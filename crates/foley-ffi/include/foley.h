@@ -21,8 +21,9 @@
  * 9: mob voices, `foley_render_voice`.
  * 10: voice engine 2: more mobs (zombies' kin, skeletons, spiders, creepers,
  *     bats) and calls (growls, purrs, the fuse, breathing, …).
+ * 11: everyday animals and rarer hostiles (M8, M9): 52 mobs, 43 calls.
  */
-#define FOLEY_ABI_VERSION 10
+#define FOLEY_ABI_VERSION 11
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -96,18 +97,16 @@
 #define FOLEY_CONTACT_STEP 4
 
 /**
- * Mobs for `foley_render_voice`: cow, pig, sheep, chicken, villager,
- * zombie, wolf, cat, husk, drowned, zombie villager, skeleton, stray, bogged,
- * spider, cave spider, creeper, bat.
+ * Mobs for `foley_render_voice`, in `foley_synth::Mob`'s order (cow, pig,
+ * sheep, …; scripts/gen_voices.py lists them all).
  */
-#define FOLEY_MOBS 18
+#define FOLEY_MOBS 52
 
 /**
- * Calls: ambient, hurt, death, growl, pant, whine, hiss, purr, beg, primed
- * (a creeper's fuse), ambient, hurt and death under water, breath, heavy
- * breath, and ambient close by. A call a mob doesn't have is its ambient one.
+ * Calls, in `foley_synth::Call`'s order (ambient, hurt, death, growl, …). A
+ * call a mob doesn't have is its ambient one.
  */
-#define FOLEY_CALLS 16
+#define FOLEY_CALLS 43
 
 #define FOLEY_OK 0
 

@@ -4,47 +4,31 @@ import io.github.cumsauce.foley.FoleyClient;
 import io.github.cumsauce.foley.mixin.AbstractSoundInstanceAccessor;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.resources.sounds.Sound;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
+import net.minecraft.util.valueproviders.ConstantFloat;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Procedural mob voices (M6, remade in M7), each switched on in the settings (off by default), group by group:
- * zombies (with husks, drowned and zombie villagers), skeletons (strays, bogged), spiders, and so on. A mob's calls,
- * in all their variants ({@code entity.wolf_big.hurt}, {@code entity.cat.ambient_baby}), are replaced by Foley's,
- * keeping the game's volume and pitch (a baby's is higher; bigger variants a little lower). A zombie close to the
- * listener strains, louder; {@link Breathing} adds its breath.
+ * Procedural mob voices (M6, remade in M7, more in M8 and M9), switched on in the settings group by group (off by
+ * default). The game's calls for a mob ({@link VoiceTable#GAME}), in all their variants ({@code entity.wolf_big.hurt},
+ * {@code entity.cat.ambient_baby}), are replaced by Foley's, keeping the game's volume and pitch (a baby's is higher;
+ * bigger variants a little lower). A zombie close by strains, louder; {@link Breathing} adds its breath. A bee's buzz
+ * loops, so rather than replaced, the game's own looping instance is pointed at Foley's sound ({@link #redirect}). A
+ * parrot imitating a mob does it in Foley's voice for that mob.
  */
 public final class Voices {
-	/** The settings' groups, in the order of their bits. */
-	public static final List<String> GROUPS = List.of("cow", "pig", "sheep", "chicken", "villager", "zombie", "wolf",
-			"cat", "skeleton", "spider", "creeper", "bat");
-	/** The native mobs, in the C ABI's order. */
-	public static final List<String> MOBS = List.of("cow", "pig", "sheep", "chicken", "villager", "zombie", "wolf",
-			"cat", "husk", "drowned", "zombie_villager", "skeleton", "stray", "bogged", "spider", "cave_spider",
-			"creeper", "bat");
-	/** The native calls, in the C ABI's order. */
-	public static final List<String> CALLS = List.of("ambient", "hurt", "death", "growl", "pant", "whine", "hiss",
-			"purr", "beg", "primed", "ambient_water", "hurt_water", "death_water", "breath", "breath_heavy",
-			"ambient_near");
-	/** Each mob's calls Foley makes (the rest stay the game's). */
-	public static final Map<String, List<String>> CALLS_OF = Map.ofEntries(
-			Map.entry("wolf", List.of("ambient", "hurt", "death", "growl", "pant", "whine")),
-			Map.entry("cat", List.of("ambient", "hurt", "death", "hiss", "purr", "beg")),
-			Map.entry("creeper", List.of("primed", "hurt", "death")),
-			Map.entry("zombie", List.of("ambient", "hurt", "death", "breath", "breath_heavy", "ambient_near")),
-			Map.entry("husk", List.of("ambient", "hurt", "death", "breath", "breath_heavy", "ambient_near")),
-			Map.entry("zombie_villager", List.of("ambient", "hurt", "death", "breath", "breath_heavy",
-					"ambient_near")),
-			Map.entry("drowned", List.of("ambient", "hurt", "death", "ambient_water", "hurt_water", "death_water",
-					"breath", "breath_heavy", "ambient_near")));
-	/** The game's names for calls, where they differ. */
-	private static final Map<String, String> GAME_CALLS = Map.of("beg_for_food", "beg", "purreow", "beg",
-			"stray_ambient", "ambient");
+	public static final List<String> GROUPS = VoiceTable.GROUPS;
+	public static final List<String> MOBS = VoiceTable.MOBS;
+	public static final List<String> CALLS = VoiceTable.CALLS;
 	/** Variants and how much higher they are. */
 	private static final Map<String, Float> VARIANTS = Map.ofEntries(Map.entry("moody", 0.95f),
 			Map.entry("big", 0.85f), Map.entry("mini", 1.25f), Map.entry("picky", 1.05f), Map.entry("angry", 0.95f),
@@ -52,62 +36,77 @@ public final class Voices {
 			Map.entry("royal", 0.95f));
 	/** A zombie's ambient call within this many blocks is its strained, louder one. */
 	private static final double NEAR = 8;
+	private static final RandomSource RANDOM = RandomSource.create();
+	private static final AtomicInteger REDIRECTED = new AtomicInteger();
 
 	private Voices() {}
 
-	/** A mob's calls. */
+	/** The calls Foley makes for native mob {@code mob}. */
 	public static List<String> callsOf(String mob) {
-		return CALLS_OF.getOrDefault(mob, List.of("ambient", "hurt", "death"));
+		var calls = new java.util.ArrayList<String>();
+		VoiceTable.GAME.forEach((game, table) -> table.forEach((call, target) -> {
+			String m = target.contains(":") ? target.substring(0, target.indexOf(':')) : game;
+			String c = target.contains(":") ? target.substring(target.indexOf(':') + 1) : target;
+			if (m.equals(mob) && !calls.contains(c)) calls.add(c);
+		}));
+		calls.addAll(VoiceTable.EXTRA.getOrDefault(mob, List.of()));
+		return calls;
 	}
 
-	/** The settings group {@code mob} belongs to. */
+	/** The settings group native mob {@code mob} belongs to, as a bit index, or -1. */
 	public static int group(String mob) {
-		return switch (mob) {
-			case "husk", "drowned", "zombie_villager" -> GROUPS.indexOf("zombie");
-			case "stray", "bogged" -> GROUPS.indexOf("skeleton");
-			case "cave_spider" -> GROUPS.indexOf("spider");
-			default -> GROUPS.indexOf(mob);
-		};
+		return GROUPS.indexOf(VoiceTable.GROUP_OF.getOrDefault(mob, ""));
 	}
 
-	/** Whether Foley voices {@code mob} now. */
+	/** Whether Foley voices native mob {@code mob} now. */
 	public static boolean voiced(String mob) {
 		int group = group(mob);
 		return group >= 0 && FoleyClient.wants(config -> config.voice(group));
 	}
 
-	/** A sound event's mob, pitch for its variant, and call, or null if it's not one Foley voices. */
-	record Parsed(String mob, float pitch, String call) {}
+	/** Game sounds pointed at Foley's (bee buzzes). For the client gametest. */
+	public static int redirected() {
+		return REDIRECTED.get();
+	}
+
+	/** A game sound as Foley voices it: the native mob and call, and how much higher its variant is. */
+	record Parsed(String mob, String call, float pitch) {}
 
 	static @Nullable Parsed parse(Identifier id) {
 		if (!id.getNamespace().equals("minecraft") || !id.getPath().startsWith("entity.")) return null;
-		String[] parts = id.getPath().split("\\.");
-		if (parts.length != 3) return null;
-		String name = parts[1];
+		String path = id.getPath().substring("entity.".length());
+		int dot = path.indexOf('.');
+		if (dot < 0) return null;
+		String name = path.substring(0, dot);
+		String call = path.substring(dot + 1);
 		float pitch = 1f;
-		String mob = MOBS.contains(name) ? name : null;
-		if (mob == null) {
+		Map<String, String> table = VoiceTable.GAME.get(name);
+		if (table == null) {
 			int split = name.lastIndexOf('_');
 			if (split < 0) return null;
-			String base = name.substring(0, split);
 			Float variant = VARIANTS.get(name.substring(split + 1));
-			if (variant == null || !MOBS.contains(base)) return null;
-			mob = base;
+			table = VoiceTable.GAME.get(name.substring(0, split));
+			if (variant == null || table == null) return null;
+			name = name.substring(0, split);
 			pitch = variant;
 		}
-		String call = parts[2];
-		if (call.endsWith("_baby")) {
-			call = call.substring(0, call.length() - "_baby".length());
+		String target = table.get(call);
+		if (target == null && call.endsWith("_baby")) {
+			target = table.get(call.substring(0, call.length() - "_baby".length()));
 			pitch *= 1.3f;
 		}
-		call = GAME_CALLS.getOrDefault(call, call);
-		return callsOf(mob).contains(call) ? new Parsed(mob, pitch, call) : null;
+		if (target == null) return null;
+		int colon = target.indexOf(':');
+		return colon < 0 ? new Parsed(name, target, pitch)
+				: new Parsed(target.substring(0, colon), target.substring(colon + 1), pitch);
 	}
 
 	/** Whether to skip {@code sound}, having played Foley's voice for it instead. */
 	public static boolean replace(SoundInstance sound) {
-		Parsed parsed = parse(sound.getIdentifier());
-		if (parsed == null || !voiced(parsed.mob)) return false;
+		Identifier id = sound.getIdentifier();
+		if (id.getPath().startsWith("entity.parrot.imitate.")) return imitate(sound, id);
+		Parsed parsed = parse(id);
+		if (parsed == null || parsed.call.startsWith("loop") || !voiced(parsed.mob)) return false;
 		float volume = 1f;
 		float pitch = 1f;
 		if (sound instanceof AbstractSoundInstanceAccessor own) {
@@ -129,12 +128,40 @@ public final class Voices {
 		return true;
 	}
 
+	/** A parrot imitating a mob Foley voices, in that voice, higher. */
+	private static boolean imitate(SoundInstance sound, Identifier id) {
+		if (!voiced("parrot")) return false;
+		String mob = id.getPath().substring("entity.parrot.imitate.".length());
+		if (!MOBS.contains(mob)) return false;
+		List<String> calls = callsOf(mob);
+		String call = calls.contains("ambient") ? "ambient" : calls.isEmpty() ? null : calls.getFirst();
+		if (call == null) return false;
+		float pitch = sound instanceof AbstractSoundInstanceAccessor own ? own.foley$pitch() : 1f;
+		play(Minecraft.getInstance(), mob, call, sound.getSource(), 0.7f, pitch * 1.5f, sound.getX(), sound.getY(),
+				sound.getZ());
+		FoleyClient.countReplaced();
+		return true;
+	}
+
+	/**
+	 * Foley's sound for a looping game sound it voices (a bee's buzz), to put in place of the one the game resolved,
+	 * or null. The game's instance keeps doing the rest: looping, following the bee, rising in pitch as it flies.
+	 */
+	public static @Nullable Sound redirect(SoundInstance sound) {
+		Parsed parsed = parse(sound.getIdentifier());
+		if (parsed == null || !parsed.call.startsWith("loop") || !voiced(parsed.mob)) return null;
+		REDIRECTED.incrementAndGet();
+		Identifier generated = Identifier.fromNamespaceAndPath("foley", GeneratedSounds.PREFIX + "voice_" + parsed.mob
+				+ "_" + parsed.call + "_" + RANDOM.nextInt(4));
+		return new Sound(generated, ConstantFloat.of(1f), ConstantFloat.of(1f), 1, Sound.Type.FILE, false, false, 16);
+	}
+
 	static SoundEvent event(String mob, String call) {
 		return SoundEvent.createVariableRangeEvent(Identifier.fromNamespaceAndPath("foley", "voice_" + mob + "_" + call));
 	}
 
-	private static void play(Minecraft minecraft, String mob, String call, net.minecraft.sounds.SoundSource source,
-			float volume, float pitch, double x, double y, double z) {
+	private static void play(Minecraft minecraft, String mob, String call, SoundSource source, float volume,
+			float pitch, double x, double y, double z) {
 		minecraft.getSoundManager().play(new SimpleSoundInstance(event(mob, call), source, volume * FoleyClient.gain(),
 				Math.clamp(pitch, 0.5f, 2f), SoundInstance.createUnseededRandom(), x, y, z));
 	}

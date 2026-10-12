@@ -72,7 +72,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 		frogs = added("foley.settings.frogs", config.frogs());
 		for (int i = 0; i < io.github.cumsauce.foley.audio.Voices.GROUPS.size(); i++) {
 			String mob = io.github.cumsauce.foley.audio.Voices.GROUPS.get(i);
-			voices.add(new OptionInstance<>("entity.minecraft." + mob,
+			voices.add(new OptionInstance<>("foley.settings.voice." + mob,
 					OptionInstance.cachedConstantTooltip(Component.translatable("foley.settings.voice.tooltip")),
 					(caption, value) -> Component.translatable(
 							value ? "foley.settings.made_by.foley" : "foley.settings.made_by.game"),
@@ -118,6 +118,13 @@ public final class FoleyScreen extends OptionsSubScreen {
 
 		list.addHeader(Component.translatable("foley.settings.section.voices"));
 		list.addBig(note(Component.translatable("foley.settings.voices.note")));
+		boolean allFoley = voices.stream().allMatch(OptionInstance::get);
+		list.addBig(net.minecraft.client.gui.components.Button.builder(
+				Component.translatable(allFoley ? "foley.settings.voices.all_game" : "foley.settings.voices.all_foley"),
+				button -> {
+					voices.forEach(v -> v.set(!allFoley));
+					rebuildWidgets();
+				}).build());
 		for (int i = 0; i < voices.size(); i += 2) {
 			list.addSmall(voices.get(i), i + 1 < voices.size() ? voices.get(i + 1) : null);
 		}
@@ -165,9 +172,9 @@ public final class FoleyScreen extends OptionsSubScreen {
 
 	@Override
 	public void removed() {
-		int voiced = 0;
+		long voiced = 0;
 		for (int i = 0; i < voices.size(); i++) {
-			if (voices.get(i).get()) voiced |= 1 << i;
+			if (voices.get(i).get()) voiced |= 1L << i;
 		}
 		FoleyConfig next = new FoleyConfig(volume.get(), rain.get(), wind.get(), thunder.get(), water.get(), fire.get(),
 				lava.get(), drips.get(), strikes.get(), footsteps.get(), birds.get(), crickets.get(), frogs.get(),

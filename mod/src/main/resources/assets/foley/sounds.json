@@ -1128,463 +1128,260 @@
 			"foley:generated/step_snow_7"
 		]
 	},
-	"voice_cow_ambient": {
-		"subtitle": "subtitles.entity.cow.ambient",
+	"voice_armadillo_ambient": {
+		"subtitle": "subtitles.entity.armadillo.ambient",
 		"sounds": [
-			"foley:generated/voice_cow_ambient_0",
-			"foley:generated/voice_cow_ambient_1",
-			"foley:generated/voice_cow_ambient_2",
-			"foley:generated/voice_cow_ambient_3",
-			"foley:generated/voice_cow_ambient_4",
-			"foley:generated/voice_cow_ambient_5",
-			"foley:generated/voice_cow_ambient_6",
-			"foley:generated/voice_cow_ambient_7",
-			"foley:generated/voice_cow_ambient_8",
-			"foley:generated/voice_cow_ambient_9",
-			"foley:generated/voice_cow_ambient_10",
-			"foley:generated/voice_cow_ambient_11"
+			"foley:generated/voice_armadillo_ambient_0",
+			"foley:generated/voice_armadillo_ambient_1",
+			"foley:generated/voice_armadillo_ambient_2",
+			"foley:generated/voice_armadillo_ambient_3",
+			"foley:generated/voice_armadillo_ambient_4",
+			"foley:generated/voice_armadillo_ambient_5",
+			"foley:generated/voice_armadillo_ambient_6",
+			"foley:generated/voice_armadillo_ambient_7",
+			"foley:generated/voice_armadillo_ambient_8",
+			"foley:generated/voice_armadillo_ambient_9",
+			"foley:generated/voice_armadillo_ambient_10",
+			"foley:generated/voice_armadillo_ambient_11"
 		]
 	},
-	"voice_cow_hurt": {
-		"subtitle": "subtitles.entity.cow.hurt",
+	"voice_armadillo_death": {
+		"subtitle": "subtitles.entity.armadillo.death",
 		"sounds": [
-			"foley:generated/voice_cow_hurt_0",
-			"foley:generated/voice_cow_hurt_1",
-			"foley:generated/voice_cow_hurt_2",
-			"foley:generated/voice_cow_hurt_3",
-			"foley:generated/voice_cow_hurt_4",
-			"foley:generated/voice_cow_hurt_5",
-			"foley:generated/voice_cow_hurt_6",
-			"foley:generated/voice_cow_hurt_7",
-			"foley:generated/voice_cow_hurt_8",
-			"foley:generated/voice_cow_hurt_9",
-			"foley:generated/voice_cow_hurt_10",
-			"foley:generated/voice_cow_hurt_11"
+			"foley:generated/voice_armadillo_death_0",
+			"foley:generated/voice_armadillo_death_1",
+			"foley:generated/voice_armadillo_death_2",
+			"foley:generated/voice_armadillo_death_3",
+			"foley:generated/voice_armadillo_death_4",
+			"foley:generated/voice_armadillo_death_5",
+			"foley:generated/voice_armadillo_death_6",
+			"foley:generated/voice_armadillo_death_7",
+			"foley:generated/voice_armadillo_death_8",
+			"foley:generated/voice_armadillo_death_9",
+			"foley:generated/voice_armadillo_death_10",
+			"foley:generated/voice_armadillo_death_11"
 		]
 	},
-	"voice_cow_death": {
-		"subtitle": "subtitles.entity.cow.death",
+	"voice_armadillo_hurt": {
+		"subtitle": "subtitles.entity.armadillo.hurt",
 		"sounds": [
-			"foley:generated/voice_cow_death_0",
-			"foley:generated/voice_cow_death_1",
-			"foley:generated/voice_cow_death_2",
-			"foley:generated/voice_cow_death_3",
-			"foley:generated/voice_cow_death_4",
-			"foley:generated/voice_cow_death_5",
-			"foley:generated/voice_cow_death_6",
-			"foley:generated/voice_cow_death_7",
-			"foley:generated/voice_cow_death_8",
-			"foley:generated/voice_cow_death_9",
-			"foley:generated/voice_cow_death_10",
-			"foley:generated/voice_cow_death_11"
+			"foley:generated/voice_armadillo_hurt_0",
+			"foley:generated/voice_armadillo_hurt_1",
+			"foley:generated/voice_armadillo_hurt_2",
+			"foley:generated/voice_armadillo_hurt_3",
+			"foley:generated/voice_armadillo_hurt_4",
+			"foley:generated/voice_armadillo_hurt_5",
+			"foley:generated/voice_armadillo_hurt_6",
+			"foley:generated/voice_armadillo_hurt_7",
+			"foley:generated/voice_armadillo_hurt_8",
+			"foley:generated/voice_armadillo_hurt_9",
+			"foley:generated/voice_armadillo_hurt_10",
+			"foley:generated/voice_armadillo_hurt_11"
 		]
 	},
-	"voice_pig_ambient": {
-		"subtitle": "subtitles.entity.pig.ambient",
+	"voice_bat_ambient": {
+		"subtitle": "subtitles.entity.bat.ambient",
 		"sounds": [
-			"foley:generated/voice_pig_ambient_0",
-			"foley:generated/voice_pig_ambient_1",
-			"foley:generated/voice_pig_ambient_2",
-			"foley:generated/voice_pig_ambient_3",
-			"foley:generated/voice_pig_ambient_4",
-			"foley:generated/voice_pig_ambient_5",
-			"foley:generated/voice_pig_ambient_6",
-			"foley:generated/voice_pig_ambient_7",
-			"foley:generated/voice_pig_ambient_8",
-			"foley:generated/voice_pig_ambient_9",
-			"foley:generated/voice_pig_ambient_10",
-			"foley:generated/voice_pig_ambient_11"
+			"foley:generated/voice_bat_ambient_0",
+			"foley:generated/voice_bat_ambient_1",
+			"foley:generated/voice_bat_ambient_2",
+			"foley:generated/voice_bat_ambient_3",
+			"foley:generated/voice_bat_ambient_4",
+			"foley:generated/voice_bat_ambient_5",
+			"foley:generated/voice_bat_ambient_6",
+			"foley:generated/voice_bat_ambient_7",
+			"foley:generated/voice_bat_ambient_8",
+			"foley:generated/voice_bat_ambient_9",
+			"foley:generated/voice_bat_ambient_10",
+			"foley:generated/voice_bat_ambient_11"
 		]
 	},
-	"voice_pig_hurt": {
-		"subtitle": "subtitles.entity.pig.hurt",
+	"voice_bat_death": {
+		"subtitle": "subtitles.entity.bat.death",
 		"sounds": [
-			"foley:generated/voice_pig_hurt_0",
-			"foley:generated/voice_pig_hurt_1",
-			"foley:generated/voice_pig_hurt_2",
-			"foley:generated/voice_pig_hurt_3",
-			"foley:generated/voice_pig_hurt_4",
-			"foley:generated/voice_pig_hurt_5",
-			"foley:generated/voice_pig_hurt_6",
-			"foley:generated/voice_pig_hurt_7",
-			"foley:generated/voice_pig_hurt_8",
-			"foley:generated/voice_pig_hurt_9",
-			"foley:generated/voice_pig_hurt_10",
-			"foley:generated/voice_pig_hurt_11"
+			"foley:generated/voice_bat_death_0",
+			"foley:generated/voice_bat_death_1",
+			"foley:generated/voice_bat_death_2",
+			"foley:generated/voice_bat_death_3",
+			"foley:generated/voice_bat_death_4",
+			"foley:generated/voice_bat_death_5",
+			"foley:generated/voice_bat_death_6",
+			"foley:generated/voice_bat_death_7",
+			"foley:generated/voice_bat_death_8",
+			"foley:generated/voice_bat_death_9",
+			"foley:generated/voice_bat_death_10",
+			"foley:generated/voice_bat_death_11"
 		]
 	},
-	"voice_pig_death": {
-		"subtitle": "subtitles.entity.pig.death",
+	"voice_bat_hurt": {
+		"subtitle": "subtitles.entity.bat.hurt",
 		"sounds": [
-			"foley:generated/voice_pig_death_0",
-			"foley:generated/voice_pig_death_1",
-			"foley:generated/voice_pig_death_2",
-			"foley:generated/voice_pig_death_3",
-			"foley:generated/voice_pig_death_4",
-			"foley:generated/voice_pig_death_5",
-			"foley:generated/voice_pig_death_6",
-			"foley:generated/voice_pig_death_7",
-			"foley:generated/voice_pig_death_8",
-			"foley:generated/voice_pig_death_9",
-			"foley:generated/voice_pig_death_10",
-			"foley:generated/voice_pig_death_11"
+			"foley:generated/voice_bat_hurt_0",
+			"foley:generated/voice_bat_hurt_1",
+			"foley:generated/voice_bat_hurt_2",
+			"foley:generated/voice_bat_hurt_3",
+			"foley:generated/voice_bat_hurt_4",
+			"foley:generated/voice_bat_hurt_5",
+			"foley:generated/voice_bat_hurt_6",
+			"foley:generated/voice_bat_hurt_7",
+			"foley:generated/voice_bat_hurt_8",
+			"foley:generated/voice_bat_hurt_9",
+			"foley:generated/voice_bat_hurt_10",
+			"foley:generated/voice_bat_hurt_11"
 		]
 	},
-	"voice_sheep_ambient": {
-		"subtitle": "subtitles.entity.sheep.ambient",
+	"voice_bee_death": {
+		"subtitle": "subtitles.entity.bee.death",
 		"sounds": [
-			"foley:generated/voice_sheep_ambient_0",
-			"foley:generated/voice_sheep_ambient_1",
-			"foley:generated/voice_sheep_ambient_2",
-			"foley:generated/voice_sheep_ambient_3",
-			"foley:generated/voice_sheep_ambient_4",
-			"foley:generated/voice_sheep_ambient_5",
-			"foley:generated/voice_sheep_ambient_6",
-			"foley:generated/voice_sheep_ambient_7",
-			"foley:generated/voice_sheep_ambient_8",
-			"foley:generated/voice_sheep_ambient_9",
-			"foley:generated/voice_sheep_ambient_10",
-			"foley:generated/voice_sheep_ambient_11"
+			"foley:generated/voice_bee_death_0",
+			"foley:generated/voice_bee_death_1",
+			"foley:generated/voice_bee_death_2",
+			"foley:generated/voice_bee_death_3",
+			"foley:generated/voice_bee_death_4",
+			"foley:generated/voice_bee_death_5",
+			"foley:generated/voice_bee_death_6",
+			"foley:generated/voice_bee_death_7",
+			"foley:generated/voice_bee_death_8",
+			"foley:generated/voice_bee_death_9",
+			"foley:generated/voice_bee_death_10",
+			"foley:generated/voice_bee_death_11"
 		]
 	},
-	"voice_sheep_hurt": {
-		"subtitle": "subtitles.entity.sheep.hurt",
+	"voice_bee_hurt": {
+		"subtitle": "subtitles.entity.bee.hurt",
 		"sounds": [
-			"foley:generated/voice_sheep_hurt_0",
-			"foley:generated/voice_sheep_hurt_1",
-			"foley:generated/voice_sheep_hurt_2",
-			"foley:generated/voice_sheep_hurt_3",
-			"foley:generated/voice_sheep_hurt_4",
-			"foley:generated/voice_sheep_hurt_5",
-			"foley:generated/voice_sheep_hurt_6",
-			"foley:generated/voice_sheep_hurt_7",
-			"foley:generated/voice_sheep_hurt_8",
-			"foley:generated/voice_sheep_hurt_9",
-			"foley:generated/voice_sheep_hurt_10",
-			"foley:generated/voice_sheep_hurt_11"
+			"foley:generated/voice_bee_hurt_0",
+			"foley:generated/voice_bee_hurt_1",
+			"foley:generated/voice_bee_hurt_2",
+			"foley:generated/voice_bee_hurt_3",
+			"foley:generated/voice_bee_hurt_4",
+			"foley:generated/voice_bee_hurt_5",
+			"foley:generated/voice_bee_hurt_6",
+			"foley:generated/voice_bee_hurt_7",
+			"foley:generated/voice_bee_hurt_8",
+			"foley:generated/voice_bee_hurt_9",
+			"foley:generated/voice_bee_hurt_10",
+			"foley:generated/voice_bee_hurt_11"
 		]
 	},
-	"voice_sheep_death": {
-		"subtitle": "subtitles.entity.sheep.death",
+	"voice_bee_loop": {
+		"subtitle": "subtitles.entity.bee.loop",
 		"sounds": [
-			"foley:generated/voice_sheep_death_0",
-			"foley:generated/voice_sheep_death_1",
-			"foley:generated/voice_sheep_death_2",
-			"foley:generated/voice_sheep_death_3",
-			"foley:generated/voice_sheep_death_4",
-			"foley:generated/voice_sheep_death_5",
-			"foley:generated/voice_sheep_death_6",
-			"foley:generated/voice_sheep_death_7",
-			"foley:generated/voice_sheep_death_8",
-			"foley:generated/voice_sheep_death_9",
-			"foley:generated/voice_sheep_death_10",
-			"foley:generated/voice_sheep_death_11"
+			"foley:generated/voice_bee_loop_0",
+			"foley:generated/voice_bee_loop_1",
+			"foley:generated/voice_bee_loop_2",
+			"foley:generated/voice_bee_loop_3"
 		]
 	},
-	"voice_chicken_ambient": {
-		"subtitle": "subtitles.entity.chicken.ambient",
+	"voice_bee_loop_aggressive": {
+		"subtitle": "subtitles.entity.bee.loop_aggressive",
 		"sounds": [
-			"foley:generated/voice_chicken_ambient_0",
-			"foley:generated/voice_chicken_ambient_1",
-			"foley:generated/voice_chicken_ambient_2",
-			"foley:generated/voice_chicken_ambient_3",
-			"foley:generated/voice_chicken_ambient_4",
-			"foley:generated/voice_chicken_ambient_5",
-			"foley:generated/voice_chicken_ambient_6",
-			"foley:generated/voice_chicken_ambient_7",
-			"foley:generated/voice_chicken_ambient_8",
-			"foley:generated/voice_chicken_ambient_9",
-			"foley:generated/voice_chicken_ambient_10",
-			"foley:generated/voice_chicken_ambient_11"
+			"foley:generated/voice_bee_loop_aggressive_0",
+			"foley:generated/voice_bee_loop_aggressive_1",
+			"foley:generated/voice_bee_loop_aggressive_2",
+			"foley:generated/voice_bee_loop_aggressive_3"
 		]
 	},
-	"voice_chicken_hurt": {
-		"subtitle": "subtitles.entity.chicken.hurt",
+	"voice_bogged_ambient": {
+		"subtitle": "subtitles.entity.bogged.ambient",
 		"sounds": [
-			"foley:generated/voice_chicken_hurt_0",
-			"foley:generated/voice_chicken_hurt_1",
-			"foley:generated/voice_chicken_hurt_2",
-			"foley:generated/voice_chicken_hurt_3",
-			"foley:generated/voice_chicken_hurt_4",
-			"foley:generated/voice_chicken_hurt_5",
-			"foley:generated/voice_chicken_hurt_6",
-			"foley:generated/voice_chicken_hurt_7",
-			"foley:generated/voice_chicken_hurt_8",
-			"foley:generated/voice_chicken_hurt_9",
-			"foley:generated/voice_chicken_hurt_10",
-			"foley:generated/voice_chicken_hurt_11"
+			"foley:generated/voice_bogged_ambient_0",
+			"foley:generated/voice_bogged_ambient_1",
+			"foley:generated/voice_bogged_ambient_2",
+			"foley:generated/voice_bogged_ambient_3",
+			"foley:generated/voice_bogged_ambient_4",
+			"foley:generated/voice_bogged_ambient_5",
+			"foley:generated/voice_bogged_ambient_6",
+			"foley:generated/voice_bogged_ambient_7",
+			"foley:generated/voice_bogged_ambient_8",
+			"foley:generated/voice_bogged_ambient_9",
+			"foley:generated/voice_bogged_ambient_10",
+			"foley:generated/voice_bogged_ambient_11"
 		]
 	},
-	"voice_chicken_death": {
-		"subtitle": "subtitles.entity.chicken.death",
+	"voice_bogged_death": {
+		"subtitle": "subtitles.entity.bogged.death",
 		"sounds": [
-			"foley:generated/voice_chicken_death_0",
-			"foley:generated/voice_chicken_death_1",
-			"foley:generated/voice_chicken_death_2",
-			"foley:generated/voice_chicken_death_3",
-			"foley:generated/voice_chicken_death_4",
-			"foley:generated/voice_chicken_death_5",
-			"foley:generated/voice_chicken_death_6",
-			"foley:generated/voice_chicken_death_7",
-			"foley:generated/voice_chicken_death_8",
-			"foley:generated/voice_chicken_death_9",
-			"foley:generated/voice_chicken_death_10",
-			"foley:generated/voice_chicken_death_11"
+			"foley:generated/voice_bogged_death_0",
+			"foley:generated/voice_bogged_death_1",
+			"foley:generated/voice_bogged_death_2",
+			"foley:generated/voice_bogged_death_3",
+			"foley:generated/voice_bogged_death_4",
+			"foley:generated/voice_bogged_death_5",
+			"foley:generated/voice_bogged_death_6",
+			"foley:generated/voice_bogged_death_7",
+			"foley:generated/voice_bogged_death_8",
+			"foley:generated/voice_bogged_death_9",
+			"foley:generated/voice_bogged_death_10",
+			"foley:generated/voice_bogged_death_11"
 		]
 	},
-	"voice_villager_ambient": {
-		"subtitle": "subtitles.entity.villager.ambient",
+	"voice_bogged_hurt": {
+		"subtitle": "subtitles.entity.bogged.hurt",
 		"sounds": [
-			"foley:generated/voice_villager_ambient_0",
-			"foley:generated/voice_villager_ambient_1",
-			"foley:generated/voice_villager_ambient_2",
-			"foley:generated/voice_villager_ambient_3",
-			"foley:generated/voice_villager_ambient_4",
-			"foley:generated/voice_villager_ambient_5",
-			"foley:generated/voice_villager_ambient_6",
-			"foley:generated/voice_villager_ambient_7",
-			"foley:generated/voice_villager_ambient_8",
-			"foley:generated/voice_villager_ambient_9",
-			"foley:generated/voice_villager_ambient_10",
-			"foley:generated/voice_villager_ambient_11"
+			"foley:generated/voice_bogged_hurt_0",
+			"foley:generated/voice_bogged_hurt_1",
+			"foley:generated/voice_bogged_hurt_2",
+			"foley:generated/voice_bogged_hurt_3",
+			"foley:generated/voice_bogged_hurt_4",
+			"foley:generated/voice_bogged_hurt_5",
+			"foley:generated/voice_bogged_hurt_6",
+			"foley:generated/voice_bogged_hurt_7",
+			"foley:generated/voice_bogged_hurt_8",
+			"foley:generated/voice_bogged_hurt_9",
+			"foley:generated/voice_bogged_hurt_10",
+			"foley:generated/voice_bogged_hurt_11"
 		]
 	},
-	"voice_villager_hurt": {
-		"subtitle": "subtitles.entity.villager.hurt",
+	"voice_camel_ambient": {
+		"subtitle": "subtitles.entity.camel.ambient",
 		"sounds": [
-			"foley:generated/voice_villager_hurt_0",
-			"foley:generated/voice_villager_hurt_1",
-			"foley:generated/voice_villager_hurt_2",
-			"foley:generated/voice_villager_hurt_3",
-			"foley:generated/voice_villager_hurt_4",
-			"foley:generated/voice_villager_hurt_5",
-			"foley:generated/voice_villager_hurt_6",
-			"foley:generated/voice_villager_hurt_7",
-			"foley:generated/voice_villager_hurt_8",
-			"foley:generated/voice_villager_hurt_9",
-			"foley:generated/voice_villager_hurt_10",
-			"foley:generated/voice_villager_hurt_11"
+			"foley:generated/voice_camel_ambient_0",
+			"foley:generated/voice_camel_ambient_1",
+			"foley:generated/voice_camel_ambient_2",
+			"foley:generated/voice_camel_ambient_3",
+			"foley:generated/voice_camel_ambient_4",
+			"foley:generated/voice_camel_ambient_5",
+			"foley:generated/voice_camel_ambient_6",
+			"foley:generated/voice_camel_ambient_7",
+			"foley:generated/voice_camel_ambient_8",
+			"foley:generated/voice_camel_ambient_9",
+			"foley:generated/voice_camel_ambient_10",
+			"foley:generated/voice_camel_ambient_11"
 		]
 	},
-	"voice_villager_death": {
-		"subtitle": "subtitles.entity.villager.death",
+	"voice_camel_death": {
+		"subtitle": "subtitles.entity.camel.death",
 		"sounds": [
-			"foley:generated/voice_villager_death_0",
-			"foley:generated/voice_villager_death_1",
-			"foley:generated/voice_villager_death_2",
-			"foley:generated/voice_villager_death_3",
-			"foley:generated/voice_villager_death_4",
-			"foley:generated/voice_villager_death_5",
-			"foley:generated/voice_villager_death_6",
-			"foley:generated/voice_villager_death_7",
-			"foley:generated/voice_villager_death_8",
-			"foley:generated/voice_villager_death_9",
-			"foley:generated/voice_villager_death_10",
-			"foley:generated/voice_villager_death_11"
+			"foley:generated/voice_camel_death_0",
+			"foley:generated/voice_camel_death_1",
+			"foley:generated/voice_camel_death_2",
+			"foley:generated/voice_camel_death_3",
+			"foley:generated/voice_camel_death_4",
+			"foley:generated/voice_camel_death_5",
+			"foley:generated/voice_camel_death_6",
+			"foley:generated/voice_camel_death_7",
+			"foley:generated/voice_camel_death_8",
+			"foley:generated/voice_camel_death_9",
+			"foley:generated/voice_camel_death_10",
+			"foley:generated/voice_camel_death_11"
 		]
 	},
-	"voice_zombie_ambient": {
-		"subtitle": "subtitles.entity.zombie.ambient",
+	"voice_camel_hurt": {
+		"subtitle": "subtitles.entity.camel.hurt",
 		"sounds": [
-			"foley:generated/voice_zombie_ambient_0",
-			"foley:generated/voice_zombie_ambient_1",
-			"foley:generated/voice_zombie_ambient_2",
-			"foley:generated/voice_zombie_ambient_3",
-			"foley:generated/voice_zombie_ambient_4",
-			"foley:generated/voice_zombie_ambient_5",
-			"foley:generated/voice_zombie_ambient_6",
-			"foley:generated/voice_zombie_ambient_7",
-			"foley:generated/voice_zombie_ambient_8",
-			"foley:generated/voice_zombie_ambient_9",
-			"foley:generated/voice_zombie_ambient_10",
-			"foley:generated/voice_zombie_ambient_11"
-		]
-	},
-	"voice_zombie_hurt": {
-		"subtitle": "subtitles.entity.zombie.hurt",
-		"sounds": [
-			"foley:generated/voice_zombie_hurt_0",
-			"foley:generated/voice_zombie_hurt_1",
-			"foley:generated/voice_zombie_hurt_2",
-			"foley:generated/voice_zombie_hurt_3",
-			"foley:generated/voice_zombie_hurt_4",
-			"foley:generated/voice_zombie_hurt_5",
-			"foley:generated/voice_zombie_hurt_6",
-			"foley:generated/voice_zombie_hurt_7",
-			"foley:generated/voice_zombie_hurt_8",
-			"foley:generated/voice_zombie_hurt_9",
-			"foley:generated/voice_zombie_hurt_10",
-			"foley:generated/voice_zombie_hurt_11"
-		]
-	},
-	"voice_zombie_death": {
-		"subtitle": "subtitles.entity.zombie.death",
-		"sounds": [
-			"foley:generated/voice_zombie_death_0",
-			"foley:generated/voice_zombie_death_1",
-			"foley:generated/voice_zombie_death_2",
-			"foley:generated/voice_zombie_death_3",
-			"foley:generated/voice_zombie_death_4",
-			"foley:generated/voice_zombie_death_5",
-			"foley:generated/voice_zombie_death_6",
-			"foley:generated/voice_zombie_death_7",
-			"foley:generated/voice_zombie_death_8",
-			"foley:generated/voice_zombie_death_9",
-			"foley:generated/voice_zombie_death_10",
-			"foley:generated/voice_zombie_death_11"
-		]
-	},
-	"voice_zombie_breath": {
-		"subtitle": "subtitles.foley.breath",
-		"sounds": [
-			"foley:generated/voice_zombie_breath_0",
-			"foley:generated/voice_zombie_breath_1",
-			"foley:generated/voice_zombie_breath_2",
-			"foley:generated/voice_zombie_breath_3",
-			"foley:generated/voice_zombie_breath_4",
-			"foley:generated/voice_zombie_breath_5",
-			"foley:generated/voice_zombie_breath_6",
-			"foley:generated/voice_zombie_breath_7",
-			"foley:generated/voice_zombie_breath_8",
-			"foley:generated/voice_zombie_breath_9",
-			"foley:generated/voice_zombie_breath_10",
-			"foley:generated/voice_zombie_breath_11"
-		]
-	},
-	"voice_zombie_breath_heavy": {
-		"subtitle": "subtitles.foley.breath",
-		"sounds": [
-			"foley:generated/voice_zombie_breath_heavy_0",
-			"foley:generated/voice_zombie_breath_heavy_1",
-			"foley:generated/voice_zombie_breath_heavy_2",
-			"foley:generated/voice_zombie_breath_heavy_3",
-			"foley:generated/voice_zombie_breath_heavy_4",
-			"foley:generated/voice_zombie_breath_heavy_5",
-			"foley:generated/voice_zombie_breath_heavy_6",
-			"foley:generated/voice_zombie_breath_heavy_7",
-			"foley:generated/voice_zombie_breath_heavy_8",
-			"foley:generated/voice_zombie_breath_heavy_9",
-			"foley:generated/voice_zombie_breath_heavy_10",
-			"foley:generated/voice_zombie_breath_heavy_11"
-		]
-	},
-	"voice_zombie_ambient_near": {
-		"subtitle": "subtitles.entity.zombie.ambient",
-		"sounds": [
-			"foley:generated/voice_zombie_ambient_near_0",
-			"foley:generated/voice_zombie_ambient_near_1",
-			"foley:generated/voice_zombie_ambient_near_2",
-			"foley:generated/voice_zombie_ambient_near_3",
-			"foley:generated/voice_zombie_ambient_near_4",
-			"foley:generated/voice_zombie_ambient_near_5",
-			"foley:generated/voice_zombie_ambient_near_6",
-			"foley:generated/voice_zombie_ambient_near_7",
-			"foley:generated/voice_zombie_ambient_near_8",
-			"foley:generated/voice_zombie_ambient_near_9",
-			"foley:generated/voice_zombie_ambient_near_10",
-			"foley:generated/voice_zombie_ambient_near_11"
-		]
-	},
-	"voice_wolf_ambient": {
-		"subtitle": "subtitles.entity.wolf.ambient",
-		"sounds": [
-			"foley:generated/voice_wolf_ambient_0",
-			"foley:generated/voice_wolf_ambient_1",
-			"foley:generated/voice_wolf_ambient_2",
-			"foley:generated/voice_wolf_ambient_3",
-			"foley:generated/voice_wolf_ambient_4",
-			"foley:generated/voice_wolf_ambient_5",
-			"foley:generated/voice_wolf_ambient_6",
-			"foley:generated/voice_wolf_ambient_7",
-			"foley:generated/voice_wolf_ambient_8",
-			"foley:generated/voice_wolf_ambient_9",
-			"foley:generated/voice_wolf_ambient_10",
-			"foley:generated/voice_wolf_ambient_11"
-		]
-	},
-	"voice_wolf_hurt": {
-		"subtitle": "subtitles.entity.wolf.hurt",
-		"sounds": [
-			"foley:generated/voice_wolf_hurt_0",
-			"foley:generated/voice_wolf_hurt_1",
-			"foley:generated/voice_wolf_hurt_2",
-			"foley:generated/voice_wolf_hurt_3",
-			"foley:generated/voice_wolf_hurt_4",
-			"foley:generated/voice_wolf_hurt_5",
-			"foley:generated/voice_wolf_hurt_6",
-			"foley:generated/voice_wolf_hurt_7",
-			"foley:generated/voice_wolf_hurt_8",
-			"foley:generated/voice_wolf_hurt_9",
-			"foley:generated/voice_wolf_hurt_10",
-			"foley:generated/voice_wolf_hurt_11"
-		]
-	},
-	"voice_wolf_death": {
-		"subtitle": "subtitles.entity.wolf.death",
-		"sounds": [
-			"foley:generated/voice_wolf_death_0",
-			"foley:generated/voice_wolf_death_1",
-			"foley:generated/voice_wolf_death_2",
-			"foley:generated/voice_wolf_death_3",
-			"foley:generated/voice_wolf_death_4",
-			"foley:generated/voice_wolf_death_5",
-			"foley:generated/voice_wolf_death_6",
-			"foley:generated/voice_wolf_death_7",
-			"foley:generated/voice_wolf_death_8",
-			"foley:generated/voice_wolf_death_9",
-			"foley:generated/voice_wolf_death_10",
-			"foley:generated/voice_wolf_death_11"
-		]
-	},
-	"voice_wolf_growl": {
-		"subtitle": "subtitles.entity.wolf.growl",
-		"sounds": [
-			"foley:generated/voice_wolf_growl_0",
-			"foley:generated/voice_wolf_growl_1",
-			"foley:generated/voice_wolf_growl_2",
-			"foley:generated/voice_wolf_growl_3",
-			"foley:generated/voice_wolf_growl_4",
-			"foley:generated/voice_wolf_growl_5",
-			"foley:generated/voice_wolf_growl_6",
-			"foley:generated/voice_wolf_growl_7",
-			"foley:generated/voice_wolf_growl_8",
-			"foley:generated/voice_wolf_growl_9",
-			"foley:generated/voice_wolf_growl_10",
-			"foley:generated/voice_wolf_growl_11"
-		]
-	},
-	"voice_wolf_pant": {
-		"subtitle": "subtitles.entity.wolf.pant",
-		"sounds": [
-			"foley:generated/voice_wolf_pant_0",
-			"foley:generated/voice_wolf_pant_1",
-			"foley:generated/voice_wolf_pant_2",
-			"foley:generated/voice_wolf_pant_3",
-			"foley:generated/voice_wolf_pant_4",
-			"foley:generated/voice_wolf_pant_5",
-			"foley:generated/voice_wolf_pant_6",
-			"foley:generated/voice_wolf_pant_7",
-			"foley:generated/voice_wolf_pant_8",
-			"foley:generated/voice_wolf_pant_9",
-			"foley:generated/voice_wolf_pant_10",
-			"foley:generated/voice_wolf_pant_11"
-		]
-	},
-	"voice_wolf_whine": {
-		"subtitle": "subtitles.entity.wolf.whine",
-		"sounds": [
-			"foley:generated/voice_wolf_whine_0",
-			"foley:generated/voice_wolf_whine_1",
-			"foley:generated/voice_wolf_whine_2",
-			"foley:generated/voice_wolf_whine_3",
-			"foley:generated/voice_wolf_whine_4",
-			"foley:generated/voice_wolf_whine_5",
-			"foley:generated/voice_wolf_whine_6",
-			"foley:generated/voice_wolf_whine_7",
-			"foley:generated/voice_wolf_whine_8",
-			"foley:generated/voice_wolf_whine_9",
-			"foley:generated/voice_wolf_whine_10",
-			"foley:generated/voice_wolf_whine_11"
+			"foley:generated/voice_camel_hurt_0",
+			"foley:generated/voice_camel_hurt_1",
+			"foley:generated/voice_camel_hurt_2",
+			"foley:generated/voice_camel_hurt_3",
+			"foley:generated/voice_camel_hurt_4",
+			"foley:generated/voice_camel_hurt_5",
+			"foley:generated/voice_camel_hurt_6",
+			"foley:generated/voice_camel_hurt_7",
+			"foley:generated/voice_camel_hurt_8",
+			"foley:generated/voice_camel_hurt_9",
+			"foley:generated/voice_camel_hurt_10",
+			"foley:generated/voice_camel_hurt_11"
 		]
 	},
 	"voice_cat_ambient": {
@@ -1604,21 +1401,21 @@
 			"foley:generated/voice_cat_ambient_11"
 		]
 	},
-	"voice_cat_hurt": {
-		"subtitle": "subtitles.entity.cat.hurt",
+	"voice_cat_beg": {
+		"subtitle": "subtitles.entity.cat.beg_for_food",
 		"sounds": [
-			"foley:generated/voice_cat_hurt_0",
-			"foley:generated/voice_cat_hurt_1",
-			"foley:generated/voice_cat_hurt_2",
-			"foley:generated/voice_cat_hurt_3",
-			"foley:generated/voice_cat_hurt_4",
-			"foley:generated/voice_cat_hurt_5",
-			"foley:generated/voice_cat_hurt_6",
-			"foley:generated/voice_cat_hurt_7",
-			"foley:generated/voice_cat_hurt_8",
-			"foley:generated/voice_cat_hurt_9",
-			"foley:generated/voice_cat_hurt_10",
-			"foley:generated/voice_cat_hurt_11"
+			"foley:generated/voice_cat_beg_0",
+			"foley:generated/voice_cat_beg_1",
+			"foley:generated/voice_cat_beg_2",
+			"foley:generated/voice_cat_beg_3",
+			"foley:generated/voice_cat_beg_4",
+			"foley:generated/voice_cat_beg_5",
+			"foley:generated/voice_cat_beg_6",
+			"foley:generated/voice_cat_beg_7",
+			"foley:generated/voice_cat_beg_8",
+			"foley:generated/voice_cat_beg_9",
+			"foley:generated/voice_cat_beg_10",
+			"foley:generated/voice_cat_beg_11"
 		]
 	},
 	"voice_cat_death": {
@@ -1655,6 +1452,23 @@
 			"foley:generated/voice_cat_hiss_11"
 		]
 	},
+	"voice_cat_hurt": {
+		"subtitle": "subtitles.entity.cat.hurt",
+		"sounds": [
+			"foley:generated/voice_cat_hurt_0",
+			"foley:generated/voice_cat_hurt_1",
+			"foley:generated/voice_cat_hurt_2",
+			"foley:generated/voice_cat_hurt_3",
+			"foley:generated/voice_cat_hurt_4",
+			"foley:generated/voice_cat_hurt_5",
+			"foley:generated/voice_cat_hurt_6",
+			"foley:generated/voice_cat_hurt_7",
+			"foley:generated/voice_cat_hurt_8",
+			"foley:generated/voice_cat_hurt_9",
+			"foley:generated/voice_cat_hurt_10",
+			"foley:generated/voice_cat_hurt_11"
+		]
+	},
 	"voice_cat_purr": {
 		"subtitle": "subtitles.entity.cat.purr",
 		"sounds": [
@@ -1672,123 +1486,225 @@
 			"foley:generated/voice_cat_purr_11"
 		]
 	},
-	"voice_cat_beg": {
-		"subtitle": "subtitles.entity.cat.beg_for_food",
+	"voice_chicken_ambient": {
+		"subtitle": "subtitles.entity.chicken.ambient",
 		"sounds": [
-			"foley:generated/voice_cat_beg_0",
-			"foley:generated/voice_cat_beg_1",
-			"foley:generated/voice_cat_beg_2",
-			"foley:generated/voice_cat_beg_3",
-			"foley:generated/voice_cat_beg_4",
-			"foley:generated/voice_cat_beg_5",
-			"foley:generated/voice_cat_beg_6",
-			"foley:generated/voice_cat_beg_7",
-			"foley:generated/voice_cat_beg_8",
-			"foley:generated/voice_cat_beg_9",
-			"foley:generated/voice_cat_beg_10",
-			"foley:generated/voice_cat_beg_11"
+			"foley:generated/voice_chicken_ambient_0",
+			"foley:generated/voice_chicken_ambient_1",
+			"foley:generated/voice_chicken_ambient_2",
+			"foley:generated/voice_chicken_ambient_3",
+			"foley:generated/voice_chicken_ambient_4",
+			"foley:generated/voice_chicken_ambient_5",
+			"foley:generated/voice_chicken_ambient_6",
+			"foley:generated/voice_chicken_ambient_7",
+			"foley:generated/voice_chicken_ambient_8",
+			"foley:generated/voice_chicken_ambient_9",
+			"foley:generated/voice_chicken_ambient_10",
+			"foley:generated/voice_chicken_ambient_11"
 		]
 	},
-	"voice_husk_ambient": {
-		"subtitle": "subtitles.entity.husk.ambient",
+	"voice_chicken_death": {
+		"subtitle": "subtitles.entity.chicken.death",
 		"sounds": [
-			"foley:generated/voice_husk_ambient_0",
-			"foley:generated/voice_husk_ambient_1",
-			"foley:generated/voice_husk_ambient_2",
-			"foley:generated/voice_husk_ambient_3",
-			"foley:generated/voice_husk_ambient_4",
-			"foley:generated/voice_husk_ambient_5",
-			"foley:generated/voice_husk_ambient_6",
-			"foley:generated/voice_husk_ambient_7",
-			"foley:generated/voice_husk_ambient_8",
-			"foley:generated/voice_husk_ambient_9",
-			"foley:generated/voice_husk_ambient_10",
-			"foley:generated/voice_husk_ambient_11"
+			"foley:generated/voice_chicken_death_0",
+			"foley:generated/voice_chicken_death_1",
+			"foley:generated/voice_chicken_death_2",
+			"foley:generated/voice_chicken_death_3",
+			"foley:generated/voice_chicken_death_4",
+			"foley:generated/voice_chicken_death_5",
+			"foley:generated/voice_chicken_death_6",
+			"foley:generated/voice_chicken_death_7",
+			"foley:generated/voice_chicken_death_8",
+			"foley:generated/voice_chicken_death_9",
+			"foley:generated/voice_chicken_death_10",
+			"foley:generated/voice_chicken_death_11"
 		]
 	},
-	"voice_husk_hurt": {
-		"subtitle": "subtitles.entity.husk.hurt",
+	"voice_chicken_hurt": {
+		"subtitle": "subtitles.entity.chicken.hurt",
 		"sounds": [
-			"foley:generated/voice_husk_hurt_0",
-			"foley:generated/voice_husk_hurt_1",
-			"foley:generated/voice_husk_hurt_2",
-			"foley:generated/voice_husk_hurt_3",
-			"foley:generated/voice_husk_hurt_4",
-			"foley:generated/voice_husk_hurt_5",
-			"foley:generated/voice_husk_hurt_6",
-			"foley:generated/voice_husk_hurt_7",
-			"foley:generated/voice_husk_hurt_8",
-			"foley:generated/voice_husk_hurt_9",
-			"foley:generated/voice_husk_hurt_10",
-			"foley:generated/voice_husk_hurt_11"
+			"foley:generated/voice_chicken_hurt_0",
+			"foley:generated/voice_chicken_hurt_1",
+			"foley:generated/voice_chicken_hurt_2",
+			"foley:generated/voice_chicken_hurt_3",
+			"foley:generated/voice_chicken_hurt_4",
+			"foley:generated/voice_chicken_hurt_5",
+			"foley:generated/voice_chicken_hurt_6",
+			"foley:generated/voice_chicken_hurt_7",
+			"foley:generated/voice_chicken_hurt_8",
+			"foley:generated/voice_chicken_hurt_9",
+			"foley:generated/voice_chicken_hurt_10",
+			"foley:generated/voice_chicken_hurt_11"
 		]
 	},
-	"voice_husk_death": {
-		"subtitle": "subtitles.entity.husk.death",
+	"voice_cow_ambient": {
+		"subtitle": "subtitles.entity.cow.ambient",
 		"sounds": [
-			"foley:generated/voice_husk_death_0",
-			"foley:generated/voice_husk_death_1",
-			"foley:generated/voice_husk_death_2",
-			"foley:generated/voice_husk_death_3",
-			"foley:generated/voice_husk_death_4",
-			"foley:generated/voice_husk_death_5",
-			"foley:generated/voice_husk_death_6",
-			"foley:generated/voice_husk_death_7",
-			"foley:generated/voice_husk_death_8",
-			"foley:generated/voice_husk_death_9",
-			"foley:generated/voice_husk_death_10",
-			"foley:generated/voice_husk_death_11"
+			"foley:generated/voice_cow_ambient_0",
+			"foley:generated/voice_cow_ambient_1",
+			"foley:generated/voice_cow_ambient_2",
+			"foley:generated/voice_cow_ambient_3",
+			"foley:generated/voice_cow_ambient_4",
+			"foley:generated/voice_cow_ambient_5",
+			"foley:generated/voice_cow_ambient_6",
+			"foley:generated/voice_cow_ambient_7",
+			"foley:generated/voice_cow_ambient_8",
+			"foley:generated/voice_cow_ambient_9",
+			"foley:generated/voice_cow_ambient_10",
+			"foley:generated/voice_cow_ambient_11"
 		]
 	},
-	"voice_husk_breath": {
-		"subtitle": "subtitles.foley.breath",
+	"voice_cow_death": {
+		"subtitle": "subtitles.entity.cow.death",
 		"sounds": [
-			"foley:generated/voice_husk_breath_0",
-			"foley:generated/voice_husk_breath_1",
-			"foley:generated/voice_husk_breath_2",
-			"foley:generated/voice_husk_breath_3",
-			"foley:generated/voice_husk_breath_4",
-			"foley:generated/voice_husk_breath_5",
-			"foley:generated/voice_husk_breath_6",
-			"foley:generated/voice_husk_breath_7",
-			"foley:generated/voice_husk_breath_8",
-			"foley:generated/voice_husk_breath_9",
-			"foley:generated/voice_husk_breath_10",
-			"foley:generated/voice_husk_breath_11"
+			"foley:generated/voice_cow_death_0",
+			"foley:generated/voice_cow_death_1",
+			"foley:generated/voice_cow_death_2",
+			"foley:generated/voice_cow_death_3",
+			"foley:generated/voice_cow_death_4",
+			"foley:generated/voice_cow_death_5",
+			"foley:generated/voice_cow_death_6",
+			"foley:generated/voice_cow_death_7",
+			"foley:generated/voice_cow_death_8",
+			"foley:generated/voice_cow_death_9",
+			"foley:generated/voice_cow_death_10",
+			"foley:generated/voice_cow_death_11"
 		]
 	},
-	"voice_husk_breath_heavy": {
-		"subtitle": "subtitles.foley.breath",
+	"voice_cow_hurt": {
+		"subtitle": "subtitles.entity.cow.hurt",
 		"sounds": [
-			"foley:generated/voice_husk_breath_heavy_0",
-			"foley:generated/voice_husk_breath_heavy_1",
-			"foley:generated/voice_husk_breath_heavy_2",
-			"foley:generated/voice_husk_breath_heavy_3",
-			"foley:generated/voice_husk_breath_heavy_4",
-			"foley:generated/voice_husk_breath_heavy_5",
-			"foley:generated/voice_husk_breath_heavy_6",
-			"foley:generated/voice_husk_breath_heavy_7",
-			"foley:generated/voice_husk_breath_heavy_8",
-			"foley:generated/voice_husk_breath_heavy_9",
-			"foley:generated/voice_husk_breath_heavy_10",
-			"foley:generated/voice_husk_breath_heavy_11"
+			"foley:generated/voice_cow_hurt_0",
+			"foley:generated/voice_cow_hurt_1",
+			"foley:generated/voice_cow_hurt_2",
+			"foley:generated/voice_cow_hurt_3",
+			"foley:generated/voice_cow_hurt_4",
+			"foley:generated/voice_cow_hurt_5",
+			"foley:generated/voice_cow_hurt_6",
+			"foley:generated/voice_cow_hurt_7",
+			"foley:generated/voice_cow_hurt_8",
+			"foley:generated/voice_cow_hurt_9",
+			"foley:generated/voice_cow_hurt_10",
+			"foley:generated/voice_cow_hurt_11"
 		]
 	},
-	"voice_husk_ambient_near": {
-		"subtitle": "subtitles.entity.husk.ambient",
+	"voice_creeper_death": {
+		"subtitle": "subtitles.entity.creeper.death",
 		"sounds": [
-			"foley:generated/voice_husk_ambient_near_0",
-			"foley:generated/voice_husk_ambient_near_1",
-			"foley:generated/voice_husk_ambient_near_2",
-			"foley:generated/voice_husk_ambient_near_3",
-			"foley:generated/voice_husk_ambient_near_4",
-			"foley:generated/voice_husk_ambient_near_5",
-			"foley:generated/voice_husk_ambient_near_6",
-			"foley:generated/voice_husk_ambient_near_7",
-			"foley:generated/voice_husk_ambient_near_8",
-			"foley:generated/voice_husk_ambient_near_9",
-			"foley:generated/voice_husk_ambient_near_10",
-			"foley:generated/voice_husk_ambient_near_11"
+			"foley:generated/voice_creeper_death_0",
+			"foley:generated/voice_creeper_death_1",
+			"foley:generated/voice_creeper_death_2",
+			"foley:generated/voice_creeper_death_3",
+			"foley:generated/voice_creeper_death_4",
+			"foley:generated/voice_creeper_death_5",
+			"foley:generated/voice_creeper_death_6",
+			"foley:generated/voice_creeper_death_7",
+			"foley:generated/voice_creeper_death_8",
+			"foley:generated/voice_creeper_death_9",
+			"foley:generated/voice_creeper_death_10",
+			"foley:generated/voice_creeper_death_11"
+		]
+	},
+	"voice_creeper_hurt": {
+		"subtitle": "subtitles.entity.creeper.hurt",
+		"sounds": [
+			"foley:generated/voice_creeper_hurt_0",
+			"foley:generated/voice_creeper_hurt_1",
+			"foley:generated/voice_creeper_hurt_2",
+			"foley:generated/voice_creeper_hurt_3",
+			"foley:generated/voice_creeper_hurt_4",
+			"foley:generated/voice_creeper_hurt_5",
+			"foley:generated/voice_creeper_hurt_6",
+			"foley:generated/voice_creeper_hurt_7",
+			"foley:generated/voice_creeper_hurt_8",
+			"foley:generated/voice_creeper_hurt_9",
+			"foley:generated/voice_creeper_hurt_10",
+			"foley:generated/voice_creeper_hurt_11"
+		]
+	},
+	"voice_creeper_primed": {
+		"subtitle": "subtitles.entity.creeper.primed",
+		"sounds": [
+			"foley:generated/voice_creeper_primed_0",
+			"foley:generated/voice_creeper_primed_1",
+			"foley:generated/voice_creeper_primed_2",
+			"foley:generated/voice_creeper_primed_3",
+			"foley:generated/voice_creeper_primed_4",
+			"foley:generated/voice_creeper_primed_5",
+			"foley:generated/voice_creeper_primed_6",
+			"foley:generated/voice_creeper_primed_7",
+			"foley:generated/voice_creeper_primed_8",
+			"foley:generated/voice_creeper_primed_9",
+			"foley:generated/voice_creeper_primed_10",
+			"foley:generated/voice_creeper_primed_11"
+		]
+	},
+	"voice_donkey_ambient": {
+		"subtitle": "subtitles.entity.donkey.ambient",
+		"sounds": [
+			"foley:generated/voice_donkey_ambient_0",
+			"foley:generated/voice_donkey_ambient_1",
+			"foley:generated/voice_donkey_ambient_2",
+			"foley:generated/voice_donkey_ambient_3",
+			"foley:generated/voice_donkey_ambient_4",
+			"foley:generated/voice_donkey_ambient_5",
+			"foley:generated/voice_donkey_ambient_6",
+			"foley:generated/voice_donkey_ambient_7",
+			"foley:generated/voice_donkey_ambient_8",
+			"foley:generated/voice_donkey_ambient_9",
+			"foley:generated/voice_donkey_ambient_10",
+			"foley:generated/voice_donkey_ambient_11"
+		]
+	},
+	"voice_donkey_angry": {
+		"subtitle": "subtitles.entity.donkey.angry",
+		"sounds": [
+			"foley:generated/voice_donkey_angry_0",
+			"foley:generated/voice_donkey_angry_1",
+			"foley:generated/voice_donkey_angry_2",
+			"foley:generated/voice_donkey_angry_3",
+			"foley:generated/voice_donkey_angry_4",
+			"foley:generated/voice_donkey_angry_5",
+			"foley:generated/voice_donkey_angry_6",
+			"foley:generated/voice_donkey_angry_7",
+			"foley:generated/voice_donkey_angry_8",
+			"foley:generated/voice_donkey_angry_9",
+			"foley:generated/voice_donkey_angry_10",
+			"foley:generated/voice_donkey_angry_11"
+		]
+	},
+	"voice_donkey_death": {
+		"subtitle": "subtitles.entity.donkey.death",
+		"sounds": [
+			"foley:generated/voice_donkey_death_0",
+			"foley:generated/voice_donkey_death_1",
+			"foley:generated/voice_donkey_death_2",
+			"foley:generated/voice_donkey_death_3",
+			"foley:generated/voice_donkey_death_4",
+			"foley:generated/voice_donkey_death_5",
+			"foley:generated/voice_donkey_death_6",
+			"foley:generated/voice_donkey_death_7",
+			"foley:generated/voice_donkey_death_8",
+			"foley:generated/voice_donkey_death_9",
+			"foley:generated/voice_donkey_death_10",
+			"foley:generated/voice_donkey_death_11"
+		]
+	},
+	"voice_donkey_hurt": {
+		"subtitle": "subtitles.entity.donkey.hurt",
+		"sounds": [
+			"foley:generated/voice_donkey_hurt_0",
+			"foley:generated/voice_donkey_hurt_1",
+			"foley:generated/voice_donkey_hurt_2",
+			"foley:generated/voice_donkey_hurt_3",
+			"foley:generated/voice_donkey_hurt_4",
+			"foley:generated/voice_donkey_hurt_5",
+			"foley:generated/voice_donkey_hurt_6",
+			"foley:generated/voice_donkey_hurt_7",
+			"foley:generated/voice_donkey_hurt_8",
+			"foley:generated/voice_donkey_hurt_9",
+			"foley:generated/voice_donkey_hurt_10",
+			"foley:generated/voice_donkey_hurt_11"
 		]
 	},
 	"voice_drowned_ambient": {
@@ -1808,38 +1724,21 @@
 			"foley:generated/voice_drowned_ambient_11"
 		]
 	},
-	"voice_drowned_hurt": {
-		"subtitle": "subtitles.entity.drowned.hurt",
+	"voice_drowned_ambient_near": {
+		"subtitle": "subtitles.entity.drowned.ambient",
 		"sounds": [
-			"foley:generated/voice_drowned_hurt_0",
-			"foley:generated/voice_drowned_hurt_1",
-			"foley:generated/voice_drowned_hurt_2",
-			"foley:generated/voice_drowned_hurt_3",
-			"foley:generated/voice_drowned_hurt_4",
-			"foley:generated/voice_drowned_hurt_5",
-			"foley:generated/voice_drowned_hurt_6",
-			"foley:generated/voice_drowned_hurt_7",
-			"foley:generated/voice_drowned_hurt_8",
-			"foley:generated/voice_drowned_hurt_9",
-			"foley:generated/voice_drowned_hurt_10",
-			"foley:generated/voice_drowned_hurt_11"
-		]
-	},
-	"voice_drowned_death": {
-		"subtitle": "subtitles.entity.drowned.death",
-		"sounds": [
-			"foley:generated/voice_drowned_death_0",
-			"foley:generated/voice_drowned_death_1",
-			"foley:generated/voice_drowned_death_2",
-			"foley:generated/voice_drowned_death_3",
-			"foley:generated/voice_drowned_death_4",
-			"foley:generated/voice_drowned_death_5",
-			"foley:generated/voice_drowned_death_6",
-			"foley:generated/voice_drowned_death_7",
-			"foley:generated/voice_drowned_death_8",
-			"foley:generated/voice_drowned_death_9",
-			"foley:generated/voice_drowned_death_10",
-			"foley:generated/voice_drowned_death_11"
+			"foley:generated/voice_drowned_ambient_near_0",
+			"foley:generated/voice_drowned_ambient_near_1",
+			"foley:generated/voice_drowned_ambient_near_2",
+			"foley:generated/voice_drowned_ambient_near_3",
+			"foley:generated/voice_drowned_ambient_near_4",
+			"foley:generated/voice_drowned_ambient_near_5",
+			"foley:generated/voice_drowned_ambient_near_6",
+			"foley:generated/voice_drowned_ambient_near_7",
+			"foley:generated/voice_drowned_ambient_near_8",
+			"foley:generated/voice_drowned_ambient_near_9",
+			"foley:generated/voice_drowned_ambient_near_10",
+			"foley:generated/voice_drowned_ambient_near_11"
 		]
 	},
 	"voice_drowned_ambient_water": {
@@ -1857,40 +1756,6 @@
 			"foley:generated/voice_drowned_ambient_water_9",
 			"foley:generated/voice_drowned_ambient_water_10",
 			"foley:generated/voice_drowned_ambient_water_11"
-		]
-	},
-	"voice_drowned_hurt_water": {
-		"subtitle": "subtitles.entity.drowned.hurt_water",
-		"sounds": [
-			"foley:generated/voice_drowned_hurt_water_0",
-			"foley:generated/voice_drowned_hurt_water_1",
-			"foley:generated/voice_drowned_hurt_water_2",
-			"foley:generated/voice_drowned_hurt_water_3",
-			"foley:generated/voice_drowned_hurt_water_4",
-			"foley:generated/voice_drowned_hurt_water_5",
-			"foley:generated/voice_drowned_hurt_water_6",
-			"foley:generated/voice_drowned_hurt_water_7",
-			"foley:generated/voice_drowned_hurt_water_8",
-			"foley:generated/voice_drowned_hurt_water_9",
-			"foley:generated/voice_drowned_hurt_water_10",
-			"foley:generated/voice_drowned_hurt_water_11"
-		]
-	},
-	"voice_drowned_death_water": {
-		"subtitle": "subtitles.entity.drowned.death_water",
-		"sounds": [
-			"foley:generated/voice_drowned_death_water_0",
-			"foley:generated/voice_drowned_death_water_1",
-			"foley:generated/voice_drowned_death_water_2",
-			"foley:generated/voice_drowned_death_water_3",
-			"foley:generated/voice_drowned_death_water_4",
-			"foley:generated/voice_drowned_death_water_5",
-			"foley:generated/voice_drowned_death_water_6",
-			"foley:generated/voice_drowned_death_water_7",
-			"foley:generated/voice_drowned_death_water_8",
-			"foley:generated/voice_drowned_death_water_9",
-			"foley:generated/voice_drowned_death_water_10",
-			"foley:generated/voice_drowned_death_water_11"
 		]
 	},
 	"voice_drowned_breath": {
@@ -1927,21 +1792,2876 @@
 			"foley:generated/voice_drowned_breath_heavy_11"
 		]
 	},
-	"voice_drowned_ambient_near": {
-		"subtitle": "subtitles.entity.drowned.ambient",
+	"voice_drowned_death": {
+		"subtitle": "subtitles.entity.drowned.death",
 		"sounds": [
-			"foley:generated/voice_drowned_ambient_near_0",
-			"foley:generated/voice_drowned_ambient_near_1",
-			"foley:generated/voice_drowned_ambient_near_2",
-			"foley:generated/voice_drowned_ambient_near_3",
-			"foley:generated/voice_drowned_ambient_near_4",
-			"foley:generated/voice_drowned_ambient_near_5",
-			"foley:generated/voice_drowned_ambient_near_6",
-			"foley:generated/voice_drowned_ambient_near_7",
-			"foley:generated/voice_drowned_ambient_near_8",
-			"foley:generated/voice_drowned_ambient_near_9",
-			"foley:generated/voice_drowned_ambient_near_10",
-			"foley:generated/voice_drowned_ambient_near_11"
+			"foley:generated/voice_drowned_death_0",
+			"foley:generated/voice_drowned_death_1",
+			"foley:generated/voice_drowned_death_2",
+			"foley:generated/voice_drowned_death_3",
+			"foley:generated/voice_drowned_death_4",
+			"foley:generated/voice_drowned_death_5",
+			"foley:generated/voice_drowned_death_6",
+			"foley:generated/voice_drowned_death_7",
+			"foley:generated/voice_drowned_death_8",
+			"foley:generated/voice_drowned_death_9",
+			"foley:generated/voice_drowned_death_10",
+			"foley:generated/voice_drowned_death_11"
+		]
+	},
+	"voice_drowned_death_water": {
+		"subtitle": "subtitles.entity.drowned.death",
+		"sounds": [
+			"foley:generated/voice_drowned_death_water_0",
+			"foley:generated/voice_drowned_death_water_1",
+			"foley:generated/voice_drowned_death_water_2",
+			"foley:generated/voice_drowned_death_water_3",
+			"foley:generated/voice_drowned_death_water_4",
+			"foley:generated/voice_drowned_death_water_5",
+			"foley:generated/voice_drowned_death_water_6",
+			"foley:generated/voice_drowned_death_water_7",
+			"foley:generated/voice_drowned_death_water_8",
+			"foley:generated/voice_drowned_death_water_9",
+			"foley:generated/voice_drowned_death_water_10",
+			"foley:generated/voice_drowned_death_water_11"
+		]
+	},
+	"voice_drowned_hurt": {
+		"subtitle": "subtitles.entity.drowned.hurt",
+		"sounds": [
+			"foley:generated/voice_drowned_hurt_0",
+			"foley:generated/voice_drowned_hurt_1",
+			"foley:generated/voice_drowned_hurt_2",
+			"foley:generated/voice_drowned_hurt_3",
+			"foley:generated/voice_drowned_hurt_4",
+			"foley:generated/voice_drowned_hurt_5",
+			"foley:generated/voice_drowned_hurt_6",
+			"foley:generated/voice_drowned_hurt_7",
+			"foley:generated/voice_drowned_hurt_8",
+			"foley:generated/voice_drowned_hurt_9",
+			"foley:generated/voice_drowned_hurt_10",
+			"foley:generated/voice_drowned_hurt_11"
+		]
+	},
+	"voice_drowned_hurt_water": {
+		"subtitle": "subtitles.entity.drowned.hurt",
+		"sounds": [
+			"foley:generated/voice_drowned_hurt_water_0",
+			"foley:generated/voice_drowned_hurt_water_1",
+			"foley:generated/voice_drowned_hurt_water_2",
+			"foley:generated/voice_drowned_hurt_water_3",
+			"foley:generated/voice_drowned_hurt_water_4",
+			"foley:generated/voice_drowned_hurt_water_5",
+			"foley:generated/voice_drowned_hurt_water_6",
+			"foley:generated/voice_drowned_hurt_water_7",
+			"foley:generated/voice_drowned_hurt_water_8",
+			"foley:generated/voice_drowned_hurt_water_9",
+			"foley:generated/voice_drowned_hurt_water_10",
+			"foley:generated/voice_drowned_hurt_water_11"
+		]
+	},
+	"voice_elder_guardian_ambient": {
+		"subtitle": "subtitles.entity.elder_guardian.ambient",
+		"sounds": [
+			"foley:generated/voice_elder_guardian_ambient_0",
+			"foley:generated/voice_elder_guardian_ambient_1",
+			"foley:generated/voice_elder_guardian_ambient_2",
+			"foley:generated/voice_elder_guardian_ambient_3",
+			"foley:generated/voice_elder_guardian_ambient_4",
+			"foley:generated/voice_elder_guardian_ambient_5",
+			"foley:generated/voice_elder_guardian_ambient_6",
+			"foley:generated/voice_elder_guardian_ambient_7",
+			"foley:generated/voice_elder_guardian_ambient_8",
+			"foley:generated/voice_elder_guardian_ambient_9",
+			"foley:generated/voice_elder_guardian_ambient_10",
+			"foley:generated/voice_elder_guardian_ambient_11"
+		]
+	},
+	"voice_elder_guardian_ambient_land": {
+		"subtitle": "subtitles.entity.elder_guardian.ambient_land",
+		"sounds": [
+			"foley:generated/voice_elder_guardian_ambient_land_0",
+			"foley:generated/voice_elder_guardian_ambient_land_1",
+			"foley:generated/voice_elder_guardian_ambient_land_2",
+			"foley:generated/voice_elder_guardian_ambient_land_3",
+			"foley:generated/voice_elder_guardian_ambient_land_4",
+			"foley:generated/voice_elder_guardian_ambient_land_5",
+			"foley:generated/voice_elder_guardian_ambient_land_6",
+			"foley:generated/voice_elder_guardian_ambient_land_7",
+			"foley:generated/voice_elder_guardian_ambient_land_8",
+			"foley:generated/voice_elder_guardian_ambient_land_9",
+			"foley:generated/voice_elder_guardian_ambient_land_10",
+			"foley:generated/voice_elder_guardian_ambient_land_11"
+		]
+	},
+	"voice_elder_guardian_death": {
+		"subtitle": "subtitles.entity.elder_guardian.death",
+		"sounds": [
+			"foley:generated/voice_elder_guardian_death_0",
+			"foley:generated/voice_elder_guardian_death_1",
+			"foley:generated/voice_elder_guardian_death_2",
+			"foley:generated/voice_elder_guardian_death_3",
+			"foley:generated/voice_elder_guardian_death_4",
+			"foley:generated/voice_elder_guardian_death_5",
+			"foley:generated/voice_elder_guardian_death_6",
+			"foley:generated/voice_elder_guardian_death_7",
+			"foley:generated/voice_elder_guardian_death_8",
+			"foley:generated/voice_elder_guardian_death_9",
+			"foley:generated/voice_elder_guardian_death_10",
+			"foley:generated/voice_elder_guardian_death_11"
+		]
+	},
+	"voice_elder_guardian_flop": {
+		"subtitle": "subtitles.entity.elder_guardian.flop",
+		"sounds": [
+			"foley:generated/voice_elder_guardian_flop_0",
+			"foley:generated/voice_elder_guardian_flop_1",
+			"foley:generated/voice_elder_guardian_flop_2",
+			"foley:generated/voice_elder_guardian_flop_3",
+			"foley:generated/voice_elder_guardian_flop_4",
+			"foley:generated/voice_elder_guardian_flop_5",
+			"foley:generated/voice_elder_guardian_flop_6",
+			"foley:generated/voice_elder_guardian_flop_7",
+			"foley:generated/voice_elder_guardian_flop_8",
+			"foley:generated/voice_elder_guardian_flop_9",
+			"foley:generated/voice_elder_guardian_flop_10",
+			"foley:generated/voice_elder_guardian_flop_11"
+		]
+	},
+	"voice_elder_guardian_hurt": {
+		"subtitle": "subtitles.entity.elder_guardian.hurt",
+		"sounds": [
+			"foley:generated/voice_elder_guardian_hurt_0",
+			"foley:generated/voice_elder_guardian_hurt_1",
+			"foley:generated/voice_elder_guardian_hurt_2",
+			"foley:generated/voice_elder_guardian_hurt_3",
+			"foley:generated/voice_elder_guardian_hurt_4",
+			"foley:generated/voice_elder_guardian_hurt_5",
+			"foley:generated/voice_elder_guardian_hurt_6",
+			"foley:generated/voice_elder_guardian_hurt_7",
+			"foley:generated/voice_elder_guardian_hurt_8",
+			"foley:generated/voice_elder_guardian_hurt_9",
+			"foley:generated/voice_elder_guardian_hurt_10",
+			"foley:generated/voice_elder_guardian_hurt_11"
+		]
+	},
+	"voice_enderman_ambient": {
+		"subtitle": "subtitles.entity.enderman.ambient",
+		"sounds": [
+			"foley:generated/voice_enderman_ambient_0",
+			"foley:generated/voice_enderman_ambient_1",
+			"foley:generated/voice_enderman_ambient_2",
+			"foley:generated/voice_enderman_ambient_3",
+			"foley:generated/voice_enderman_ambient_4",
+			"foley:generated/voice_enderman_ambient_5",
+			"foley:generated/voice_enderman_ambient_6",
+			"foley:generated/voice_enderman_ambient_7",
+			"foley:generated/voice_enderman_ambient_8",
+			"foley:generated/voice_enderman_ambient_9",
+			"foley:generated/voice_enderman_ambient_10",
+			"foley:generated/voice_enderman_ambient_11"
+		]
+	},
+	"voice_enderman_death": {
+		"subtitle": "subtitles.entity.enderman.death",
+		"sounds": [
+			"foley:generated/voice_enderman_death_0",
+			"foley:generated/voice_enderman_death_1",
+			"foley:generated/voice_enderman_death_2",
+			"foley:generated/voice_enderman_death_3",
+			"foley:generated/voice_enderman_death_4",
+			"foley:generated/voice_enderman_death_5",
+			"foley:generated/voice_enderman_death_6",
+			"foley:generated/voice_enderman_death_7",
+			"foley:generated/voice_enderman_death_8",
+			"foley:generated/voice_enderman_death_9",
+			"foley:generated/voice_enderman_death_10",
+			"foley:generated/voice_enderman_death_11"
+		]
+	},
+	"voice_enderman_hurt": {
+		"subtitle": "subtitles.entity.enderman.hurt",
+		"sounds": [
+			"foley:generated/voice_enderman_hurt_0",
+			"foley:generated/voice_enderman_hurt_1",
+			"foley:generated/voice_enderman_hurt_2",
+			"foley:generated/voice_enderman_hurt_3",
+			"foley:generated/voice_enderman_hurt_4",
+			"foley:generated/voice_enderman_hurt_5",
+			"foley:generated/voice_enderman_hurt_6",
+			"foley:generated/voice_enderman_hurt_7",
+			"foley:generated/voice_enderman_hurt_8",
+			"foley:generated/voice_enderman_hurt_9",
+			"foley:generated/voice_enderman_hurt_10",
+			"foley:generated/voice_enderman_hurt_11"
+		]
+	},
+	"voice_enderman_scream": {
+		"subtitle": "subtitles.entity.enderman.scream",
+		"sounds": [
+			"foley:generated/voice_enderman_scream_0",
+			"foley:generated/voice_enderman_scream_1",
+			"foley:generated/voice_enderman_scream_2",
+			"foley:generated/voice_enderman_scream_3",
+			"foley:generated/voice_enderman_scream_4",
+			"foley:generated/voice_enderman_scream_5",
+			"foley:generated/voice_enderman_scream_6",
+			"foley:generated/voice_enderman_scream_7",
+			"foley:generated/voice_enderman_scream_8",
+			"foley:generated/voice_enderman_scream_9",
+			"foley:generated/voice_enderman_scream_10",
+			"foley:generated/voice_enderman_scream_11"
+		]
+	},
+	"voice_enderman_stare": {
+		"subtitle": "subtitles.entity.enderman.stare",
+		"sounds": [
+			"foley:generated/voice_enderman_stare_0",
+			"foley:generated/voice_enderman_stare_1",
+			"foley:generated/voice_enderman_stare_2",
+			"foley:generated/voice_enderman_stare_3",
+			"foley:generated/voice_enderman_stare_4",
+			"foley:generated/voice_enderman_stare_5",
+			"foley:generated/voice_enderman_stare_6",
+			"foley:generated/voice_enderman_stare_7",
+			"foley:generated/voice_enderman_stare_8",
+			"foley:generated/voice_enderman_stare_9",
+			"foley:generated/voice_enderman_stare_10",
+			"foley:generated/voice_enderman_stare_11"
+		]
+	},
+	"voice_endermite_ambient": {
+		"subtitle": "subtitles.entity.endermite.ambient",
+		"sounds": [
+			"foley:generated/voice_endermite_ambient_0",
+			"foley:generated/voice_endermite_ambient_1",
+			"foley:generated/voice_endermite_ambient_2",
+			"foley:generated/voice_endermite_ambient_3",
+			"foley:generated/voice_endermite_ambient_4",
+			"foley:generated/voice_endermite_ambient_5",
+			"foley:generated/voice_endermite_ambient_6",
+			"foley:generated/voice_endermite_ambient_7",
+			"foley:generated/voice_endermite_ambient_8",
+			"foley:generated/voice_endermite_ambient_9",
+			"foley:generated/voice_endermite_ambient_10",
+			"foley:generated/voice_endermite_ambient_11"
+		]
+	},
+	"voice_endermite_death": {
+		"subtitle": "subtitles.entity.endermite.death",
+		"sounds": [
+			"foley:generated/voice_endermite_death_0",
+			"foley:generated/voice_endermite_death_1",
+			"foley:generated/voice_endermite_death_2",
+			"foley:generated/voice_endermite_death_3",
+			"foley:generated/voice_endermite_death_4",
+			"foley:generated/voice_endermite_death_5",
+			"foley:generated/voice_endermite_death_6",
+			"foley:generated/voice_endermite_death_7",
+			"foley:generated/voice_endermite_death_8",
+			"foley:generated/voice_endermite_death_9",
+			"foley:generated/voice_endermite_death_10",
+			"foley:generated/voice_endermite_death_11"
+		]
+	},
+	"voice_endermite_hurt": {
+		"subtitle": "subtitles.entity.endermite.hurt",
+		"sounds": [
+			"foley:generated/voice_endermite_hurt_0",
+			"foley:generated/voice_endermite_hurt_1",
+			"foley:generated/voice_endermite_hurt_2",
+			"foley:generated/voice_endermite_hurt_3",
+			"foley:generated/voice_endermite_hurt_4",
+			"foley:generated/voice_endermite_hurt_5",
+			"foley:generated/voice_endermite_hurt_6",
+			"foley:generated/voice_endermite_hurt_7",
+			"foley:generated/voice_endermite_hurt_8",
+			"foley:generated/voice_endermite_hurt_9",
+			"foley:generated/voice_endermite_hurt_10",
+			"foley:generated/voice_endermite_hurt_11"
+		]
+	},
+	"voice_evoker_ambient": {
+		"subtitle": "subtitles.entity.evoker.ambient",
+		"sounds": [
+			"foley:generated/voice_evoker_ambient_0",
+			"foley:generated/voice_evoker_ambient_1",
+			"foley:generated/voice_evoker_ambient_2",
+			"foley:generated/voice_evoker_ambient_3",
+			"foley:generated/voice_evoker_ambient_4",
+			"foley:generated/voice_evoker_ambient_5",
+			"foley:generated/voice_evoker_ambient_6",
+			"foley:generated/voice_evoker_ambient_7",
+			"foley:generated/voice_evoker_ambient_8",
+			"foley:generated/voice_evoker_ambient_9",
+			"foley:generated/voice_evoker_ambient_10",
+			"foley:generated/voice_evoker_ambient_11"
+		]
+	},
+	"voice_evoker_celebrate": {
+		"subtitle": "subtitles.entity.evoker.celebrate",
+		"sounds": [
+			"foley:generated/voice_evoker_celebrate_0",
+			"foley:generated/voice_evoker_celebrate_1",
+			"foley:generated/voice_evoker_celebrate_2",
+			"foley:generated/voice_evoker_celebrate_3",
+			"foley:generated/voice_evoker_celebrate_4",
+			"foley:generated/voice_evoker_celebrate_5",
+			"foley:generated/voice_evoker_celebrate_6",
+			"foley:generated/voice_evoker_celebrate_7",
+			"foley:generated/voice_evoker_celebrate_8",
+			"foley:generated/voice_evoker_celebrate_9",
+			"foley:generated/voice_evoker_celebrate_10",
+			"foley:generated/voice_evoker_celebrate_11"
+		]
+	},
+	"voice_evoker_death": {
+		"subtitle": "subtitles.entity.evoker.death",
+		"sounds": [
+			"foley:generated/voice_evoker_death_0",
+			"foley:generated/voice_evoker_death_1",
+			"foley:generated/voice_evoker_death_2",
+			"foley:generated/voice_evoker_death_3",
+			"foley:generated/voice_evoker_death_4",
+			"foley:generated/voice_evoker_death_5",
+			"foley:generated/voice_evoker_death_6",
+			"foley:generated/voice_evoker_death_7",
+			"foley:generated/voice_evoker_death_8",
+			"foley:generated/voice_evoker_death_9",
+			"foley:generated/voice_evoker_death_10",
+			"foley:generated/voice_evoker_death_11"
+		]
+	},
+	"voice_evoker_hurt": {
+		"subtitle": "subtitles.entity.evoker.hurt",
+		"sounds": [
+			"foley:generated/voice_evoker_hurt_0",
+			"foley:generated/voice_evoker_hurt_1",
+			"foley:generated/voice_evoker_hurt_2",
+			"foley:generated/voice_evoker_hurt_3",
+			"foley:generated/voice_evoker_hurt_4",
+			"foley:generated/voice_evoker_hurt_5",
+			"foley:generated/voice_evoker_hurt_6",
+			"foley:generated/voice_evoker_hurt_7",
+			"foley:generated/voice_evoker_hurt_8",
+			"foley:generated/voice_evoker_hurt_9",
+			"foley:generated/voice_evoker_hurt_10",
+			"foley:generated/voice_evoker_hurt_11"
+		]
+	},
+	"voice_fox_aggressive": {
+		"subtitle": "subtitles.entity.fox.aggro",
+		"sounds": [
+			"foley:generated/voice_fox_aggressive_0",
+			"foley:generated/voice_fox_aggressive_1",
+			"foley:generated/voice_fox_aggressive_2",
+			"foley:generated/voice_fox_aggressive_3",
+			"foley:generated/voice_fox_aggressive_4",
+			"foley:generated/voice_fox_aggressive_5",
+			"foley:generated/voice_fox_aggressive_6",
+			"foley:generated/voice_fox_aggressive_7",
+			"foley:generated/voice_fox_aggressive_8",
+			"foley:generated/voice_fox_aggressive_9",
+			"foley:generated/voice_fox_aggressive_10",
+			"foley:generated/voice_fox_aggressive_11"
+		]
+	},
+	"voice_fox_ambient": {
+		"subtitle": "subtitles.entity.fox.ambient",
+		"sounds": [
+			"foley:generated/voice_fox_ambient_0",
+			"foley:generated/voice_fox_ambient_1",
+			"foley:generated/voice_fox_ambient_2",
+			"foley:generated/voice_fox_ambient_3",
+			"foley:generated/voice_fox_ambient_4",
+			"foley:generated/voice_fox_ambient_5",
+			"foley:generated/voice_fox_ambient_6",
+			"foley:generated/voice_fox_ambient_7",
+			"foley:generated/voice_fox_ambient_8",
+			"foley:generated/voice_fox_ambient_9",
+			"foley:generated/voice_fox_ambient_10",
+			"foley:generated/voice_fox_ambient_11"
+		]
+	},
+	"voice_fox_death": {
+		"subtitle": "subtitles.entity.fox.death",
+		"sounds": [
+			"foley:generated/voice_fox_death_0",
+			"foley:generated/voice_fox_death_1",
+			"foley:generated/voice_fox_death_2",
+			"foley:generated/voice_fox_death_3",
+			"foley:generated/voice_fox_death_4",
+			"foley:generated/voice_fox_death_5",
+			"foley:generated/voice_fox_death_6",
+			"foley:generated/voice_fox_death_7",
+			"foley:generated/voice_fox_death_8",
+			"foley:generated/voice_fox_death_9",
+			"foley:generated/voice_fox_death_10",
+			"foley:generated/voice_fox_death_11"
+		]
+	},
+	"voice_fox_hurt": {
+		"subtitle": "subtitles.entity.fox.hurt",
+		"sounds": [
+			"foley:generated/voice_fox_hurt_0",
+			"foley:generated/voice_fox_hurt_1",
+			"foley:generated/voice_fox_hurt_2",
+			"foley:generated/voice_fox_hurt_3",
+			"foley:generated/voice_fox_hurt_4",
+			"foley:generated/voice_fox_hurt_5",
+			"foley:generated/voice_fox_hurt_6",
+			"foley:generated/voice_fox_hurt_7",
+			"foley:generated/voice_fox_hurt_8",
+			"foley:generated/voice_fox_hurt_9",
+			"foley:generated/voice_fox_hurt_10",
+			"foley:generated/voice_fox_hurt_11"
+		]
+	},
+	"voice_fox_screech": {
+		"subtitle": "subtitles.entity.fox.screech",
+		"sounds": [
+			"foley:generated/voice_fox_screech_0",
+			"foley:generated/voice_fox_screech_1",
+			"foley:generated/voice_fox_screech_2",
+			"foley:generated/voice_fox_screech_3",
+			"foley:generated/voice_fox_screech_4",
+			"foley:generated/voice_fox_screech_5",
+			"foley:generated/voice_fox_screech_6",
+			"foley:generated/voice_fox_screech_7",
+			"foley:generated/voice_fox_screech_8",
+			"foley:generated/voice_fox_screech_9",
+			"foley:generated/voice_fox_screech_10",
+			"foley:generated/voice_fox_screech_11"
+		]
+	},
+	"voice_fox_sleep": {
+		"subtitle": "subtitles.entity.fox.sleep",
+		"sounds": [
+			"foley:generated/voice_fox_sleep_0",
+			"foley:generated/voice_fox_sleep_1",
+			"foley:generated/voice_fox_sleep_2",
+			"foley:generated/voice_fox_sleep_3",
+			"foley:generated/voice_fox_sleep_4",
+			"foley:generated/voice_fox_sleep_5",
+			"foley:generated/voice_fox_sleep_6",
+			"foley:generated/voice_fox_sleep_7",
+			"foley:generated/voice_fox_sleep_8",
+			"foley:generated/voice_fox_sleep_9",
+			"foley:generated/voice_fox_sleep_10",
+			"foley:generated/voice_fox_sleep_11"
+		]
+	},
+	"voice_fox_snort": {
+		"subtitle": "subtitles.entity.fox.sniff",
+		"sounds": [
+			"foley:generated/voice_fox_snort_0",
+			"foley:generated/voice_fox_snort_1",
+			"foley:generated/voice_fox_snort_2",
+			"foley:generated/voice_fox_snort_3",
+			"foley:generated/voice_fox_snort_4",
+			"foley:generated/voice_fox_snort_5",
+			"foley:generated/voice_fox_snort_6",
+			"foley:generated/voice_fox_snort_7",
+			"foley:generated/voice_fox_snort_8",
+			"foley:generated/voice_fox_snort_9",
+			"foley:generated/voice_fox_snort_10",
+			"foley:generated/voice_fox_snort_11"
+		]
+	},
+	"voice_frog_ambient": {
+		"subtitle": "subtitles.entity.frog.ambient",
+		"sounds": [
+			"foley:generated/voice_frog_ambient_0",
+			"foley:generated/voice_frog_ambient_1",
+			"foley:generated/voice_frog_ambient_2",
+			"foley:generated/voice_frog_ambient_3",
+			"foley:generated/voice_frog_ambient_4",
+			"foley:generated/voice_frog_ambient_5",
+			"foley:generated/voice_frog_ambient_6",
+			"foley:generated/voice_frog_ambient_7",
+			"foley:generated/voice_frog_ambient_8",
+			"foley:generated/voice_frog_ambient_9",
+			"foley:generated/voice_frog_ambient_10",
+			"foley:generated/voice_frog_ambient_11"
+		]
+	},
+	"voice_frog_death": {
+		"subtitle": "subtitles.entity.frog.death",
+		"sounds": [
+			"foley:generated/voice_frog_death_0",
+			"foley:generated/voice_frog_death_1",
+			"foley:generated/voice_frog_death_2",
+			"foley:generated/voice_frog_death_3",
+			"foley:generated/voice_frog_death_4",
+			"foley:generated/voice_frog_death_5",
+			"foley:generated/voice_frog_death_6",
+			"foley:generated/voice_frog_death_7",
+			"foley:generated/voice_frog_death_8",
+			"foley:generated/voice_frog_death_9",
+			"foley:generated/voice_frog_death_10",
+			"foley:generated/voice_frog_death_11"
+		]
+	},
+	"voice_frog_hurt": {
+		"subtitle": "subtitles.entity.frog.hurt",
+		"sounds": [
+			"foley:generated/voice_frog_hurt_0",
+			"foley:generated/voice_frog_hurt_1",
+			"foley:generated/voice_frog_hurt_2",
+			"foley:generated/voice_frog_hurt_3",
+			"foley:generated/voice_frog_hurt_4",
+			"foley:generated/voice_frog_hurt_5",
+			"foley:generated/voice_frog_hurt_6",
+			"foley:generated/voice_frog_hurt_7",
+			"foley:generated/voice_frog_hurt_8",
+			"foley:generated/voice_frog_hurt_9",
+			"foley:generated/voice_frog_hurt_10",
+			"foley:generated/voice_frog_hurt_11"
+		]
+	},
+	"voice_goat_ambient": {
+		"subtitle": "subtitles.entity.goat.ambient",
+		"sounds": [
+			"foley:generated/voice_goat_ambient_0",
+			"foley:generated/voice_goat_ambient_1",
+			"foley:generated/voice_goat_ambient_2",
+			"foley:generated/voice_goat_ambient_3",
+			"foley:generated/voice_goat_ambient_4",
+			"foley:generated/voice_goat_ambient_5",
+			"foley:generated/voice_goat_ambient_6",
+			"foley:generated/voice_goat_ambient_7",
+			"foley:generated/voice_goat_ambient_8",
+			"foley:generated/voice_goat_ambient_9",
+			"foley:generated/voice_goat_ambient_10",
+			"foley:generated/voice_goat_ambient_11"
+		]
+	},
+	"voice_goat_death": {
+		"subtitle": "subtitles.entity.goat.death",
+		"sounds": [
+			"foley:generated/voice_goat_death_0",
+			"foley:generated/voice_goat_death_1",
+			"foley:generated/voice_goat_death_2",
+			"foley:generated/voice_goat_death_3",
+			"foley:generated/voice_goat_death_4",
+			"foley:generated/voice_goat_death_5",
+			"foley:generated/voice_goat_death_6",
+			"foley:generated/voice_goat_death_7",
+			"foley:generated/voice_goat_death_8",
+			"foley:generated/voice_goat_death_9",
+			"foley:generated/voice_goat_death_10",
+			"foley:generated/voice_goat_death_11"
+		]
+	},
+	"voice_goat_hurt": {
+		"subtitle": "subtitles.entity.goat.hurt",
+		"sounds": [
+			"foley:generated/voice_goat_hurt_0",
+			"foley:generated/voice_goat_hurt_1",
+			"foley:generated/voice_goat_hurt_2",
+			"foley:generated/voice_goat_hurt_3",
+			"foley:generated/voice_goat_hurt_4",
+			"foley:generated/voice_goat_hurt_5",
+			"foley:generated/voice_goat_hurt_6",
+			"foley:generated/voice_goat_hurt_7",
+			"foley:generated/voice_goat_hurt_8",
+			"foley:generated/voice_goat_hurt_9",
+			"foley:generated/voice_goat_hurt_10",
+			"foley:generated/voice_goat_hurt_11"
+		]
+	},
+	"voice_goat_scream": {
+		"subtitle": "subtitles.entity.goat.screaming.ambient",
+		"sounds": [
+			"foley:generated/voice_goat_scream_0",
+			"foley:generated/voice_goat_scream_1",
+			"foley:generated/voice_goat_scream_2",
+			"foley:generated/voice_goat_scream_3",
+			"foley:generated/voice_goat_scream_4",
+			"foley:generated/voice_goat_scream_5",
+			"foley:generated/voice_goat_scream_6",
+			"foley:generated/voice_goat_scream_7",
+			"foley:generated/voice_goat_scream_8",
+			"foley:generated/voice_goat_scream_9",
+			"foley:generated/voice_goat_scream_10",
+			"foley:generated/voice_goat_scream_11"
+		]
+	},
+	"voice_guardian_ambient": {
+		"subtitle": "subtitles.entity.guardian.ambient",
+		"sounds": [
+			"foley:generated/voice_guardian_ambient_0",
+			"foley:generated/voice_guardian_ambient_1",
+			"foley:generated/voice_guardian_ambient_2",
+			"foley:generated/voice_guardian_ambient_3",
+			"foley:generated/voice_guardian_ambient_4",
+			"foley:generated/voice_guardian_ambient_5",
+			"foley:generated/voice_guardian_ambient_6",
+			"foley:generated/voice_guardian_ambient_7",
+			"foley:generated/voice_guardian_ambient_8",
+			"foley:generated/voice_guardian_ambient_9",
+			"foley:generated/voice_guardian_ambient_10",
+			"foley:generated/voice_guardian_ambient_11"
+		]
+	},
+	"voice_guardian_ambient_land": {
+		"subtitle": "subtitles.entity.guardian.ambient_land",
+		"sounds": [
+			"foley:generated/voice_guardian_ambient_land_0",
+			"foley:generated/voice_guardian_ambient_land_1",
+			"foley:generated/voice_guardian_ambient_land_2",
+			"foley:generated/voice_guardian_ambient_land_3",
+			"foley:generated/voice_guardian_ambient_land_4",
+			"foley:generated/voice_guardian_ambient_land_5",
+			"foley:generated/voice_guardian_ambient_land_6",
+			"foley:generated/voice_guardian_ambient_land_7",
+			"foley:generated/voice_guardian_ambient_land_8",
+			"foley:generated/voice_guardian_ambient_land_9",
+			"foley:generated/voice_guardian_ambient_land_10",
+			"foley:generated/voice_guardian_ambient_land_11"
+		]
+	},
+	"voice_guardian_death": {
+		"subtitle": "subtitles.entity.guardian.death",
+		"sounds": [
+			"foley:generated/voice_guardian_death_0",
+			"foley:generated/voice_guardian_death_1",
+			"foley:generated/voice_guardian_death_2",
+			"foley:generated/voice_guardian_death_3",
+			"foley:generated/voice_guardian_death_4",
+			"foley:generated/voice_guardian_death_5",
+			"foley:generated/voice_guardian_death_6",
+			"foley:generated/voice_guardian_death_7",
+			"foley:generated/voice_guardian_death_8",
+			"foley:generated/voice_guardian_death_9",
+			"foley:generated/voice_guardian_death_10",
+			"foley:generated/voice_guardian_death_11"
+		]
+	},
+	"voice_guardian_flop": {
+		"subtitle": "subtitles.entity.guardian.flop",
+		"sounds": [
+			"foley:generated/voice_guardian_flop_0",
+			"foley:generated/voice_guardian_flop_1",
+			"foley:generated/voice_guardian_flop_2",
+			"foley:generated/voice_guardian_flop_3",
+			"foley:generated/voice_guardian_flop_4",
+			"foley:generated/voice_guardian_flop_5",
+			"foley:generated/voice_guardian_flop_6",
+			"foley:generated/voice_guardian_flop_7",
+			"foley:generated/voice_guardian_flop_8",
+			"foley:generated/voice_guardian_flop_9",
+			"foley:generated/voice_guardian_flop_10",
+			"foley:generated/voice_guardian_flop_11"
+		]
+	},
+	"voice_guardian_hurt": {
+		"subtitle": "subtitles.entity.guardian.hurt",
+		"sounds": [
+			"foley:generated/voice_guardian_hurt_0",
+			"foley:generated/voice_guardian_hurt_1",
+			"foley:generated/voice_guardian_hurt_2",
+			"foley:generated/voice_guardian_hurt_3",
+			"foley:generated/voice_guardian_hurt_4",
+			"foley:generated/voice_guardian_hurt_5",
+			"foley:generated/voice_guardian_hurt_6",
+			"foley:generated/voice_guardian_hurt_7",
+			"foley:generated/voice_guardian_hurt_8",
+			"foley:generated/voice_guardian_hurt_9",
+			"foley:generated/voice_guardian_hurt_10",
+			"foley:generated/voice_guardian_hurt_11"
+		]
+	},
+	"voice_horse_ambient": {
+		"subtitle": "subtitles.entity.horse.ambient",
+		"sounds": [
+			"foley:generated/voice_horse_ambient_0",
+			"foley:generated/voice_horse_ambient_1",
+			"foley:generated/voice_horse_ambient_2",
+			"foley:generated/voice_horse_ambient_3",
+			"foley:generated/voice_horse_ambient_4",
+			"foley:generated/voice_horse_ambient_5",
+			"foley:generated/voice_horse_ambient_6",
+			"foley:generated/voice_horse_ambient_7",
+			"foley:generated/voice_horse_ambient_8",
+			"foley:generated/voice_horse_ambient_9",
+			"foley:generated/voice_horse_ambient_10",
+			"foley:generated/voice_horse_ambient_11"
+		]
+	},
+	"voice_horse_angry": {
+		"subtitle": "subtitles.entity.horse.angry",
+		"sounds": [
+			"foley:generated/voice_horse_angry_0",
+			"foley:generated/voice_horse_angry_1",
+			"foley:generated/voice_horse_angry_2",
+			"foley:generated/voice_horse_angry_3",
+			"foley:generated/voice_horse_angry_4",
+			"foley:generated/voice_horse_angry_5",
+			"foley:generated/voice_horse_angry_6",
+			"foley:generated/voice_horse_angry_7",
+			"foley:generated/voice_horse_angry_8",
+			"foley:generated/voice_horse_angry_9",
+			"foley:generated/voice_horse_angry_10",
+			"foley:generated/voice_horse_angry_11"
+		]
+	},
+	"voice_horse_death": {
+		"subtitle": "subtitles.entity.horse.death",
+		"sounds": [
+			"foley:generated/voice_horse_death_0",
+			"foley:generated/voice_horse_death_1",
+			"foley:generated/voice_horse_death_2",
+			"foley:generated/voice_horse_death_3",
+			"foley:generated/voice_horse_death_4",
+			"foley:generated/voice_horse_death_5",
+			"foley:generated/voice_horse_death_6",
+			"foley:generated/voice_horse_death_7",
+			"foley:generated/voice_horse_death_8",
+			"foley:generated/voice_horse_death_9",
+			"foley:generated/voice_horse_death_10",
+			"foley:generated/voice_horse_death_11"
+		]
+	},
+	"voice_horse_hurt": {
+		"subtitle": "subtitles.entity.horse.hurt",
+		"sounds": [
+			"foley:generated/voice_horse_hurt_0",
+			"foley:generated/voice_horse_hurt_1",
+			"foley:generated/voice_horse_hurt_2",
+			"foley:generated/voice_horse_hurt_3",
+			"foley:generated/voice_horse_hurt_4",
+			"foley:generated/voice_horse_hurt_5",
+			"foley:generated/voice_horse_hurt_6",
+			"foley:generated/voice_horse_hurt_7",
+			"foley:generated/voice_horse_hurt_8",
+			"foley:generated/voice_horse_hurt_9",
+			"foley:generated/voice_horse_hurt_10",
+			"foley:generated/voice_horse_hurt_11"
+		]
+	},
+	"voice_horse_snort": {
+		"subtitle": "subtitles.entity.horse.breathe",
+		"sounds": [
+			"foley:generated/voice_horse_snort_0",
+			"foley:generated/voice_horse_snort_1",
+			"foley:generated/voice_horse_snort_2",
+			"foley:generated/voice_horse_snort_3",
+			"foley:generated/voice_horse_snort_4",
+			"foley:generated/voice_horse_snort_5",
+			"foley:generated/voice_horse_snort_6",
+			"foley:generated/voice_horse_snort_7",
+			"foley:generated/voice_horse_snort_8",
+			"foley:generated/voice_horse_snort_9",
+			"foley:generated/voice_horse_snort_10",
+			"foley:generated/voice_horse_snort_11"
+		]
+	},
+	"voice_husk_ambient": {
+		"subtitle": "subtitles.entity.husk.ambient",
+		"sounds": [
+			"foley:generated/voice_husk_ambient_0",
+			"foley:generated/voice_husk_ambient_1",
+			"foley:generated/voice_husk_ambient_2",
+			"foley:generated/voice_husk_ambient_3",
+			"foley:generated/voice_husk_ambient_4",
+			"foley:generated/voice_husk_ambient_5",
+			"foley:generated/voice_husk_ambient_6",
+			"foley:generated/voice_husk_ambient_7",
+			"foley:generated/voice_husk_ambient_8",
+			"foley:generated/voice_husk_ambient_9",
+			"foley:generated/voice_husk_ambient_10",
+			"foley:generated/voice_husk_ambient_11"
+		]
+	},
+	"voice_husk_ambient_near": {
+		"subtitle": "subtitles.entity.husk.ambient",
+		"sounds": [
+			"foley:generated/voice_husk_ambient_near_0",
+			"foley:generated/voice_husk_ambient_near_1",
+			"foley:generated/voice_husk_ambient_near_2",
+			"foley:generated/voice_husk_ambient_near_3",
+			"foley:generated/voice_husk_ambient_near_4",
+			"foley:generated/voice_husk_ambient_near_5",
+			"foley:generated/voice_husk_ambient_near_6",
+			"foley:generated/voice_husk_ambient_near_7",
+			"foley:generated/voice_husk_ambient_near_8",
+			"foley:generated/voice_husk_ambient_near_9",
+			"foley:generated/voice_husk_ambient_near_10",
+			"foley:generated/voice_husk_ambient_near_11"
+		]
+	},
+	"voice_husk_breath": {
+		"subtitle": "subtitles.foley.breath",
+		"sounds": [
+			"foley:generated/voice_husk_breath_0",
+			"foley:generated/voice_husk_breath_1",
+			"foley:generated/voice_husk_breath_2",
+			"foley:generated/voice_husk_breath_3",
+			"foley:generated/voice_husk_breath_4",
+			"foley:generated/voice_husk_breath_5",
+			"foley:generated/voice_husk_breath_6",
+			"foley:generated/voice_husk_breath_7",
+			"foley:generated/voice_husk_breath_8",
+			"foley:generated/voice_husk_breath_9",
+			"foley:generated/voice_husk_breath_10",
+			"foley:generated/voice_husk_breath_11"
+		]
+	},
+	"voice_husk_breath_heavy": {
+		"subtitle": "subtitles.foley.breath",
+		"sounds": [
+			"foley:generated/voice_husk_breath_heavy_0",
+			"foley:generated/voice_husk_breath_heavy_1",
+			"foley:generated/voice_husk_breath_heavy_2",
+			"foley:generated/voice_husk_breath_heavy_3",
+			"foley:generated/voice_husk_breath_heavy_4",
+			"foley:generated/voice_husk_breath_heavy_5",
+			"foley:generated/voice_husk_breath_heavy_6",
+			"foley:generated/voice_husk_breath_heavy_7",
+			"foley:generated/voice_husk_breath_heavy_8",
+			"foley:generated/voice_husk_breath_heavy_9",
+			"foley:generated/voice_husk_breath_heavy_10",
+			"foley:generated/voice_husk_breath_heavy_11"
+		]
+	},
+	"voice_husk_death": {
+		"subtitle": "subtitles.entity.husk.death",
+		"sounds": [
+			"foley:generated/voice_husk_death_0",
+			"foley:generated/voice_husk_death_1",
+			"foley:generated/voice_husk_death_2",
+			"foley:generated/voice_husk_death_3",
+			"foley:generated/voice_husk_death_4",
+			"foley:generated/voice_husk_death_5",
+			"foley:generated/voice_husk_death_6",
+			"foley:generated/voice_husk_death_7",
+			"foley:generated/voice_husk_death_8",
+			"foley:generated/voice_husk_death_9",
+			"foley:generated/voice_husk_death_10",
+			"foley:generated/voice_husk_death_11"
+		]
+	},
+	"voice_husk_hurt": {
+		"subtitle": "subtitles.entity.husk.hurt",
+		"sounds": [
+			"foley:generated/voice_husk_hurt_0",
+			"foley:generated/voice_husk_hurt_1",
+			"foley:generated/voice_husk_hurt_2",
+			"foley:generated/voice_husk_hurt_3",
+			"foley:generated/voice_husk_hurt_4",
+			"foley:generated/voice_husk_hurt_5",
+			"foley:generated/voice_husk_hurt_6",
+			"foley:generated/voice_husk_hurt_7",
+			"foley:generated/voice_husk_hurt_8",
+			"foley:generated/voice_husk_hurt_9",
+			"foley:generated/voice_husk_hurt_10",
+			"foley:generated/voice_husk_hurt_11"
+		]
+	},
+	"voice_illusioner_ambient": {
+		"subtitle": "subtitles.entity.illusioner.ambient",
+		"sounds": [
+			"foley:generated/voice_illusioner_ambient_0",
+			"foley:generated/voice_illusioner_ambient_1",
+			"foley:generated/voice_illusioner_ambient_2",
+			"foley:generated/voice_illusioner_ambient_3",
+			"foley:generated/voice_illusioner_ambient_4",
+			"foley:generated/voice_illusioner_ambient_5",
+			"foley:generated/voice_illusioner_ambient_6",
+			"foley:generated/voice_illusioner_ambient_7",
+			"foley:generated/voice_illusioner_ambient_8",
+			"foley:generated/voice_illusioner_ambient_9",
+			"foley:generated/voice_illusioner_ambient_10",
+			"foley:generated/voice_illusioner_ambient_11"
+		]
+	},
+	"voice_illusioner_death": {
+		"subtitle": "subtitles.entity.illusioner.death",
+		"sounds": [
+			"foley:generated/voice_illusioner_death_0",
+			"foley:generated/voice_illusioner_death_1",
+			"foley:generated/voice_illusioner_death_2",
+			"foley:generated/voice_illusioner_death_3",
+			"foley:generated/voice_illusioner_death_4",
+			"foley:generated/voice_illusioner_death_5",
+			"foley:generated/voice_illusioner_death_6",
+			"foley:generated/voice_illusioner_death_7",
+			"foley:generated/voice_illusioner_death_8",
+			"foley:generated/voice_illusioner_death_9",
+			"foley:generated/voice_illusioner_death_10",
+			"foley:generated/voice_illusioner_death_11"
+		]
+	},
+	"voice_illusioner_hurt": {
+		"subtitle": "subtitles.entity.illusioner.hurt",
+		"sounds": [
+			"foley:generated/voice_illusioner_hurt_0",
+			"foley:generated/voice_illusioner_hurt_1",
+			"foley:generated/voice_illusioner_hurt_2",
+			"foley:generated/voice_illusioner_hurt_3",
+			"foley:generated/voice_illusioner_hurt_4",
+			"foley:generated/voice_illusioner_hurt_5",
+			"foley:generated/voice_illusioner_hurt_6",
+			"foley:generated/voice_illusioner_hurt_7",
+			"foley:generated/voice_illusioner_hurt_8",
+			"foley:generated/voice_illusioner_hurt_9",
+			"foley:generated/voice_illusioner_hurt_10",
+			"foley:generated/voice_illusioner_hurt_11"
+		]
+	},
+	"voice_iron_golem_death": {
+		"subtitle": "subtitles.entity.iron_golem.death",
+		"sounds": [
+			"foley:generated/voice_iron_golem_death_0",
+			"foley:generated/voice_iron_golem_death_1",
+			"foley:generated/voice_iron_golem_death_2",
+			"foley:generated/voice_iron_golem_death_3",
+			"foley:generated/voice_iron_golem_death_4",
+			"foley:generated/voice_iron_golem_death_5",
+			"foley:generated/voice_iron_golem_death_6",
+			"foley:generated/voice_iron_golem_death_7",
+			"foley:generated/voice_iron_golem_death_8",
+			"foley:generated/voice_iron_golem_death_9",
+			"foley:generated/voice_iron_golem_death_10",
+			"foley:generated/voice_iron_golem_death_11"
+		]
+	},
+	"voice_iron_golem_hurt": {
+		"subtitle": "subtitles.entity.iron_golem.hurt",
+		"sounds": [
+			"foley:generated/voice_iron_golem_hurt_0",
+			"foley:generated/voice_iron_golem_hurt_1",
+			"foley:generated/voice_iron_golem_hurt_2",
+			"foley:generated/voice_iron_golem_hurt_3",
+			"foley:generated/voice_iron_golem_hurt_4",
+			"foley:generated/voice_iron_golem_hurt_5",
+			"foley:generated/voice_iron_golem_hurt_6",
+			"foley:generated/voice_iron_golem_hurt_7",
+			"foley:generated/voice_iron_golem_hurt_8",
+			"foley:generated/voice_iron_golem_hurt_9",
+			"foley:generated/voice_iron_golem_hurt_10",
+			"foley:generated/voice_iron_golem_hurt_11"
+		]
+	},
+	"voice_llama_ambient": {
+		"subtitle": "subtitles.entity.llama.ambient",
+		"sounds": [
+			"foley:generated/voice_llama_ambient_0",
+			"foley:generated/voice_llama_ambient_1",
+			"foley:generated/voice_llama_ambient_2",
+			"foley:generated/voice_llama_ambient_3",
+			"foley:generated/voice_llama_ambient_4",
+			"foley:generated/voice_llama_ambient_5",
+			"foley:generated/voice_llama_ambient_6",
+			"foley:generated/voice_llama_ambient_7",
+			"foley:generated/voice_llama_ambient_8",
+			"foley:generated/voice_llama_ambient_9",
+			"foley:generated/voice_llama_ambient_10",
+			"foley:generated/voice_llama_ambient_11"
+		]
+	},
+	"voice_llama_angry": {
+		"subtitle": "subtitles.entity.llama.angry",
+		"sounds": [
+			"foley:generated/voice_llama_angry_0",
+			"foley:generated/voice_llama_angry_1",
+			"foley:generated/voice_llama_angry_2",
+			"foley:generated/voice_llama_angry_3",
+			"foley:generated/voice_llama_angry_4",
+			"foley:generated/voice_llama_angry_5",
+			"foley:generated/voice_llama_angry_6",
+			"foley:generated/voice_llama_angry_7",
+			"foley:generated/voice_llama_angry_8",
+			"foley:generated/voice_llama_angry_9",
+			"foley:generated/voice_llama_angry_10",
+			"foley:generated/voice_llama_angry_11"
+		]
+	},
+	"voice_llama_death": {
+		"subtitle": "subtitles.entity.llama.death",
+		"sounds": [
+			"foley:generated/voice_llama_death_0",
+			"foley:generated/voice_llama_death_1",
+			"foley:generated/voice_llama_death_2",
+			"foley:generated/voice_llama_death_3",
+			"foley:generated/voice_llama_death_4",
+			"foley:generated/voice_llama_death_5",
+			"foley:generated/voice_llama_death_6",
+			"foley:generated/voice_llama_death_7",
+			"foley:generated/voice_llama_death_8",
+			"foley:generated/voice_llama_death_9",
+			"foley:generated/voice_llama_death_10",
+			"foley:generated/voice_llama_death_11"
+		]
+	},
+	"voice_llama_hurt": {
+		"subtitle": "subtitles.entity.llama.hurt",
+		"sounds": [
+			"foley:generated/voice_llama_hurt_0",
+			"foley:generated/voice_llama_hurt_1",
+			"foley:generated/voice_llama_hurt_2",
+			"foley:generated/voice_llama_hurt_3",
+			"foley:generated/voice_llama_hurt_4",
+			"foley:generated/voice_llama_hurt_5",
+			"foley:generated/voice_llama_hurt_6",
+			"foley:generated/voice_llama_hurt_7",
+			"foley:generated/voice_llama_hurt_8",
+			"foley:generated/voice_llama_hurt_9",
+			"foley:generated/voice_llama_hurt_10",
+			"foley:generated/voice_llama_hurt_11"
+		]
+	},
+	"voice_mule_ambient": {
+		"subtitle": "subtitles.entity.mule.ambient",
+		"sounds": [
+			"foley:generated/voice_mule_ambient_0",
+			"foley:generated/voice_mule_ambient_1",
+			"foley:generated/voice_mule_ambient_2",
+			"foley:generated/voice_mule_ambient_3",
+			"foley:generated/voice_mule_ambient_4",
+			"foley:generated/voice_mule_ambient_5",
+			"foley:generated/voice_mule_ambient_6",
+			"foley:generated/voice_mule_ambient_7",
+			"foley:generated/voice_mule_ambient_8",
+			"foley:generated/voice_mule_ambient_9",
+			"foley:generated/voice_mule_ambient_10",
+			"foley:generated/voice_mule_ambient_11"
+		]
+	},
+	"voice_mule_angry": {
+		"subtitle": "subtitles.entity.mule.angry",
+		"sounds": [
+			"foley:generated/voice_mule_angry_0",
+			"foley:generated/voice_mule_angry_1",
+			"foley:generated/voice_mule_angry_2",
+			"foley:generated/voice_mule_angry_3",
+			"foley:generated/voice_mule_angry_4",
+			"foley:generated/voice_mule_angry_5",
+			"foley:generated/voice_mule_angry_6",
+			"foley:generated/voice_mule_angry_7",
+			"foley:generated/voice_mule_angry_8",
+			"foley:generated/voice_mule_angry_9",
+			"foley:generated/voice_mule_angry_10",
+			"foley:generated/voice_mule_angry_11"
+		]
+	},
+	"voice_mule_death": {
+		"subtitle": "subtitles.entity.mule.death",
+		"sounds": [
+			"foley:generated/voice_mule_death_0",
+			"foley:generated/voice_mule_death_1",
+			"foley:generated/voice_mule_death_2",
+			"foley:generated/voice_mule_death_3",
+			"foley:generated/voice_mule_death_4",
+			"foley:generated/voice_mule_death_5",
+			"foley:generated/voice_mule_death_6",
+			"foley:generated/voice_mule_death_7",
+			"foley:generated/voice_mule_death_8",
+			"foley:generated/voice_mule_death_9",
+			"foley:generated/voice_mule_death_10",
+			"foley:generated/voice_mule_death_11"
+		]
+	},
+	"voice_mule_hurt": {
+		"subtitle": "subtitles.entity.mule.hurt",
+		"sounds": [
+			"foley:generated/voice_mule_hurt_0",
+			"foley:generated/voice_mule_hurt_1",
+			"foley:generated/voice_mule_hurt_2",
+			"foley:generated/voice_mule_hurt_3",
+			"foley:generated/voice_mule_hurt_4",
+			"foley:generated/voice_mule_hurt_5",
+			"foley:generated/voice_mule_hurt_6",
+			"foley:generated/voice_mule_hurt_7",
+			"foley:generated/voice_mule_hurt_8",
+			"foley:generated/voice_mule_hurt_9",
+			"foley:generated/voice_mule_hurt_10",
+			"foley:generated/voice_mule_hurt_11"
+		]
+	},
+	"voice_ocelot_ambient": {
+		"subtitle": "subtitles.entity.cat.ambient",
+		"sounds": [
+			"foley:generated/voice_ocelot_ambient_0",
+			"foley:generated/voice_ocelot_ambient_1",
+			"foley:generated/voice_ocelot_ambient_2",
+			"foley:generated/voice_ocelot_ambient_3",
+			"foley:generated/voice_ocelot_ambient_4",
+			"foley:generated/voice_ocelot_ambient_5",
+			"foley:generated/voice_ocelot_ambient_6",
+			"foley:generated/voice_ocelot_ambient_7",
+			"foley:generated/voice_ocelot_ambient_8",
+			"foley:generated/voice_ocelot_ambient_9",
+			"foley:generated/voice_ocelot_ambient_10",
+			"foley:generated/voice_ocelot_ambient_11"
+		]
+	},
+	"voice_ocelot_death": {
+		"subtitle": "subtitles.entity.cat.death",
+		"sounds": [
+			"foley:generated/voice_ocelot_death_0",
+			"foley:generated/voice_ocelot_death_1",
+			"foley:generated/voice_ocelot_death_2",
+			"foley:generated/voice_ocelot_death_3",
+			"foley:generated/voice_ocelot_death_4",
+			"foley:generated/voice_ocelot_death_5",
+			"foley:generated/voice_ocelot_death_6",
+			"foley:generated/voice_ocelot_death_7",
+			"foley:generated/voice_ocelot_death_8",
+			"foley:generated/voice_ocelot_death_9",
+			"foley:generated/voice_ocelot_death_10",
+			"foley:generated/voice_ocelot_death_11"
+		]
+	},
+	"voice_ocelot_hurt": {
+		"subtitle": "subtitles.entity.cat.hurt",
+		"sounds": [
+			"foley:generated/voice_ocelot_hurt_0",
+			"foley:generated/voice_ocelot_hurt_1",
+			"foley:generated/voice_ocelot_hurt_2",
+			"foley:generated/voice_ocelot_hurt_3",
+			"foley:generated/voice_ocelot_hurt_4",
+			"foley:generated/voice_ocelot_hurt_5",
+			"foley:generated/voice_ocelot_hurt_6",
+			"foley:generated/voice_ocelot_hurt_7",
+			"foley:generated/voice_ocelot_hurt_8",
+			"foley:generated/voice_ocelot_hurt_9",
+			"foley:generated/voice_ocelot_hurt_10",
+			"foley:generated/voice_ocelot_hurt_11"
+		]
+	},
+	"voice_panda_aggressive": {
+		"subtitle": "subtitles.entity.panda.aggressive_ambient",
+		"sounds": [
+			"foley:generated/voice_panda_aggressive_0",
+			"foley:generated/voice_panda_aggressive_1",
+			"foley:generated/voice_panda_aggressive_2",
+			"foley:generated/voice_panda_aggressive_3",
+			"foley:generated/voice_panda_aggressive_4",
+			"foley:generated/voice_panda_aggressive_5",
+			"foley:generated/voice_panda_aggressive_6",
+			"foley:generated/voice_panda_aggressive_7",
+			"foley:generated/voice_panda_aggressive_8",
+			"foley:generated/voice_panda_aggressive_9",
+			"foley:generated/voice_panda_aggressive_10",
+			"foley:generated/voice_panda_aggressive_11"
+		]
+	},
+	"voice_panda_ambient": {
+		"subtitle": "subtitles.entity.panda.ambient",
+		"sounds": [
+			"foley:generated/voice_panda_ambient_0",
+			"foley:generated/voice_panda_ambient_1",
+			"foley:generated/voice_panda_ambient_2",
+			"foley:generated/voice_panda_ambient_3",
+			"foley:generated/voice_panda_ambient_4",
+			"foley:generated/voice_panda_ambient_5",
+			"foley:generated/voice_panda_ambient_6",
+			"foley:generated/voice_panda_ambient_7",
+			"foley:generated/voice_panda_ambient_8",
+			"foley:generated/voice_panda_ambient_9",
+			"foley:generated/voice_panda_ambient_10",
+			"foley:generated/voice_panda_ambient_11"
+		]
+	},
+	"voice_panda_death": {
+		"subtitle": "subtitles.entity.panda.death",
+		"sounds": [
+			"foley:generated/voice_panda_death_0",
+			"foley:generated/voice_panda_death_1",
+			"foley:generated/voice_panda_death_2",
+			"foley:generated/voice_panda_death_3",
+			"foley:generated/voice_panda_death_4",
+			"foley:generated/voice_panda_death_5",
+			"foley:generated/voice_panda_death_6",
+			"foley:generated/voice_panda_death_7",
+			"foley:generated/voice_panda_death_8",
+			"foley:generated/voice_panda_death_9",
+			"foley:generated/voice_panda_death_10",
+			"foley:generated/voice_panda_death_11"
+		]
+	},
+	"voice_panda_hurt": {
+		"subtitle": "subtitles.entity.panda.hurt",
+		"sounds": [
+			"foley:generated/voice_panda_hurt_0",
+			"foley:generated/voice_panda_hurt_1",
+			"foley:generated/voice_panda_hurt_2",
+			"foley:generated/voice_panda_hurt_3",
+			"foley:generated/voice_panda_hurt_4",
+			"foley:generated/voice_panda_hurt_5",
+			"foley:generated/voice_panda_hurt_6",
+			"foley:generated/voice_panda_hurt_7",
+			"foley:generated/voice_panda_hurt_8",
+			"foley:generated/voice_panda_hurt_9",
+			"foley:generated/voice_panda_hurt_10",
+			"foley:generated/voice_panda_hurt_11"
+		]
+	},
+	"voice_panda_sneeze": {
+		"subtitle": "subtitles.entity.panda.sneeze",
+		"sounds": [
+			"foley:generated/voice_panda_sneeze_0",
+			"foley:generated/voice_panda_sneeze_1",
+			"foley:generated/voice_panda_sneeze_2",
+			"foley:generated/voice_panda_sneeze_3",
+			"foley:generated/voice_panda_sneeze_4",
+			"foley:generated/voice_panda_sneeze_5",
+			"foley:generated/voice_panda_sneeze_6",
+			"foley:generated/voice_panda_sneeze_7",
+			"foley:generated/voice_panda_sneeze_8",
+			"foley:generated/voice_panda_sneeze_9",
+			"foley:generated/voice_panda_sneeze_10",
+			"foley:generated/voice_panda_sneeze_11"
+		]
+	},
+	"voice_panda_worried": {
+		"subtitle": "subtitles.entity.panda.worried_ambient",
+		"sounds": [
+			"foley:generated/voice_panda_worried_0",
+			"foley:generated/voice_panda_worried_1",
+			"foley:generated/voice_panda_worried_2",
+			"foley:generated/voice_panda_worried_3",
+			"foley:generated/voice_panda_worried_4",
+			"foley:generated/voice_panda_worried_5",
+			"foley:generated/voice_panda_worried_6",
+			"foley:generated/voice_panda_worried_7",
+			"foley:generated/voice_panda_worried_8",
+			"foley:generated/voice_panda_worried_9",
+			"foley:generated/voice_panda_worried_10",
+			"foley:generated/voice_panda_worried_11"
+		]
+	},
+	"voice_parrot_ambient": {
+		"subtitle": "subtitles.entity.parrot.ambient",
+		"sounds": [
+			"foley:generated/voice_parrot_ambient_0",
+			"foley:generated/voice_parrot_ambient_1",
+			"foley:generated/voice_parrot_ambient_2",
+			"foley:generated/voice_parrot_ambient_3",
+			"foley:generated/voice_parrot_ambient_4",
+			"foley:generated/voice_parrot_ambient_5",
+			"foley:generated/voice_parrot_ambient_6",
+			"foley:generated/voice_parrot_ambient_7",
+			"foley:generated/voice_parrot_ambient_8",
+			"foley:generated/voice_parrot_ambient_9",
+			"foley:generated/voice_parrot_ambient_10",
+			"foley:generated/voice_parrot_ambient_11"
+		]
+	},
+	"voice_parrot_death": {
+		"subtitle": "subtitles.entity.parrot.death",
+		"sounds": [
+			"foley:generated/voice_parrot_death_0",
+			"foley:generated/voice_parrot_death_1",
+			"foley:generated/voice_parrot_death_2",
+			"foley:generated/voice_parrot_death_3",
+			"foley:generated/voice_parrot_death_4",
+			"foley:generated/voice_parrot_death_5",
+			"foley:generated/voice_parrot_death_6",
+			"foley:generated/voice_parrot_death_7",
+			"foley:generated/voice_parrot_death_8",
+			"foley:generated/voice_parrot_death_9",
+			"foley:generated/voice_parrot_death_10",
+			"foley:generated/voice_parrot_death_11"
+		]
+	},
+	"voice_parrot_hurt": {
+		"subtitle": "subtitles.entity.parrot.hurts",
+		"sounds": [
+			"foley:generated/voice_parrot_hurt_0",
+			"foley:generated/voice_parrot_hurt_1",
+			"foley:generated/voice_parrot_hurt_2",
+			"foley:generated/voice_parrot_hurt_3",
+			"foley:generated/voice_parrot_hurt_4",
+			"foley:generated/voice_parrot_hurt_5",
+			"foley:generated/voice_parrot_hurt_6",
+			"foley:generated/voice_parrot_hurt_7",
+			"foley:generated/voice_parrot_hurt_8",
+			"foley:generated/voice_parrot_hurt_9",
+			"foley:generated/voice_parrot_hurt_10",
+			"foley:generated/voice_parrot_hurt_11"
+		]
+	},
+	"voice_phantom_ambient": {
+		"subtitle": "subtitles.entity.phantom.ambient",
+		"sounds": [
+			"foley:generated/voice_phantom_ambient_0",
+			"foley:generated/voice_phantom_ambient_1",
+			"foley:generated/voice_phantom_ambient_2",
+			"foley:generated/voice_phantom_ambient_3",
+			"foley:generated/voice_phantom_ambient_4",
+			"foley:generated/voice_phantom_ambient_5",
+			"foley:generated/voice_phantom_ambient_6",
+			"foley:generated/voice_phantom_ambient_7",
+			"foley:generated/voice_phantom_ambient_8",
+			"foley:generated/voice_phantom_ambient_9",
+			"foley:generated/voice_phantom_ambient_10",
+			"foley:generated/voice_phantom_ambient_11"
+		]
+	},
+	"voice_phantom_death": {
+		"subtitle": "subtitles.entity.phantom.death",
+		"sounds": [
+			"foley:generated/voice_phantom_death_0",
+			"foley:generated/voice_phantom_death_1",
+			"foley:generated/voice_phantom_death_2",
+			"foley:generated/voice_phantom_death_3",
+			"foley:generated/voice_phantom_death_4",
+			"foley:generated/voice_phantom_death_5",
+			"foley:generated/voice_phantom_death_6",
+			"foley:generated/voice_phantom_death_7",
+			"foley:generated/voice_phantom_death_8",
+			"foley:generated/voice_phantom_death_9",
+			"foley:generated/voice_phantom_death_10",
+			"foley:generated/voice_phantom_death_11"
+		]
+	},
+	"voice_phantom_flap": {
+		"subtitle": "subtitles.entity.phantom.flap",
+		"sounds": [
+			"foley:generated/voice_phantom_flap_0",
+			"foley:generated/voice_phantom_flap_1",
+			"foley:generated/voice_phantom_flap_2",
+			"foley:generated/voice_phantom_flap_3",
+			"foley:generated/voice_phantom_flap_4",
+			"foley:generated/voice_phantom_flap_5",
+			"foley:generated/voice_phantom_flap_6",
+			"foley:generated/voice_phantom_flap_7",
+			"foley:generated/voice_phantom_flap_8",
+			"foley:generated/voice_phantom_flap_9",
+			"foley:generated/voice_phantom_flap_10",
+			"foley:generated/voice_phantom_flap_11"
+		]
+	},
+	"voice_phantom_hurt": {
+		"subtitle": "subtitles.entity.phantom.hurt",
+		"sounds": [
+			"foley:generated/voice_phantom_hurt_0",
+			"foley:generated/voice_phantom_hurt_1",
+			"foley:generated/voice_phantom_hurt_2",
+			"foley:generated/voice_phantom_hurt_3",
+			"foley:generated/voice_phantom_hurt_4",
+			"foley:generated/voice_phantom_hurt_5",
+			"foley:generated/voice_phantom_hurt_6",
+			"foley:generated/voice_phantom_hurt_7",
+			"foley:generated/voice_phantom_hurt_8",
+			"foley:generated/voice_phantom_hurt_9",
+			"foley:generated/voice_phantom_hurt_10",
+			"foley:generated/voice_phantom_hurt_11"
+		]
+	},
+	"voice_phantom_swoop": {
+		"subtitle": "subtitles.entity.phantom.swoop",
+		"sounds": [
+			"foley:generated/voice_phantom_swoop_0",
+			"foley:generated/voice_phantom_swoop_1",
+			"foley:generated/voice_phantom_swoop_2",
+			"foley:generated/voice_phantom_swoop_3",
+			"foley:generated/voice_phantom_swoop_4",
+			"foley:generated/voice_phantom_swoop_5",
+			"foley:generated/voice_phantom_swoop_6",
+			"foley:generated/voice_phantom_swoop_7",
+			"foley:generated/voice_phantom_swoop_8",
+			"foley:generated/voice_phantom_swoop_9",
+			"foley:generated/voice_phantom_swoop_10",
+			"foley:generated/voice_phantom_swoop_11"
+		]
+	},
+	"voice_pig_ambient": {
+		"subtitle": "subtitles.entity.pig.ambient",
+		"sounds": [
+			"foley:generated/voice_pig_ambient_0",
+			"foley:generated/voice_pig_ambient_1",
+			"foley:generated/voice_pig_ambient_2",
+			"foley:generated/voice_pig_ambient_3",
+			"foley:generated/voice_pig_ambient_4",
+			"foley:generated/voice_pig_ambient_5",
+			"foley:generated/voice_pig_ambient_6",
+			"foley:generated/voice_pig_ambient_7",
+			"foley:generated/voice_pig_ambient_8",
+			"foley:generated/voice_pig_ambient_9",
+			"foley:generated/voice_pig_ambient_10",
+			"foley:generated/voice_pig_ambient_11"
+		]
+	},
+	"voice_pig_death": {
+		"subtitle": "subtitles.entity.pig.death",
+		"sounds": [
+			"foley:generated/voice_pig_death_0",
+			"foley:generated/voice_pig_death_1",
+			"foley:generated/voice_pig_death_2",
+			"foley:generated/voice_pig_death_3",
+			"foley:generated/voice_pig_death_4",
+			"foley:generated/voice_pig_death_5",
+			"foley:generated/voice_pig_death_6",
+			"foley:generated/voice_pig_death_7",
+			"foley:generated/voice_pig_death_8",
+			"foley:generated/voice_pig_death_9",
+			"foley:generated/voice_pig_death_10",
+			"foley:generated/voice_pig_death_11"
+		]
+	},
+	"voice_pig_hurt": {
+		"subtitle": "subtitles.entity.pig.hurt",
+		"sounds": [
+			"foley:generated/voice_pig_hurt_0",
+			"foley:generated/voice_pig_hurt_1",
+			"foley:generated/voice_pig_hurt_2",
+			"foley:generated/voice_pig_hurt_3",
+			"foley:generated/voice_pig_hurt_4",
+			"foley:generated/voice_pig_hurt_5",
+			"foley:generated/voice_pig_hurt_6",
+			"foley:generated/voice_pig_hurt_7",
+			"foley:generated/voice_pig_hurt_8",
+			"foley:generated/voice_pig_hurt_9",
+			"foley:generated/voice_pig_hurt_10",
+			"foley:generated/voice_pig_hurt_11"
+		]
+	},
+	"voice_pillager_ambient": {
+		"subtitle": "subtitles.entity.pillager.ambient",
+		"sounds": [
+			"foley:generated/voice_pillager_ambient_0",
+			"foley:generated/voice_pillager_ambient_1",
+			"foley:generated/voice_pillager_ambient_2",
+			"foley:generated/voice_pillager_ambient_3",
+			"foley:generated/voice_pillager_ambient_4",
+			"foley:generated/voice_pillager_ambient_5",
+			"foley:generated/voice_pillager_ambient_6",
+			"foley:generated/voice_pillager_ambient_7",
+			"foley:generated/voice_pillager_ambient_8",
+			"foley:generated/voice_pillager_ambient_9",
+			"foley:generated/voice_pillager_ambient_10",
+			"foley:generated/voice_pillager_ambient_11"
+		]
+	},
+	"voice_pillager_celebrate": {
+		"subtitle": "subtitles.entity.pillager.celebrate",
+		"sounds": [
+			"foley:generated/voice_pillager_celebrate_0",
+			"foley:generated/voice_pillager_celebrate_1",
+			"foley:generated/voice_pillager_celebrate_2",
+			"foley:generated/voice_pillager_celebrate_3",
+			"foley:generated/voice_pillager_celebrate_4",
+			"foley:generated/voice_pillager_celebrate_5",
+			"foley:generated/voice_pillager_celebrate_6",
+			"foley:generated/voice_pillager_celebrate_7",
+			"foley:generated/voice_pillager_celebrate_8",
+			"foley:generated/voice_pillager_celebrate_9",
+			"foley:generated/voice_pillager_celebrate_10",
+			"foley:generated/voice_pillager_celebrate_11"
+		]
+	},
+	"voice_pillager_death": {
+		"subtitle": "subtitles.entity.pillager.death",
+		"sounds": [
+			"foley:generated/voice_pillager_death_0",
+			"foley:generated/voice_pillager_death_1",
+			"foley:generated/voice_pillager_death_2",
+			"foley:generated/voice_pillager_death_3",
+			"foley:generated/voice_pillager_death_4",
+			"foley:generated/voice_pillager_death_5",
+			"foley:generated/voice_pillager_death_6",
+			"foley:generated/voice_pillager_death_7",
+			"foley:generated/voice_pillager_death_8",
+			"foley:generated/voice_pillager_death_9",
+			"foley:generated/voice_pillager_death_10",
+			"foley:generated/voice_pillager_death_11"
+		]
+	},
+	"voice_pillager_hurt": {
+		"subtitle": "subtitles.entity.pillager.hurt",
+		"sounds": [
+			"foley:generated/voice_pillager_hurt_0",
+			"foley:generated/voice_pillager_hurt_1",
+			"foley:generated/voice_pillager_hurt_2",
+			"foley:generated/voice_pillager_hurt_3",
+			"foley:generated/voice_pillager_hurt_4",
+			"foley:generated/voice_pillager_hurt_5",
+			"foley:generated/voice_pillager_hurt_6",
+			"foley:generated/voice_pillager_hurt_7",
+			"foley:generated/voice_pillager_hurt_8",
+			"foley:generated/voice_pillager_hurt_9",
+			"foley:generated/voice_pillager_hurt_10",
+			"foley:generated/voice_pillager_hurt_11"
+		]
+	},
+	"voice_polar_bear_ambient": {
+		"subtitle": "subtitles.entity.polar_bear.ambient",
+		"sounds": [
+			"foley:generated/voice_polar_bear_ambient_0",
+			"foley:generated/voice_polar_bear_ambient_1",
+			"foley:generated/voice_polar_bear_ambient_2",
+			"foley:generated/voice_polar_bear_ambient_3",
+			"foley:generated/voice_polar_bear_ambient_4",
+			"foley:generated/voice_polar_bear_ambient_5",
+			"foley:generated/voice_polar_bear_ambient_6",
+			"foley:generated/voice_polar_bear_ambient_7",
+			"foley:generated/voice_polar_bear_ambient_8",
+			"foley:generated/voice_polar_bear_ambient_9",
+			"foley:generated/voice_polar_bear_ambient_10",
+			"foley:generated/voice_polar_bear_ambient_11"
+		]
+	},
+	"voice_polar_bear_ambient_baby": {
+		"subtitle": "subtitles.entity.polar_bear.ambient_baby",
+		"sounds": [
+			"foley:generated/voice_polar_bear_ambient_baby_0",
+			"foley:generated/voice_polar_bear_ambient_baby_1",
+			"foley:generated/voice_polar_bear_ambient_baby_2",
+			"foley:generated/voice_polar_bear_ambient_baby_3",
+			"foley:generated/voice_polar_bear_ambient_baby_4",
+			"foley:generated/voice_polar_bear_ambient_baby_5",
+			"foley:generated/voice_polar_bear_ambient_baby_6",
+			"foley:generated/voice_polar_bear_ambient_baby_7",
+			"foley:generated/voice_polar_bear_ambient_baby_8",
+			"foley:generated/voice_polar_bear_ambient_baby_9",
+			"foley:generated/voice_polar_bear_ambient_baby_10",
+			"foley:generated/voice_polar_bear_ambient_baby_11"
+		]
+	},
+	"voice_polar_bear_death": {
+		"subtitle": "subtitles.entity.polar_bear.death",
+		"sounds": [
+			"foley:generated/voice_polar_bear_death_0",
+			"foley:generated/voice_polar_bear_death_1",
+			"foley:generated/voice_polar_bear_death_2",
+			"foley:generated/voice_polar_bear_death_3",
+			"foley:generated/voice_polar_bear_death_4",
+			"foley:generated/voice_polar_bear_death_5",
+			"foley:generated/voice_polar_bear_death_6",
+			"foley:generated/voice_polar_bear_death_7",
+			"foley:generated/voice_polar_bear_death_8",
+			"foley:generated/voice_polar_bear_death_9",
+			"foley:generated/voice_polar_bear_death_10",
+			"foley:generated/voice_polar_bear_death_11"
+		]
+	},
+	"voice_polar_bear_hurt": {
+		"subtitle": "subtitles.entity.polar_bear.hurt",
+		"sounds": [
+			"foley:generated/voice_polar_bear_hurt_0",
+			"foley:generated/voice_polar_bear_hurt_1",
+			"foley:generated/voice_polar_bear_hurt_2",
+			"foley:generated/voice_polar_bear_hurt_3",
+			"foley:generated/voice_polar_bear_hurt_4",
+			"foley:generated/voice_polar_bear_hurt_5",
+			"foley:generated/voice_polar_bear_hurt_6",
+			"foley:generated/voice_polar_bear_hurt_7",
+			"foley:generated/voice_polar_bear_hurt_8",
+			"foley:generated/voice_polar_bear_hurt_9",
+			"foley:generated/voice_polar_bear_hurt_10",
+			"foley:generated/voice_polar_bear_hurt_11"
+		]
+	},
+	"voice_polar_bear_warning": {
+		"subtitle": "subtitles.entity.polar_bear.warning",
+		"sounds": [
+			"foley:generated/voice_polar_bear_warning_0",
+			"foley:generated/voice_polar_bear_warning_1",
+			"foley:generated/voice_polar_bear_warning_2",
+			"foley:generated/voice_polar_bear_warning_3",
+			"foley:generated/voice_polar_bear_warning_4",
+			"foley:generated/voice_polar_bear_warning_5",
+			"foley:generated/voice_polar_bear_warning_6",
+			"foley:generated/voice_polar_bear_warning_7",
+			"foley:generated/voice_polar_bear_warning_8",
+			"foley:generated/voice_polar_bear_warning_9",
+			"foley:generated/voice_polar_bear_warning_10",
+			"foley:generated/voice_polar_bear_warning_11"
+		]
+	},
+	"voice_rabbit_ambient": {
+		"subtitle": "subtitles.entity.rabbit.ambient",
+		"sounds": [
+			"foley:generated/voice_rabbit_ambient_0",
+			"foley:generated/voice_rabbit_ambient_1",
+			"foley:generated/voice_rabbit_ambient_2",
+			"foley:generated/voice_rabbit_ambient_3",
+			"foley:generated/voice_rabbit_ambient_4",
+			"foley:generated/voice_rabbit_ambient_5",
+			"foley:generated/voice_rabbit_ambient_6",
+			"foley:generated/voice_rabbit_ambient_7",
+			"foley:generated/voice_rabbit_ambient_8",
+			"foley:generated/voice_rabbit_ambient_9",
+			"foley:generated/voice_rabbit_ambient_10",
+			"foley:generated/voice_rabbit_ambient_11"
+		]
+	},
+	"voice_rabbit_death": {
+		"subtitle": "subtitles.entity.rabbit.death",
+		"sounds": [
+			"foley:generated/voice_rabbit_death_0",
+			"foley:generated/voice_rabbit_death_1",
+			"foley:generated/voice_rabbit_death_2",
+			"foley:generated/voice_rabbit_death_3",
+			"foley:generated/voice_rabbit_death_4",
+			"foley:generated/voice_rabbit_death_5",
+			"foley:generated/voice_rabbit_death_6",
+			"foley:generated/voice_rabbit_death_7",
+			"foley:generated/voice_rabbit_death_8",
+			"foley:generated/voice_rabbit_death_9",
+			"foley:generated/voice_rabbit_death_10",
+			"foley:generated/voice_rabbit_death_11"
+		]
+	},
+	"voice_rabbit_hurt": {
+		"subtitle": "subtitles.entity.rabbit.hurt",
+		"sounds": [
+			"foley:generated/voice_rabbit_hurt_0",
+			"foley:generated/voice_rabbit_hurt_1",
+			"foley:generated/voice_rabbit_hurt_2",
+			"foley:generated/voice_rabbit_hurt_3",
+			"foley:generated/voice_rabbit_hurt_4",
+			"foley:generated/voice_rabbit_hurt_5",
+			"foley:generated/voice_rabbit_hurt_6",
+			"foley:generated/voice_rabbit_hurt_7",
+			"foley:generated/voice_rabbit_hurt_8",
+			"foley:generated/voice_rabbit_hurt_9",
+			"foley:generated/voice_rabbit_hurt_10",
+			"foley:generated/voice_rabbit_hurt_11"
+		]
+	},
+	"voice_ravager_ambient": {
+		"subtitle": "subtitles.entity.ravager.ambient",
+		"sounds": [
+			"foley:generated/voice_ravager_ambient_0",
+			"foley:generated/voice_ravager_ambient_1",
+			"foley:generated/voice_ravager_ambient_2",
+			"foley:generated/voice_ravager_ambient_3",
+			"foley:generated/voice_ravager_ambient_4",
+			"foley:generated/voice_ravager_ambient_5",
+			"foley:generated/voice_ravager_ambient_6",
+			"foley:generated/voice_ravager_ambient_7",
+			"foley:generated/voice_ravager_ambient_8",
+			"foley:generated/voice_ravager_ambient_9",
+			"foley:generated/voice_ravager_ambient_10",
+			"foley:generated/voice_ravager_ambient_11"
+		]
+	},
+	"voice_ravager_celebrate": {
+		"subtitle": "subtitles.entity.ravager.celebrate",
+		"sounds": [
+			"foley:generated/voice_ravager_celebrate_0",
+			"foley:generated/voice_ravager_celebrate_1",
+			"foley:generated/voice_ravager_celebrate_2",
+			"foley:generated/voice_ravager_celebrate_3",
+			"foley:generated/voice_ravager_celebrate_4",
+			"foley:generated/voice_ravager_celebrate_5",
+			"foley:generated/voice_ravager_celebrate_6",
+			"foley:generated/voice_ravager_celebrate_7",
+			"foley:generated/voice_ravager_celebrate_8",
+			"foley:generated/voice_ravager_celebrate_9",
+			"foley:generated/voice_ravager_celebrate_10",
+			"foley:generated/voice_ravager_celebrate_11"
+		]
+	},
+	"voice_ravager_death": {
+		"subtitle": "subtitles.entity.ravager.death",
+		"sounds": [
+			"foley:generated/voice_ravager_death_0",
+			"foley:generated/voice_ravager_death_1",
+			"foley:generated/voice_ravager_death_2",
+			"foley:generated/voice_ravager_death_3",
+			"foley:generated/voice_ravager_death_4",
+			"foley:generated/voice_ravager_death_5",
+			"foley:generated/voice_ravager_death_6",
+			"foley:generated/voice_ravager_death_7",
+			"foley:generated/voice_ravager_death_8",
+			"foley:generated/voice_ravager_death_9",
+			"foley:generated/voice_ravager_death_10",
+			"foley:generated/voice_ravager_death_11"
+		]
+	},
+	"voice_ravager_hurt": {
+		"subtitle": "subtitles.entity.ravager.hurt",
+		"sounds": [
+			"foley:generated/voice_ravager_hurt_0",
+			"foley:generated/voice_ravager_hurt_1",
+			"foley:generated/voice_ravager_hurt_2",
+			"foley:generated/voice_ravager_hurt_3",
+			"foley:generated/voice_ravager_hurt_4",
+			"foley:generated/voice_ravager_hurt_5",
+			"foley:generated/voice_ravager_hurt_6",
+			"foley:generated/voice_ravager_hurt_7",
+			"foley:generated/voice_ravager_hurt_8",
+			"foley:generated/voice_ravager_hurt_9",
+			"foley:generated/voice_ravager_hurt_10",
+			"foley:generated/voice_ravager_hurt_11"
+		]
+	},
+	"voice_ravager_roar": {
+		"subtitle": "subtitles.entity.ravager.roar",
+		"sounds": [
+			"foley:generated/voice_ravager_roar_0",
+			"foley:generated/voice_ravager_roar_1",
+			"foley:generated/voice_ravager_roar_2",
+			"foley:generated/voice_ravager_roar_3",
+			"foley:generated/voice_ravager_roar_4",
+			"foley:generated/voice_ravager_roar_5",
+			"foley:generated/voice_ravager_roar_6",
+			"foley:generated/voice_ravager_roar_7",
+			"foley:generated/voice_ravager_roar_8",
+			"foley:generated/voice_ravager_roar_9",
+			"foley:generated/voice_ravager_roar_10",
+			"foley:generated/voice_ravager_roar_11"
+		]
+	},
+	"voice_ravager_stunned": {
+		"subtitle": "subtitles.entity.ravager.stunned",
+		"sounds": [
+			"foley:generated/voice_ravager_stunned_0",
+			"foley:generated/voice_ravager_stunned_1",
+			"foley:generated/voice_ravager_stunned_2",
+			"foley:generated/voice_ravager_stunned_3",
+			"foley:generated/voice_ravager_stunned_4",
+			"foley:generated/voice_ravager_stunned_5",
+			"foley:generated/voice_ravager_stunned_6",
+			"foley:generated/voice_ravager_stunned_7",
+			"foley:generated/voice_ravager_stunned_8",
+			"foley:generated/voice_ravager_stunned_9",
+			"foley:generated/voice_ravager_stunned_10",
+			"foley:generated/voice_ravager_stunned_11"
+		]
+	},
+	"voice_sheep_ambient": {
+		"subtitle": "subtitles.entity.sheep.ambient",
+		"sounds": [
+			"foley:generated/voice_sheep_ambient_0",
+			"foley:generated/voice_sheep_ambient_1",
+			"foley:generated/voice_sheep_ambient_2",
+			"foley:generated/voice_sheep_ambient_3",
+			"foley:generated/voice_sheep_ambient_4",
+			"foley:generated/voice_sheep_ambient_5",
+			"foley:generated/voice_sheep_ambient_6",
+			"foley:generated/voice_sheep_ambient_7",
+			"foley:generated/voice_sheep_ambient_8",
+			"foley:generated/voice_sheep_ambient_9",
+			"foley:generated/voice_sheep_ambient_10",
+			"foley:generated/voice_sheep_ambient_11"
+		]
+	},
+	"voice_sheep_death": {
+		"subtitle": "subtitles.entity.sheep.death",
+		"sounds": [
+			"foley:generated/voice_sheep_death_0",
+			"foley:generated/voice_sheep_death_1",
+			"foley:generated/voice_sheep_death_2",
+			"foley:generated/voice_sheep_death_3",
+			"foley:generated/voice_sheep_death_4",
+			"foley:generated/voice_sheep_death_5",
+			"foley:generated/voice_sheep_death_6",
+			"foley:generated/voice_sheep_death_7",
+			"foley:generated/voice_sheep_death_8",
+			"foley:generated/voice_sheep_death_9",
+			"foley:generated/voice_sheep_death_10",
+			"foley:generated/voice_sheep_death_11"
+		]
+	},
+	"voice_sheep_hurt": {
+		"subtitle": "subtitles.entity.sheep.hurt",
+		"sounds": [
+			"foley:generated/voice_sheep_hurt_0",
+			"foley:generated/voice_sheep_hurt_1",
+			"foley:generated/voice_sheep_hurt_2",
+			"foley:generated/voice_sheep_hurt_3",
+			"foley:generated/voice_sheep_hurt_4",
+			"foley:generated/voice_sheep_hurt_5",
+			"foley:generated/voice_sheep_hurt_6",
+			"foley:generated/voice_sheep_hurt_7",
+			"foley:generated/voice_sheep_hurt_8",
+			"foley:generated/voice_sheep_hurt_9",
+			"foley:generated/voice_sheep_hurt_10",
+			"foley:generated/voice_sheep_hurt_11"
+		]
+	},
+	"voice_silverfish_ambient": {
+		"subtitle": "subtitles.entity.silverfish.ambient",
+		"sounds": [
+			"foley:generated/voice_silverfish_ambient_0",
+			"foley:generated/voice_silverfish_ambient_1",
+			"foley:generated/voice_silverfish_ambient_2",
+			"foley:generated/voice_silverfish_ambient_3",
+			"foley:generated/voice_silverfish_ambient_4",
+			"foley:generated/voice_silverfish_ambient_5",
+			"foley:generated/voice_silverfish_ambient_6",
+			"foley:generated/voice_silverfish_ambient_7",
+			"foley:generated/voice_silverfish_ambient_8",
+			"foley:generated/voice_silverfish_ambient_9",
+			"foley:generated/voice_silverfish_ambient_10",
+			"foley:generated/voice_silverfish_ambient_11"
+		]
+	},
+	"voice_silverfish_death": {
+		"subtitle": "subtitles.entity.silverfish.death",
+		"sounds": [
+			"foley:generated/voice_silverfish_death_0",
+			"foley:generated/voice_silverfish_death_1",
+			"foley:generated/voice_silverfish_death_2",
+			"foley:generated/voice_silverfish_death_3",
+			"foley:generated/voice_silverfish_death_4",
+			"foley:generated/voice_silverfish_death_5",
+			"foley:generated/voice_silverfish_death_6",
+			"foley:generated/voice_silverfish_death_7",
+			"foley:generated/voice_silverfish_death_8",
+			"foley:generated/voice_silverfish_death_9",
+			"foley:generated/voice_silverfish_death_10",
+			"foley:generated/voice_silverfish_death_11"
+		]
+	},
+	"voice_silverfish_hurt": {
+		"subtitle": "subtitles.entity.silverfish.hurt",
+		"sounds": [
+			"foley:generated/voice_silverfish_hurt_0",
+			"foley:generated/voice_silverfish_hurt_1",
+			"foley:generated/voice_silverfish_hurt_2",
+			"foley:generated/voice_silverfish_hurt_3",
+			"foley:generated/voice_silverfish_hurt_4",
+			"foley:generated/voice_silverfish_hurt_5",
+			"foley:generated/voice_silverfish_hurt_6",
+			"foley:generated/voice_silverfish_hurt_7",
+			"foley:generated/voice_silverfish_hurt_8",
+			"foley:generated/voice_silverfish_hurt_9",
+			"foley:generated/voice_silverfish_hurt_10",
+			"foley:generated/voice_silverfish_hurt_11"
+		]
+	},
+	"voice_skeleton_ambient": {
+		"subtitle": "subtitles.entity.skeleton.ambient",
+		"sounds": [
+			"foley:generated/voice_skeleton_ambient_0",
+			"foley:generated/voice_skeleton_ambient_1",
+			"foley:generated/voice_skeleton_ambient_2",
+			"foley:generated/voice_skeleton_ambient_3",
+			"foley:generated/voice_skeleton_ambient_4",
+			"foley:generated/voice_skeleton_ambient_5",
+			"foley:generated/voice_skeleton_ambient_6",
+			"foley:generated/voice_skeleton_ambient_7",
+			"foley:generated/voice_skeleton_ambient_8",
+			"foley:generated/voice_skeleton_ambient_9",
+			"foley:generated/voice_skeleton_ambient_10",
+			"foley:generated/voice_skeleton_ambient_11"
+		]
+	},
+	"voice_skeleton_death": {
+		"subtitle": "subtitles.entity.skeleton.death",
+		"sounds": [
+			"foley:generated/voice_skeleton_death_0",
+			"foley:generated/voice_skeleton_death_1",
+			"foley:generated/voice_skeleton_death_2",
+			"foley:generated/voice_skeleton_death_3",
+			"foley:generated/voice_skeleton_death_4",
+			"foley:generated/voice_skeleton_death_5",
+			"foley:generated/voice_skeleton_death_6",
+			"foley:generated/voice_skeleton_death_7",
+			"foley:generated/voice_skeleton_death_8",
+			"foley:generated/voice_skeleton_death_9",
+			"foley:generated/voice_skeleton_death_10",
+			"foley:generated/voice_skeleton_death_11"
+		]
+	},
+	"voice_skeleton_hurt": {
+		"subtitle": "subtitles.entity.skeleton.hurt",
+		"sounds": [
+			"foley:generated/voice_skeleton_hurt_0",
+			"foley:generated/voice_skeleton_hurt_1",
+			"foley:generated/voice_skeleton_hurt_2",
+			"foley:generated/voice_skeleton_hurt_3",
+			"foley:generated/voice_skeleton_hurt_4",
+			"foley:generated/voice_skeleton_hurt_5",
+			"foley:generated/voice_skeleton_hurt_6",
+			"foley:generated/voice_skeleton_hurt_7",
+			"foley:generated/voice_skeleton_hurt_8",
+			"foley:generated/voice_skeleton_hurt_9",
+			"foley:generated/voice_skeleton_hurt_10",
+			"foley:generated/voice_skeleton_hurt_11"
+		]
+	},
+	"voice_slime_attack": {
+		"subtitle": "subtitles.entity.slime.attack",
+		"sounds": [
+			"foley:generated/voice_slime_attack_0",
+			"foley:generated/voice_slime_attack_1",
+			"foley:generated/voice_slime_attack_2",
+			"foley:generated/voice_slime_attack_3",
+			"foley:generated/voice_slime_attack_4",
+			"foley:generated/voice_slime_attack_5",
+			"foley:generated/voice_slime_attack_6",
+			"foley:generated/voice_slime_attack_7",
+			"foley:generated/voice_slime_attack_8",
+			"foley:generated/voice_slime_attack_9",
+			"foley:generated/voice_slime_attack_10",
+			"foley:generated/voice_slime_attack_11"
+		]
+	},
+	"voice_slime_death": {
+		"subtitle": "subtitles.entity.slime.death",
+		"sounds": [
+			"foley:generated/voice_slime_death_0",
+			"foley:generated/voice_slime_death_1",
+			"foley:generated/voice_slime_death_2",
+			"foley:generated/voice_slime_death_3",
+			"foley:generated/voice_slime_death_4",
+			"foley:generated/voice_slime_death_5",
+			"foley:generated/voice_slime_death_6",
+			"foley:generated/voice_slime_death_7",
+			"foley:generated/voice_slime_death_8",
+			"foley:generated/voice_slime_death_9",
+			"foley:generated/voice_slime_death_10",
+			"foley:generated/voice_slime_death_11"
+		]
+	},
+	"voice_slime_hurt": {
+		"subtitle": "subtitles.entity.slime.hurt",
+		"sounds": [
+			"foley:generated/voice_slime_hurt_0",
+			"foley:generated/voice_slime_hurt_1",
+			"foley:generated/voice_slime_hurt_2",
+			"foley:generated/voice_slime_hurt_3",
+			"foley:generated/voice_slime_hurt_4",
+			"foley:generated/voice_slime_hurt_5",
+			"foley:generated/voice_slime_hurt_6",
+			"foley:generated/voice_slime_hurt_7",
+			"foley:generated/voice_slime_hurt_8",
+			"foley:generated/voice_slime_hurt_9",
+			"foley:generated/voice_slime_hurt_10",
+			"foley:generated/voice_slime_hurt_11"
+		]
+	},
+	"voice_slime_jump": {
+		"subtitle": "subtitles.entity.slime.squish",
+		"sounds": [
+			"foley:generated/voice_slime_jump_0",
+			"foley:generated/voice_slime_jump_1",
+			"foley:generated/voice_slime_jump_2",
+			"foley:generated/voice_slime_jump_3",
+			"foley:generated/voice_slime_jump_4",
+			"foley:generated/voice_slime_jump_5",
+			"foley:generated/voice_slime_jump_6",
+			"foley:generated/voice_slime_jump_7",
+			"foley:generated/voice_slime_jump_8",
+			"foley:generated/voice_slime_jump_9",
+			"foley:generated/voice_slime_jump_10",
+			"foley:generated/voice_slime_jump_11"
+		]
+	},
+	"voice_slime_squish": {
+		"subtitle": "subtitles.entity.slime.squish",
+		"sounds": [
+			"foley:generated/voice_slime_squish_0",
+			"foley:generated/voice_slime_squish_1",
+			"foley:generated/voice_slime_squish_2",
+			"foley:generated/voice_slime_squish_3",
+			"foley:generated/voice_slime_squish_4",
+			"foley:generated/voice_slime_squish_5",
+			"foley:generated/voice_slime_squish_6",
+			"foley:generated/voice_slime_squish_7",
+			"foley:generated/voice_slime_squish_8",
+			"foley:generated/voice_slime_squish_9",
+			"foley:generated/voice_slime_squish_10",
+			"foley:generated/voice_slime_squish_11"
+		]
+	},
+	"voice_slime_small_death": {
+		"subtitle": "subtitles.entity.slime.death",
+		"sounds": [
+			"foley:generated/voice_slime_small_death_0",
+			"foley:generated/voice_slime_small_death_1",
+			"foley:generated/voice_slime_small_death_2",
+			"foley:generated/voice_slime_small_death_3",
+			"foley:generated/voice_slime_small_death_4",
+			"foley:generated/voice_slime_small_death_5",
+			"foley:generated/voice_slime_small_death_6",
+			"foley:generated/voice_slime_small_death_7",
+			"foley:generated/voice_slime_small_death_8",
+			"foley:generated/voice_slime_small_death_9",
+			"foley:generated/voice_slime_small_death_10",
+			"foley:generated/voice_slime_small_death_11"
+		]
+	},
+	"voice_slime_small_hurt": {
+		"subtitle": "subtitles.entity.slime.hurt",
+		"sounds": [
+			"foley:generated/voice_slime_small_hurt_0",
+			"foley:generated/voice_slime_small_hurt_1",
+			"foley:generated/voice_slime_small_hurt_2",
+			"foley:generated/voice_slime_small_hurt_3",
+			"foley:generated/voice_slime_small_hurt_4",
+			"foley:generated/voice_slime_small_hurt_5",
+			"foley:generated/voice_slime_small_hurt_6",
+			"foley:generated/voice_slime_small_hurt_7",
+			"foley:generated/voice_slime_small_hurt_8",
+			"foley:generated/voice_slime_small_hurt_9",
+			"foley:generated/voice_slime_small_hurt_10",
+			"foley:generated/voice_slime_small_hurt_11"
+		]
+	},
+	"voice_slime_small_jump": {
+		"subtitle": "subtitles.entity.slime.squish",
+		"sounds": [
+			"foley:generated/voice_slime_small_jump_0",
+			"foley:generated/voice_slime_small_jump_1",
+			"foley:generated/voice_slime_small_jump_2",
+			"foley:generated/voice_slime_small_jump_3",
+			"foley:generated/voice_slime_small_jump_4",
+			"foley:generated/voice_slime_small_jump_5",
+			"foley:generated/voice_slime_small_jump_6",
+			"foley:generated/voice_slime_small_jump_7",
+			"foley:generated/voice_slime_small_jump_8",
+			"foley:generated/voice_slime_small_jump_9",
+			"foley:generated/voice_slime_small_jump_10",
+			"foley:generated/voice_slime_small_jump_11"
+		]
+	},
+	"voice_slime_small_squish": {
+		"subtitle": "subtitles.entity.slime.squish",
+		"sounds": [
+			"foley:generated/voice_slime_small_squish_0",
+			"foley:generated/voice_slime_small_squish_1",
+			"foley:generated/voice_slime_small_squish_2",
+			"foley:generated/voice_slime_small_squish_3",
+			"foley:generated/voice_slime_small_squish_4",
+			"foley:generated/voice_slime_small_squish_5",
+			"foley:generated/voice_slime_small_squish_6",
+			"foley:generated/voice_slime_small_squish_7",
+			"foley:generated/voice_slime_small_squish_8",
+			"foley:generated/voice_slime_small_squish_9",
+			"foley:generated/voice_slime_small_squish_10",
+			"foley:generated/voice_slime_small_squish_11"
+		]
+	},
+	"voice_snow_golem_ambient": {
+		"sounds": [
+			"foley:generated/voice_snow_golem_ambient_0",
+			"foley:generated/voice_snow_golem_ambient_1",
+			"foley:generated/voice_snow_golem_ambient_2",
+			"foley:generated/voice_snow_golem_ambient_3",
+			"foley:generated/voice_snow_golem_ambient_4",
+			"foley:generated/voice_snow_golem_ambient_5",
+			"foley:generated/voice_snow_golem_ambient_6",
+			"foley:generated/voice_snow_golem_ambient_7",
+			"foley:generated/voice_snow_golem_ambient_8",
+			"foley:generated/voice_snow_golem_ambient_9",
+			"foley:generated/voice_snow_golem_ambient_10",
+			"foley:generated/voice_snow_golem_ambient_11"
+		]
+	},
+	"voice_snow_golem_death": {
+		"subtitle": "subtitles.entity.snow_golem.death",
+		"sounds": [
+			"foley:generated/voice_snow_golem_death_0",
+			"foley:generated/voice_snow_golem_death_1",
+			"foley:generated/voice_snow_golem_death_2",
+			"foley:generated/voice_snow_golem_death_3",
+			"foley:generated/voice_snow_golem_death_4",
+			"foley:generated/voice_snow_golem_death_5",
+			"foley:generated/voice_snow_golem_death_6",
+			"foley:generated/voice_snow_golem_death_7",
+			"foley:generated/voice_snow_golem_death_8",
+			"foley:generated/voice_snow_golem_death_9",
+			"foley:generated/voice_snow_golem_death_10",
+			"foley:generated/voice_snow_golem_death_11"
+		]
+	},
+	"voice_snow_golem_hurt": {
+		"subtitle": "subtitles.entity.snow_golem.hurt",
+		"sounds": [
+			"foley:generated/voice_snow_golem_hurt_0",
+			"foley:generated/voice_snow_golem_hurt_1",
+			"foley:generated/voice_snow_golem_hurt_2",
+			"foley:generated/voice_snow_golem_hurt_3",
+			"foley:generated/voice_snow_golem_hurt_4",
+			"foley:generated/voice_snow_golem_hurt_5",
+			"foley:generated/voice_snow_golem_hurt_6",
+			"foley:generated/voice_snow_golem_hurt_7",
+			"foley:generated/voice_snow_golem_hurt_8",
+			"foley:generated/voice_snow_golem_hurt_9",
+			"foley:generated/voice_snow_golem_hurt_10",
+			"foley:generated/voice_snow_golem_hurt_11"
+		]
+	},
+	"voice_spider_ambient": {
+		"subtitle": "subtitles.entity.spider.ambient",
+		"sounds": [
+			"foley:generated/voice_spider_ambient_0",
+			"foley:generated/voice_spider_ambient_1",
+			"foley:generated/voice_spider_ambient_2",
+			"foley:generated/voice_spider_ambient_3",
+			"foley:generated/voice_spider_ambient_4",
+			"foley:generated/voice_spider_ambient_5",
+			"foley:generated/voice_spider_ambient_6",
+			"foley:generated/voice_spider_ambient_7",
+			"foley:generated/voice_spider_ambient_8",
+			"foley:generated/voice_spider_ambient_9",
+			"foley:generated/voice_spider_ambient_10",
+			"foley:generated/voice_spider_ambient_11"
+		]
+	},
+	"voice_spider_death": {
+		"subtitle": "subtitles.entity.spider.death",
+		"sounds": [
+			"foley:generated/voice_spider_death_0",
+			"foley:generated/voice_spider_death_1",
+			"foley:generated/voice_spider_death_2",
+			"foley:generated/voice_spider_death_3",
+			"foley:generated/voice_spider_death_4",
+			"foley:generated/voice_spider_death_5",
+			"foley:generated/voice_spider_death_6",
+			"foley:generated/voice_spider_death_7",
+			"foley:generated/voice_spider_death_8",
+			"foley:generated/voice_spider_death_9",
+			"foley:generated/voice_spider_death_10",
+			"foley:generated/voice_spider_death_11"
+		]
+	},
+	"voice_spider_hurt": {
+		"subtitle": "subtitles.entity.spider.hurt",
+		"sounds": [
+			"foley:generated/voice_spider_hurt_0",
+			"foley:generated/voice_spider_hurt_1",
+			"foley:generated/voice_spider_hurt_2",
+			"foley:generated/voice_spider_hurt_3",
+			"foley:generated/voice_spider_hurt_4",
+			"foley:generated/voice_spider_hurt_5",
+			"foley:generated/voice_spider_hurt_6",
+			"foley:generated/voice_spider_hurt_7",
+			"foley:generated/voice_spider_hurt_8",
+			"foley:generated/voice_spider_hurt_9",
+			"foley:generated/voice_spider_hurt_10",
+			"foley:generated/voice_spider_hurt_11"
+		]
+	},
+	"voice_stray_ambient": {
+		"subtitle": "subtitles.entity.stray.ambient",
+		"sounds": [
+			"foley:generated/voice_stray_ambient_0",
+			"foley:generated/voice_stray_ambient_1",
+			"foley:generated/voice_stray_ambient_2",
+			"foley:generated/voice_stray_ambient_3",
+			"foley:generated/voice_stray_ambient_4",
+			"foley:generated/voice_stray_ambient_5",
+			"foley:generated/voice_stray_ambient_6",
+			"foley:generated/voice_stray_ambient_7",
+			"foley:generated/voice_stray_ambient_8",
+			"foley:generated/voice_stray_ambient_9",
+			"foley:generated/voice_stray_ambient_10",
+			"foley:generated/voice_stray_ambient_11"
+		]
+	},
+	"voice_stray_death": {
+		"subtitle": "subtitles.entity.stray.death",
+		"sounds": [
+			"foley:generated/voice_stray_death_0",
+			"foley:generated/voice_stray_death_1",
+			"foley:generated/voice_stray_death_2",
+			"foley:generated/voice_stray_death_3",
+			"foley:generated/voice_stray_death_4",
+			"foley:generated/voice_stray_death_5",
+			"foley:generated/voice_stray_death_6",
+			"foley:generated/voice_stray_death_7",
+			"foley:generated/voice_stray_death_8",
+			"foley:generated/voice_stray_death_9",
+			"foley:generated/voice_stray_death_10",
+			"foley:generated/voice_stray_death_11"
+		]
+	},
+	"voice_stray_hurt": {
+		"subtitle": "subtitles.entity.stray.hurt",
+		"sounds": [
+			"foley:generated/voice_stray_hurt_0",
+			"foley:generated/voice_stray_hurt_1",
+			"foley:generated/voice_stray_hurt_2",
+			"foley:generated/voice_stray_hurt_3",
+			"foley:generated/voice_stray_hurt_4",
+			"foley:generated/voice_stray_hurt_5",
+			"foley:generated/voice_stray_hurt_6",
+			"foley:generated/voice_stray_hurt_7",
+			"foley:generated/voice_stray_hurt_8",
+			"foley:generated/voice_stray_hurt_9",
+			"foley:generated/voice_stray_hurt_10",
+			"foley:generated/voice_stray_hurt_11"
+		]
+	},
+	"voice_turtle_ambient_land": {
+		"subtitle": "subtitles.entity.turtle.ambient_land",
+		"sounds": [
+			"foley:generated/voice_turtle_ambient_land_0",
+			"foley:generated/voice_turtle_ambient_land_1",
+			"foley:generated/voice_turtle_ambient_land_2",
+			"foley:generated/voice_turtle_ambient_land_3",
+			"foley:generated/voice_turtle_ambient_land_4",
+			"foley:generated/voice_turtle_ambient_land_5",
+			"foley:generated/voice_turtle_ambient_land_6",
+			"foley:generated/voice_turtle_ambient_land_7",
+			"foley:generated/voice_turtle_ambient_land_8",
+			"foley:generated/voice_turtle_ambient_land_9",
+			"foley:generated/voice_turtle_ambient_land_10",
+			"foley:generated/voice_turtle_ambient_land_11"
+		]
+	},
+	"voice_turtle_death": {
+		"subtitle": "subtitles.entity.turtle.death",
+		"sounds": [
+			"foley:generated/voice_turtle_death_0",
+			"foley:generated/voice_turtle_death_1",
+			"foley:generated/voice_turtle_death_2",
+			"foley:generated/voice_turtle_death_3",
+			"foley:generated/voice_turtle_death_4",
+			"foley:generated/voice_turtle_death_5",
+			"foley:generated/voice_turtle_death_6",
+			"foley:generated/voice_turtle_death_7",
+			"foley:generated/voice_turtle_death_8",
+			"foley:generated/voice_turtle_death_9",
+			"foley:generated/voice_turtle_death_10",
+			"foley:generated/voice_turtle_death_11"
+		]
+	},
+	"voice_turtle_hurt": {
+		"subtitle": "subtitles.entity.turtle.hurt",
+		"sounds": [
+			"foley:generated/voice_turtle_hurt_0",
+			"foley:generated/voice_turtle_hurt_1",
+			"foley:generated/voice_turtle_hurt_2",
+			"foley:generated/voice_turtle_hurt_3",
+			"foley:generated/voice_turtle_hurt_4",
+			"foley:generated/voice_turtle_hurt_5",
+			"foley:generated/voice_turtle_hurt_6",
+			"foley:generated/voice_turtle_hurt_7",
+			"foley:generated/voice_turtle_hurt_8",
+			"foley:generated/voice_turtle_hurt_9",
+			"foley:generated/voice_turtle_hurt_10",
+			"foley:generated/voice_turtle_hurt_11"
+		]
+	},
+	"voice_vex_ambient": {
+		"subtitle": "subtitles.entity.vex.ambient",
+		"sounds": [
+			"foley:generated/voice_vex_ambient_0",
+			"foley:generated/voice_vex_ambient_1",
+			"foley:generated/voice_vex_ambient_2",
+			"foley:generated/voice_vex_ambient_3",
+			"foley:generated/voice_vex_ambient_4",
+			"foley:generated/voice_vex_ambient_5",
+			"foley:generated/voice_vex_ambient_6",
+			"foley:generated/voice_vex_ambient_7",
+			"foley:generated/voice_vex_ambient_8",
+			"foley:generated/voice_vex_ambient_9",
+			"foley:generated/voice_vex_ambient_10",
+			"foley:generated/voice_vex_ambient_11"
+		]
+	},
+	"voice_vex_charge": {
+		"subtitle": "subtitles.entity.vex.charge",
+		"sounds": [
+			"foley:generated/voice_vex_charge_0",
+			"foley:generated/voice_vex_charge_1",
+			"foley:generated/voice_vex_charge_2",
+			"foley:generated/voice_vex_charge_3",
+			"foley:generated/voice_vex_charge_4",
+			"foley:generated/voice_vex_charge_5",
+			"foley:generated/voice_vex_charge_6",
+			"foley:generated/voice_vex_charge_7",
+			"foley:generated/voice_vex_charge_8",
+			"foley:generated/voice_vex_charge_9",
+			"foley:generated/voice_vex_charge_10",
+			"foley:generated/voice_vex_charge_11"
+		]
+	},
+	"voice_vex_death": {
+		"subtitle": "subtitles.entity.vex.death",
+		"sounds": [
+			"foley:generated/voice_vex_death_0",
+			"foley:generated/voice_vex_death_1",
+			"foley:generated/voice_vex_death_2",
+			"foley:generated/voice_vex_death_3",
+			"foley:generated/voice_vex_death_4",
+			"foley:generated/voice_vex_death_5",
+			"foley:generated/voice_vex_death_6",
+			"foley:generated/voice_vex_death_7",
+			"foley:generated/voice_vex_death_8",
+			"foley:generated/voice_vex_death_9",
+			"foley:generated/voice_vex_death_10",
+			"foley:generated/voice_vex_death_11"
+		]
+	},
+	"voice_vex_hurt": {
+		"subtitle": "subtitles.entity.vex.hurt",
+		"sounds": [
+			"foley:generated/voice_vex_hurt_0",
+			"foley:generated/voice_vex_hurt_1",
+			"foley:generated/voice_vex_hurt_2",
+			"foley:generated/voice_vex_hurt_3",
+			"foley:generated/voice_vex_hurt_4",
+			"foley:generated/voice_vex_hurt_5",
+			"foley:generated/voice_vex_hurt_6",
+			"foley:generated/voice_vex_hurt_7",
+			"foley:generated/voice_vex_hurt_8",
+			"foley:generated/voice_vex_hurt_9",
+			"foley:generated/voice_vex_hurt_10",
+			"foley:generated/voice_vex_hurt_11"
+		]
+	},
+	"voice_villager_ambient": {
+		"subtitle": "subtitles.entity.villager.ambient",
+		"sounds": [
+			"foley:generated/voice_villager_ambient_0",
+			"foley:generated/voice_villager_ambient_1",
+			"foley:generated/voice_villager_ambient_2",
+			"foley:generated/voice_villager_ambient_3",
+			"foley:generated/voice_villager_ambient_4",
+			"foley:generated/voice_villager_ambient_5",
+			"foley:generated/voice_villager_ambient_6",
+			"foley:generated/voice_villager_ambient_7",
+			"foley:generated/voice_villager_ambient_8",
+			"foley:generated/voice_villager_ambient_9",
+			"foley:generated/voice_villager_ambient_10",
+			"foley:generated/voice_villager_ambient_11"
+		]
+	},
+	"voice_villager_celebrate": {
+		"subtitle": "subtitles.entity.villager.celebrate",
+		"sounds": [
+			"foley:generated/voice_villager_celebrate_0",
+			"foley:generated/voice_villager_celebrate_1",
+			"foley:generated/voice_villager_celebrate_2",
+			"foley:generated/voice_villager_celebrate_3",
+			"foley:generated/voice_villager_celebrate_4",
+			"foley:generated/voice_villager_celebrate_5",
+			"foley:generated/voice_villager_celebrate_6",
+			"foley:generated/voice_villager_celebrate_7",
+			"foley:generated/voice_villager_celebrate_8",
+			"foley:generated/voice_villager_celebrate_9",
+			"foley:generated/voice_villager_celebrate_10",
+			"foley:generated/voice_villager_celebrate_11"
+		]
+	},
+	"voice_villager_death": {
+		"subtitle": "subtitles.entity.villager.death",
+		"sounds": [
+			"foley:generated/voice_villager_death_0",
+			"foley:generated/voice_villager_death_1",
+			"foley:generated/voice_villager_death_2",
+			"foley:generated/voice_villager_death_3",
+			"foley:generated/voice_villager_death_4",
+			"foley:generated/voice_villager_death_5",
+			"foley:generated/voice_villager_death_6",
+			"foley:generated/voice_villager_death_7",
+			"foley:generated/voice_villager_death_8",
+			"foley:generated/voice_villager_death_9",
+			"foley:generated/voice_villager_death_10",
+			"foley:generated/voice_villager_death_11"
+		]
+	},
+	"voice_villager_hurt": {
+		"subtitle": "subtitles.entity.villager.hurt",
+		"sounds": [
+			"foley:generated/voice_villager_hurt_0",
+			"foley:generated/voice_villager_hurt_1",
+			"foley:generated/voice_villager_hurt_2",
+			"foley:generated/voice_villager_hurt_3",
+			"foley:generated/voice_villager_hurt_4",
+			"foley:generated/voice_villager_hurt_5",
+			"foley:generated/voice_villager_hurt_6",
+			"foley:generated/voice_villager_hurt_7",
+			"foley:generated/voice_villager_hurt_8",
+			"foley:generated/voice_villager_hurt_9",
+			"foley:generated/voice_villager_hurt_10",
+			"foley:generated/voice_villager_hurt_11"
+		]
+	},
+	"voice_villager_no": {
+		"subtitle": "subtitles.entity.villager.no",
+		"sounds": [
+			"foley:generated/voice_villager_no_0",
+			"foley:generated/voice_villager_no_1",
+			"foley:generated/voice_villager_no_2",
+			"foley:generated/voice_villager_no_3",
+			"foley:generated/voice_villager_no_4",
+			"foley:generated/voice_villager_no_5",
+			"foley:generated/voice_villager_no_6",
+			"foley:generated/voice_villager_no_7",
+			"foley:generated/voice_villager_no_8",
+			"foley:generated/voice_villager_no_9",
+			"foley:generated/voice_villager_no_10",
+			"foley:generated/voice_villager_no_11"
+		]
+	},
+	"voice_villager_trade": {
+		"subtitle": "subtitles.entity.villager.trade",
+		"sounds": [
+			"foley:generated/voice_villager_trade_0",
+			"foley:generated/voice_villager_trade_1",
+			"foley:generated/voice_villager_trade_2",
+			"foley:generated/voice_villager_trade_3",
+			"foley:generated/voice_villager_trade_4",
+			"foley:generated/voice_villager_trade_5",
+			"foley:generated/voice_villager_trade_6",
+			"foley:generated/voice_villager_trade_7",
+			"foley:generated/voice_villager_trade_8",
+			"foley:generated/voice_villager_trade_9",
+			"foley:generated/voice_villager_trade_10",
+			"foley:generated/voice_villager_trade_11"
+		]
+	},
+	"voice_villager_yes": {
+		"subtitle": "subtitles.entity.villager.yes",
+		"sounds": [
+			"foley:generated/voice_villager_yes_0",
+			"foley:generated/voice_villager_yes_1",
+			"foley:generated/voice_villager_yes_2",
+			"foley:generated/voice_villager_yes_3",
+			"foley:generated/voice_villager_yes_4",
+			"foley:generated/voice_villager_yes_5",
+			"foley:generated/voice_villager_yes_6",
+			"foley:generated/voice_villager_yes_7",
+			"foley:generated/voice_villager_yes_8",
+			"foley:generated/voice_villager_yes_9",
+			"foley:generated/voice_villager_yes_10",
+			"foley:generated/voice_villager_yes_11"
+		]
+	},
+	"voice_vindicator_ambient": {
+		"subtitle": "subtitles.entity.vindicator.ambient",
+		"sounds": [
+			"foley:generated/voice_vindicator_ambient_0",
+			"foley:generated/voice_vindicator_ambient_1",
+			"foley:generated/voice_vindicator_ambient_2",
+			"foley:generated/voice_vindicator_ambient_3",
+			"foley:generated/voice_vindicator_ambient_4",
+			"foley:generated/voice_vindicator_ambient_5",
+			"foley:generated/voice_vindicator_ambient_6",
+			"foley:generated/voice_vindicator_ambient_7",
+			"foley:generated/voice_vindicator_ambient_8",
+			"foley:generated/voice_vindicator_ambient_9",
+			"foley:generated/voice_vindicator_ambient_10",
+			"foley:generated/voice_vindicator_ambient_11"
+		]
+	},
+	"voice_vindicator_celebrate": {
+		"subtitle": "subtitles.entity.vindicator.celebrate",
+		"sounds": [
+			"foley:generated/voice_vindicator_celebrate_0",
+			"foley:generated/voice_vindicator_celebrate_1",
+			"foley:generated/voice_vindicator_celebrate_2",
+			"foley:generated/voice_vindicator_celebrate_3",
+			"foley:generated/voice_vindicator_celebrate_4",
+			"foley:generated/voice_vindicator_celebrate_5",
+			"foley:generated/voice_vindicator_celebrate_6",
+			"foley:generated/voice_vindicator_celebrate_7",
+			"foley:generated/voice_vindicator_celebrate_8",
+			"foley:generated/voice_vindicator_celebrate_9",
+			"foley:generated/voice_vindicator_celebrate_10",
+			"foley:generated/voice_vindicator_celebrate_11"
+		]
+	},
+	"voice_vindicator_death": {
+		"subtitle": "subtitles.entity.vindicator.death",
+		"sounds": [
+			"foley:generated/voice_vindicator_death_0",
+			"foley:generated/voice_vindicator_death_1",
+			"foley:generated/voice_vindicator_death_2",
+			"foley:generated/voice_vindicator_death_3",
+			"foley:generated/voice_vindicator_death_4",
+			"foley:generated/voice_vindicator_death_5",
+			"foley:generated/voice_vindicator_death_6",
+			"foley:generated/voice_vindicator_death_7",
+			"foley:generated/voice_vindicator_death_8",
+			"foley:generated/voice_vindicator_death_9",
+			"foley:generated/voice_vindicator_death_10",
+			"foley:generated/voice_vindicator_death_11"
+		]
+	},
+	"voice_vindicator_hurt": {
+		"subtitle": "subtitles.entity.vindicator.hurt",
+		"sounds": [
+			"foley:generated/voice_vindicator_hurt_0",
+			"foley:generated/voice_vindicator_hurt_1",
+			"foley:generated/voice_vindicator_hurt_2",
+			"foley:generated/voice_vindicator_hurt_3",
+			"foley:generated/voice_vindicator_hurt_4",
+			"foley:generated/voice_vindicator_hurt_5",
+			"foley:generated/voice_vindicator_hurt_6",
+			"foley:generated/voice_vindicator_hurt_7",
+			"foley:generated/voice_vindicator_hurt_8",
+			"foley:generated/voice_vindicator_hurt_9",
+			"foley:generated/voice_vindicator_hurt_10",
+			"foley:generated/voice_vindicator_hurt_11"
+		]
+	},
+	"voice_wandering_trader_ambient": {
+		"subtitle": "subtitles.entity.wandering_trader.ambient",
+		"sounds": [
+			"foley:generated/voice_wandering_trader_ambient_0",
+			"foley:generated/voice_wandering_trader_ambient_1",
+			"foley:generated/voice_wandering_trader_ambient_2",
+			"foley:generated/voice_wandering_trader_ambient_3",
+			"foley:generated/voice_wandering_trader_ambient_4",
+			"foley:generated/voice_wandering_trader_ambient_5",
+			"foley:generated/voice_wandering_trader_ambient_6",
+			"foley:generated/voice_wandering_trader_ambient_7",
+			"foley:generated/voice_wandering_trader_ambient_8",
+			"foley:generated/voice_wandering_trader_ambient_9",
+			"foley:generated/voice_wandering_trader_ambient_10",
+			"foley:generated/voice_wandering_trader_ambient_11"
+		]
+	},
+	"voice_wandering_trader_death": {
+		"subtitle": "subtitles.entity.wandering_trader.death",
+		"sounds": [
+			"foley:generated/voice_wandering_trader_death_0",
+			"foley:generated/voice_wandering_trader_death_1",
+			"foley:generated/voice_wandering_trader_death_2",
+			"foley:generated/voice_wandering_trader_death_3",
+			"foley:generated/voice_wandering_trader_death_4",
+			"foley:generated/voice_wandering_trader_death_5",
+			"foley:generated/voice_wandering_trader_death_6",
+			"foley:generated/voice_wandering_trader_death_7",
+			"foley:generated/voice_wandering_trader_death_8",
+			"foley:generated/voice_wandering_trader_death_9",
+			"foley:generated/voice_wandering_trader_death_10",
+			"foley:generated/voice_wandering_trader_death_11"
+		]
+	},
+	"voice_wandering_trader_hurt": {
+		"subtitle": "subtitles.entity.wandering_trader.hurt",
+		"sounds": [
+			"foley:generated/voice_wandering_trader_hurt_0",
+			"foley:generated/voice_wandering_trader_hurt_1",
+			"foley:generated/voice_wandering_trader_hurt_2",
+			"foley:generated/voice_wandering_trader_hurt_3",
+			"foley:generated/voice_wandering_trader_hurt_4",
+			"foley:generated/voice_wandering_trader_hurt_5",
+			"foley:generated/voice_wandering_trader_hurt_6",
+			"foley:generated/voice_wandering_trader_hurt_7",
+			"foley:generated/voice_wandering_trader_hurt_8",
+			"foley:generated/voice_wandering_trader_hurt_9",
+			"foley:generated/voice_wandering_trader_hurt_10",
+			"foley:generated/voice_wandering_trader_hurt_11"
+		]
+	},
+	"voice_wandering_trader_no": {
+		"subtitle": "subtitles.entity.wandering_trader.no",
+		"sounds": [
+			"foley:generated/voice_wandering_trader_no_0",
+			"foley:generated/voice_wandering_trader_no_1",
+			"foley:generated/voice_wandering_trader_no_2",
+			"foley:generated/voice_wandering_trader_no_3",
+			"foley:generated/voice_wandering_trader_no_4",
+			"foley:generated/voice_wandering_trader_no_5",
+			"foley:generated/voice_wandering_trader_no_6",
+			"foley:generated/voice_wandering_trader_no_7",
+			"foley:generated/voice_wandering_trader_no_8",
+			"foley:generated/voice_wandering_trader_no_9",
+			"foley:generated/voice_wandering_trader_no_10",
+			"foley:generated/voice_wandering_trader_no_11"
+		]
+	},
+	"voice_wandering_trader_trade": {
+		"subtitle": "subtitles.entity.wandering_trader.trade",
+		"sounds": [
+			"foley:generated/voice_wandering_trader_trade_0",
+			"foley:generated/voice_wandering_trader_trade_1",
+			"foley:generated/voice_wandering_trader_trade_2",
+			"foley:generated/voice_wandering_trader_trade_3",
+			"foley:generated/voice_wandering_trader_trade_4",
+			"foley:generated/voice_wandering_trader_trade_5",
+			"foley:generated/voice_wandering_trader_trade_6",
+			"foley:generated/voice_wandering_trader_trade_7",
+			"foley:generated/voice_wandering_trader_trade_8",
+			"foley:generated/voice_wandering_trader_trade_9",
+			"foley:generated/voice_wandering_trader_trade_10",
+			"foley:generated/voice_wandering_trader_trade_11"
+		]
+	},
+	"voice_wandering_trader_yes": {
+		"subtitle": "subtitles.entity.wandering_trader.yes",
+		"sounds": [
+			"foley:generated/voice_wandering_trader_yes_0",
+			"foley:generated/voice_wandering_trader_yes_1",
+			"foley:generated/voice_wandering_trader_yes_2",
+			"foley:generated/voice_wandering_trader_yes_3",
+			"foley:generated/voice_wandering_trader_yes_4",
+			"foley:generated/voice_wandering_trader_yes_5",
+			"foley:generated/voice_wandering_trader_yes_6",
+			"foley:generated/voice_wandering_trader_yes_7",
+			"foley:generated/voice_wandering_trader_yes_8",
+			"foley:generated/voice_wandering_trader_yes_9",
+			"foley:generated/voice_wandering_trader_yes_10",
+			"foley:generated/voice_wandering_trader_yes_11"
+		]
+	},
+	"voice_witch_ambient": {
+		"subtitle": "subtitles.entity.witch.ambient",
+		"sounds": [
+			"foley:generated/voice_witch_ambient_0",
+			"foley:generated/voice_witch_ambient_1",
+			"foley:generated/voice_witch_ambient_2",
+			"foley:generated/voice_witch_ambient_3",
+			"foley:generated/voice_witch_ambient_4",
+			"foley:generated/voice_witch_ambient_5",
+			"foley:generated/voice_witch_ambient_6",
+			"foley:generated/voice_witch_ambient_7",
+			"foley:generated/voice_witch_ambient_8",
+			"foley:generated/voice_witch_ambient_9",
+			"foley:generated/voice_witch_ambient_10",
+			"foley:generated/voice_witch_ambient_11"
+		]
+	},
+	"voice_witch_celebrate": {
+		"subtitle": "subtitles.entity.witch.celebrate",
+		"sounds": [
+			"foley:generated/voice_witch_celebrate_0",
+			"foley:generated/voice_witch_celebrate_1",
+			"foley:generated/voice_witch_celebrate_2",
+			"foley:generated/voice_witch_celebrate_3",
+			"foley:generated/voice_witch_celebrate_4",
+			"foley:generated/voice_witch_celebrate_5",
+			"foley:generated/voice_witch_celebrate_6",
+			"foley:generated/voice_witch_celebrate_7",
+			"foley:generated/voice_witch_celebrate_8",
+			"foley:generated/voice_witch_celebrate_9",
+			"foley:generated/voice_witch_celebrate_10",
+			"foley:generated/voice_witch_celebrate_11"
+		]
+	},
+	"voice_witch_death": {
+		"subtitle": "subtitles.entity.witch.death",
+		"sounds": [
+			"foley:generated/voice_witch_death_0",
+			"foley:generated/voice_witch_death_1",
+			"foley:generated/voice_witch_death_2",
+			"foley:generated/voice_witch_death_3",
+			"foley:generated/voice_witch_death_4",
+			"foley:generated/voice_witch_death_5",
+			"foley:generated/voice_witch_death_6",
+			"foley:generated/voice_witch_death_7",
+			"foley:generated/voice_witch_death_8",
+			"foley:generated/voice_witch_death_9",
+			"foley:generated/voice_witch_death_10",
+			"foley:generated/voice_witch_death_11"
+		]
+	},
+	"voice_witch_hurt": {
+		"subtitle": "subtitles.entity.witch.hurt",
+		"sounds": [
+			"foley:generated/voice_witch_hurt_0",
+			"foley:generated/voice_witch_hurt_1",
+			"foley:generated/voice_witch_hurt_2",
+			"foley:generated/voice_witch_hurt_3",
+			"foley:generated/voice_witch_hurt_4",
+			"foley:generated/voice_witch_hurt_5",
+			"foley:generated/voice_witch_hurt_6",
+			"foley:generated/voice_witch_hurt_7",
+			"foley:generated/voice_witch_hurt_8",
+			"foley:generated/voice_witch_hurt_9",
+			"foley:generated/voice_witch_hurt_10",
+			"foley:generated/voice_witch_hurt_11"
+		]
+	},
+	"voice_wolf_ambient": {
+		"subtitle": "subtitles.entity.wolf.bark",
+		"sounds": [
+			"foley:generated/voice_wolf_ambient_0",
+			"foley:generated/voice_wolf_ambient_1",
+			"foley:generated/voice_wolf_ambient_2",
+			"foley:generated/voice_wolf_ambient_3",
+			"foley:generated/voice_wolf_ambient_4",
+			"foley:generated/voice_wolf_ambient_5",
+			"foley:generated/voice_wolf_ambient_6",
+			"foley:generated/voice_wolf_ambient_7",
+			"foley:generated/voice_wolf_ambient_8",
+			"foley:generated/voice_wolf_ambient_9",
+			"foley:generated/voice_wolf_ambient_10",
+			"foley:generated/voice_wolf_ambient_11"
+		]
+	},
+	"voice_wolf_death": {
+		"subtitle": "subtitles.entity.wolf.death",
+		"sounds": [
+			"foley:generated/voice_wolf_death_0",
+			"foley:generated/voice_wolf_death_1",
+			"foley:generated/voice_wolf_death_2",
+			"foley:generated/voice_wolf_death_3",
+			"foley:generated/voice_wolf_death_4",
+			"foley:generated/voice_wolf_death_5",
+			"foley:generated/voice_wolf_death_6",
+			"foley:generated/voice_wolf_death_7",
+			"foley:generated/voice_wolf_death_8",
+			"foley:generated/voice_wolf_death_9",
+			"foley:generated/voice_wolf_death_10",
+			"foley:generated/voice_wolf_death_11"
+		]
+	},
+	"voice_wolf_growl": {
+		"subtitle": "subtitles.entity.wolf.growl",
+		"sounds": [
+			"foley:generated/voice_wolf_growl_0",
+			"foley:generated/voice_wolf_growl_1",
+			"foley:generated/voice_wolf_growl_2",
+			"foley:generated/voice_wolf_growl_3",
+			"foley:generated/voice_wolf_growl_4",
+			"foley:generated/voice_wolf_growl_5",
+			"foley:generated/voice_wolf_growl_6",
+			"foley:generated/voice_wolf_growl_7",
+			"foley:generated/voice_wolf_growl_8",
+			"foley:generated/voice_wolf_growl_9",
+			"foley:generated/voice_wolf_growl_10",
+			"foley:generated/voice_wolf_growl_11"
+		]
+	},
+	"voice_wolf_hurt": {
+		"subtitle": "subtitles.entity.wolf.hurt",
+		"sounds": [
+			"foley:generated/voice_wolf_hurt_0",
+			"foley:generated/voice_wolf_hurt_1",
+			"foley:generated/voice_wolf_hurt_2",
+			"foley:generated/voice_wolf_hurt_3",
+			"foley:generated/voice_wolf_hurt_4",
+			"foley:generated/voice_wolf_hurt_5",
+			"foley:generated/voice_wolf_hurt_6",
+			"foley:generated/voice_wolf_hurt_7",
+			"foley:generated/voice_wolf_hurt_8",
+			"foley:generated/voice_wolf_hurt_9",
+			"foley:generated/voice_wolf_hurt_10",
+			"foley:generated/voice_wolf_hurt_11"
+		]
+	},
+	"voice_wolf_pant": {
+		"subtitle": "subtitles.entity.wolf.pant",
+		"sounds": [
+			"foley:generated/voice_wolf_pant_0",
+			"foley:generated/voice_wolf_pant_1",
+			"foley:generated/voice_wolf_pant_2",
+			"foley:generated/voice_wolf_pant_3",
+			"foley:generated/voice_wolf_pant_4",
+			"foley:generated/voice_wolf_pant_5",
+			"foley:generated/voice_wolf_pant_6",
+			"foley:generated/voice_wolf_pant_7",
+			"foley:generated/voice_wolf_pant_8",
+			"foley:generated/voice_wolf_pant_9",
+			"foley:generated/voice_wolf_pant_10",
+			"foley:generated/voice_wolf_pant_11"
+		]
+	},
+	"voice_wolf_whine": {
+		"subtitle": "subtitles.entity.wolf.whine",
+		"sounds": [
+			"foley:generated/voice_wolf_whine_0",
+			"foley:generated/voice_wolf_whine_1",
+			"foley:generated/voice_wolf_whine_2",
+			"foley:generated/voice_wolf_whine_3",
+			"foley:generated/voice_wolf_whine_4",
+			"foley:generated/voice_wolf_whine_5",
+			"foley:generated/voice_wolf_whine_6",
+			"foley:generated/voice_wolf_whine_7",
+			"foley:generated/voice_wolf_whine_8",
+			"foley:generated/voice_wolf_whine_9",
+			"foley:generated/voice_wolf_whine_10",
+			"foley:generated/voice_wolf_whine_11"
+		]
+	},
+	"voice_zombie_ambient": {
+		"subtitle": "subtitles.entity.zombie.ambient",
+		"sounds": [
+			"foley:generated/voice_zombie_ambient_0",
+			"foley:generated/voice_zombie_ambient_1",
+			"foley:generated/voice_zombie_ambient_2",
+			"foley:generated/voice_zombie_ambient_3",
+			"foley:generated/voice_zombie_ambient_4",
+			"foley:generated/voice_zombie_ambient_5",
+			"foley:generated/voice_zombie_ambient_6",
+			"foley:generated/voice_zombie_ambient_7",
+			"foley:generated/voice_zombie_ambient_8",
+			"foley:generated/voice_zombie_ambient_9",
+			"foley:generated/voice_zombie_ambient_10",
+			"foley:generated/voice_zombie_ambient_11"
+		]
+	},
+	"voice_zombie_ambient_near": {
+		"subtitle": "subtitles.entity.zombie.ambient",
+		"sounds": [
+			"foley:generated/voice_zombie_ambient_near_0",
+			"foley:generated/voice_zombie_ambient_near_1",
+			"foley:generated/voice_zombie_ambient_near_2",
+			"foley:generated/voice_zombie_ambient_near_3",
+			"foley:generated/voice_zombie_ambient_near_4",
+			"foley:generated/voice_zombie_ambient_near_5",
+			"foley:generated/voice_zombie_ambient_near_6",
+			"foley:generated/voice_zombie_ambient_near_7",
+			"foley:generated/voice_zombie_ambient_near_8",
+			"foley:generated/voice_zombie_ambient_near_9",
+			"foley:generated/voice_zombie_ambient_near_10",
+			"foley:generated/voice_zombie_ambient_near_11"
+		]
+	},
+	"voice_zombie_breath": {
+		"subtitle": "subtitles.foley.breath",
+		"sounds": [
+			"foley:generated/voice_zombie_breath_0",
+			"foley:generated/voice_zombie_breath_1",
+			"foley:generated/voice_zombie_breath_2",
+			"foley:generated/voice_zombie_breath_3",
+			"foley:generated/voice_zombie_breath_4",
+			"foley:generated/voice_zombie_breath_5",
+			"foley:generated/voice_zombie_breath_6",
+			"foley:generated/voice_zombie_breath_7",
+			"foley:generated/voice_zombie_breath_8",
+			"foley:generated/voice_zombie_breath_9",
+			"foley:generated/voice_zombie_breath_10",
+			"foley:generated/voice_zombie_breath_11"
+		]
+	},
+	"voice_zombie_breath_heavy": {
+		"subtitle": "subtitles.foley.breath",
+		"sounds": [
+			"foley:generated/voice_zombie_breath_heavy_0",
+			"foley:generated/voice_zombie_breath_heavy_1",
+			"foley:generated/voice_zombie_breath_heavy_2",
+			"foley:generated/voice_zombie_breath_heavy_3",
+			"foley:generated/voice_zombie_breath_heavy_4",
+			"foley:generated/voice_zombie_breath_heavy_5",
+			"foley:generated/voice_zombie_breath_heavy_6",
+			"foley:generated/voice_zombie_breath_heavy_7",
+			"foley:generated/voice_zombie_breath_heavy_8",
+			"foley:generated/voice_zombie_breath_heavy_9",
+			"foley:generated/voice_zombie_breath_heavy_10",
+			"foley:generated/voice_zombie_breath_heavy_11"
+		]
+	},
+	"voice_zombie_death": {
+		"subtitle": "subtitles.entity.zombie.death",
+		"sounds": [
+			"foley:generated/voice_zombie_death_0",
+			"foley:generated/voice_zombie_death_1",
+			"foley:generated/voice_zombie_death_2",
+			"foley:generated/voice_zombie_death_3",
+			"foley:generated/voice_zombie_death_4",
+			"foley:generated/voice_zombie_death_5",
+			"foley:generated/voice_zombie_death_6",
+			"foley:generated/voice_zombie_death_7",
+			"foley:generated/voice_zombie_death_8",
+			"foley:generated/voice_zombie_death_9",
+			"foley:generated/voice_zombie_death_10",
+			"foley:generated/voice_zombie_death_11"
+		]
+	},
+	"voice_zombie_hurt": {
+		"subtitle": "subtitles.entity.zombie.hurt",
+		"sounds": [
+			"foley:generated/voice_zombie_hurt_0",
+			"foley:generated/voice_zombie_hurt_1",
+			"foley:generated/voice_zombie_hurt_2",
+			"foley:generated/voice_zombie_hurt_3",
+			"foley:generated/voice_zombie_hurt_4",
+			"foley:generated/voice_zombie_hurt_5",
+			"foley:generated/voice_zombie_hurt_6",
+			"foley:generated/voice_zombie_hurt_7",
+			"foley:generated/voice_zombie_hurt_8",
+			"foley:generated/voice_zombie_hurt_9",
+			"foley:generated/voice_zombie_hurt_10",
+			"foley:generated/voice_zombie_hurt_11"
 		]
 	},
 	"voice_zombie_villager_ambient": {
@@ -1961,38 +4681,21 @@
 			"foley:generated/voice_zombie_villager_ambient_11"
 		]
 	},
-	"voice_zombie_villager_hurt": {
-		"subtitle": "subtitles.entity.zombie_villager.hurt",
+	"voice_zombie_villager_ambient_near": {
+		"subtitle": "subtitles.entity.zombie_villager.ambient",
 		"sounds": [
-			"foley:generated/voice_zombie_villager_hurt_0",
-			"foley:generated/voice_zombie_villager_hurt_1",
-			"foley:generated/voice_zombie_villager_hurt_2",
-			"foley:generated/voice_zombie_villager_hurt_3",
-			"foley:generated/voice_zombie_villager_hurt_4",
-			"foley:generated/voice_zombie_villager_hurt_5",
-			"foley:generated/voice_zombie_villager_hurt_6",
-			"foley:generated/voice_zombie_villager_hurt_7",
-			"foley:generated/voice_zombie_villager_hurt_8",
-			"foley:generated/voice_zombie_villager_hurt_9",
-			"foley:generated/voice_zombie_villager_hurt_10",
-			"foley:generated/voice_zombie_villager_hurt_11"
-		]
-	},
-	"voice_zombie_villager_death": {
-		"subtitle": "subtitles.entity.zombie_villager.death",
-		"sounds": [
-			"foley:generated/voice_zombie_villager_death_0",
-			"foley:generated/voice_zombie_villager_death_1",
-			"foley:generated/voice_zombie_villager_death_2",
-			"foley:generated/voice_zombie_villager_death_3",
-			"foley:generated/voice_zombie_villager_death_4",
-			"foley:generated/voice_zombie_villager_death_5",
-			"foley:generated/voice_zombie_villager_death_6",
-			"foley:generated/voice_zombie_villager_death_7",
-			"foley:generated/voice_zombie_villager_death_8",
-			"foley:generated/voice_zombie_villager_death_9",
-			"foley:generated/voice_zombie_villager_death_10",
-			"foley:generated/voice_zombie_villager_death_11"
+			"foley:generated/voice_zombie_villager_ambient_near_0",
+			"foley:generated/voice_zombie_villager_ambient_near_1",
+			"foley:generated/voice_zombie_villager_ambient_near_2",
+			"foley:generated/voice_zombie_villager_ambient_near_3",
+			"foley:generated/voice_zombie_villager_ambient_near_4",
+			"foley:generated/voice_zombie_villager_ambient_near_5",
+			"foley:generated/voice_zombie_villager_ambient_near_6",
+			"foley:generated/voice_zombie_villager_ambient_near_7",
+			"foley:generated/voice_zombie_villager_ambient_near_8",
+			"foley:generated/voice_zombie_villager_ambient_near_9",
+			"foley:generated/voice_zombie_villager_ambient_near_10",
+			"foley:generated/voice_zombie_villager_ambient_near_11"
 		]
 	},
 	"voice_zombie_villager_breath": {
@@ -2029,378 +4732,38 @@
 			"foley:generated/voice_zombie_villager_breath_heavy_11"
 		]
 	},
-	"voice_zombie_villager_ambient_near": {
-		"subtitle": "subtitles.entity.zombie_villager.ambient",
+	"voice_zombie_villager_death": {
+		"subtitle": "subtitles.entity.zombie_villager.death",
 		"sounds": [
-			"foley:generated/voice_zombie_villager_ambient_near_0",
-			"foley:generated/voice_zombie_villager_ambient_near_1",
-			"foley:generated/voice_zombie_villager_ambient_near_2",
-			"foley:generated/voice_zombie_villager_ambient_near_3",
-			"foley:generated/voice_zombie_villager_ambient_near_4",
-			"foley:generated/voice_zombie_villager_ambient_near_5",
-			"foley:generated/voice_zombie_villager_ambient_near_6",
-			"foley:generated/voice_zombie_villager_ambient_near_7",
-			"foley:generated/voice_zombie_villager_ambient_near_8",
-			"foley:generated/voice_zombie_villager_ambient_near_9",
-			"foley:generated/voice_zombie_villager_ambient_near_10",
-			"foley:generated/voice_zombie_villager_ambient_near_11"
+			"foley:generated/voice_zombie_villager_death_0",
+			"foley:generated/voice_zombie_villager_death_1",
+			"foley:generated/voice_zombie_villager_death_2",
+			"foley:generated/voice_zombie_villager_death_3",
+			"foley:generated/voice_zombie_villager_death_4",
+			"foley:generated/voice_zombie_villager_death_5",
+			"foley:generated/voice_zombie_villager_death_6",
+			"foley:generated/voice_zombie_villager_death_7",
+			"foley:generated/voice_zombie_villager_death_8",
+			"foley:generated/voice_zombie_villager_death_9",
+			"foley:generated/voice_zombie_villager_death_10",
+			"foley:generated/voice_zombie_villager_death_11"
 		]
 	},
-	"voice_skeleton_ambient": {
-		"subtitle": "subtitles.entity.skeleton.ambient",
+	"voice_zombie_villager_hurt": {
+		"subtitle": "subtitles.entity.zombie_villager.hurt",
 		"sounds": [
-			"foley:generated/voice_skeleton_ambient_0",
-			"foley:generated/voice_skeleton_ambient_1",
-			"foley:generated/voice_skeleton_ambient_2",
-			"foley:generated/voice_skeleton_ambient_3",
-			"foley:generated/voice_skeleton_ambient_4",
-			"foley:generated/voice_skeleton_ambient_5",
-			"foley:generated/voice_skeleton_ambient_6",
-			"foley:generated/voice_skeleton_ambient_7",
-			"foley:generated/voice_skeleton_ambient_8",
-			"foley:generated/voice_skeleton_ambient_9",
-			"foley:generated/voice_skeleton_ambient_10",
-			"foley:generated/voice_skeleton_ambient_11"
-		]
-	},
-	"voice_skeleton_hurt": {
-		"subtitle": "subtitles.entity.skeleton.hurt",
-		"sounds": [
-			"foley:generated/voice_skeleton_hurt_0",
-			"foley:generated/voice_skeleton_hurt_1",
-			"foley:generated/voice_skeleton_hurt_2",
-			"foley:generated/voice_skeleton_hurt_3",
-			"foley:generated/voice_skeleton_hurt_4",
-			"foley:generated/voice_skeleton_hurt_5",
-			"foley:generated/voice_skeleton_hurt_6",
-			"foley:generated/voice_skeleton_hurt_7",
-			"foley:generated/voice_skeleton_hurt_8",
-			"foley:generated/voice_skeleton_hurt_9",
-			"foley:generated/voice_skeleton_hurt_10",
-			"foley:generated/voice_skeleton_hurt_11"
-		]
-	},
-	"voice_skeleton_death": {
-		"subtitle": "subtitles.entity.skeleton.death",
-		"sounds": [
-			"foley:generated/voice_skeleton_death_0",
-			"foley:generated/voice_skeleton_death_1",
-			"foley:generated/voice_skeleton_death_2",
-			"foley:generated/voice_skeleton_death_3",
-			"foley:generated/voice_skeleton_death_4",
-			"foley:generated/voice_skeleton_death_5",
-			"foley:generated/voice_skeleton_death_6",
-			"foley:generated/voice_skeleton_death_7",
-			"foley:generated/voice_skeleton_death_8",
-			"foley:generated/voice_skeleton_death_9",
-			"foley:generated/voice_skeleton_death_10",
-			"foley:generated/voice_skeleton_death_11"
-		]
-	},
-	"voice_stray_ambient": {
-		"subtitle": "subtitles.entity.stray.ambient",
-		"sounds": [
-			"foley:generated/voice_stray_ambient_0",
-			"foley:generated/voice_stray_ambient_1",
-			"foley:generated/voice_stray_ambient_2",
-			"foley:generated/voice_stray_ambient_3",
-			"foley:generated/voice_stray_ambient_4",
-			"foley:generated/voice_stray_ambient_5",
-			"foley:generated/voice_stray_ambient_6",
-			"foley:generated/voice_stray_ambient_7",
-			"foley:generated/voice_stray_ambient_8",
-			"foley:generated/voice_stray_ambient_9",
-			"foley:generated/voice_stray_ambient_10",
-			"foley:generated/voice_stray_ambient_11"
-		]
-	},
-	"voice_stray_hurt": {
-		"subtitle": "subtitles.entity.stray.hurt",
-		"sounds": [
-			"foley:generated/voice_stray_hurt_0",
-			"foley:generated/voice_stray_hurt_1",
-			"foley:generated/voice_stray_hurt_2",
-			"foley:generated/voice_stray_hurt_3",
-			"foley:generated/voice_stray_hurt_4",
-			"foley:generated/voice_stray_hurt_5",
-			"foley:generated/voice_stray_hurt_6",
-			"foley:generated/voice_stray_hurt_7",
-			"foley:generated/voice_stray_hurt_8",
-			"foley:generated/voice_stray_hurt_9",
-			"foley:generated/voice_stray_hurt_10",
-			"foley:generated/voice_stray_hurt_11"
-		]
-	},
-	"voice_stray_death": {
-		"subtitle": "subtitles.entity.stray.death",
-		"sounds": [
-			"foley:generated/voice_stray_death_0",
-			"foley:generated/voice_stray_death_1",
-			"foley:generated/voice_stray_death_2",
-			"foley:generated/voice_stray_death_3",
-			"foley:generated/voice_stray_death_4",
-			"foley:generated/voice_stray_death_5",
-			"foley:generated/voice_stray_death_6",
-			"foley:generated/voice_stray_death_7",
-			"foley:generated/voice_stray_death_8",
-			"foley:generated/voice_stray_death_9",
-			"foley:generated/voice_stray_death_10",
-			"foley:generated/voice_stray_death_11"
-		]
-	},
-	"voice_bogged_ambient": {
-		"subtitle": "subtitles.entity.bogged.ambient",
-		"sounds": [
-			"foley:generated/voice_bogged_ambient_0",
-			"foley:generated/voice_bogged_ambient_1",
-			"foley:generated/voice_bogged_ambient_2",
-			"foley:generated/voice_bogged_ambient_3",
-			"foley:generated/voice_bogged_ambient_4",
-			"foley:generated/voice_bogged_ambient_5",
-			"foley:generated/voice_bogged_ambient_6",
-			"foley:generated/voice_bogged_ambient_7",
-			"foley:generated/voice_bogged_ambient_8",
-			"foley:generated/voice_bogged_ambient_9",
-			"foley:generated/voice_bogged_ambient_10",
-			"foley:generated/voice_bogged_ambient_11"
-		]
-	},
-	"voice_bogged_hurt": {
-		"subtitle": "subtitles.entity.bogged.hurt",
-		"sounds": [
-			"foley:generated/voice_bogged_hurt_0",
-			"foley:generated/voice_bogged_hurt_1",
-			"foley:generated/voice_bogged_hurt_2",
-			"foley:generated/voice_bogged_hurt_3",
-			"foley:generated/voice_bogged_hurt_4",
-			"foley:generated/voice_bogged_hurt_5",
-			"foley:generated/voice_bogged_hurt_6",
-			"foley:generated/voice_bogged_hurt_7",
-			"foley:generated/voice_bogged_hurt_8",
-			"foley:generated/voice_bogged_hurt_9",
-			"foley:generated/voice_bogged_hurt_10",
-			"foley:generated/voice_bogged_hurt_11"
-		]
-	},
-	"voice_bogged_death": {
-		"subtitle": "subtitles.entity.bogged.death",
-		"sounds": [
-			"foley:generated/voice_bogged_death_0",
-			"foley:generated/voice_bogged_death_1",
-			"foley:generated/voice_bogged_death_2",
-			"foley:generated/voice_bogged_death_3",
-			"foley:generated/voice_bogged_death_4",
-			"foley:generated/voice_bogged_death_5",
-			"foley:generated/voice_bogged_death_6",
-			"foley:generated/voice_bogged_death_7",
-			"foley:generated/voice_bogged_death_8",
-			"foley:generated/voice_bogged_death_9",
-			"foley:generated/voice_bogged_death_10",
-			"foley:generated/voice_bogged_death_11"
-		]
-	},
-	"voice_spider_ambient": {
-		"subtitle": "subtitles.entity.spider.ambient",
-		"sounds": [
-			"foley:generated/voice_spider_ambient_0",
-			"foley:generated/voice_spider_ambient_1",
-			"foley:generated/voice_spider_ambient_2",
-			"foley:generated/voice_spider_ambient_3",
-			"foley:generated/voice_spider_ambient_4",
-			"foley:generated/voice_spider_ambient_5",
-			"foley:generated/voice_spider_ambient_6",
-			"foley:generated/voice_spider_ambient_7",
-			"foley:generated/voice_spider_ambient_8",
-			"foley:generated/voice_spider_ambient_9",
-			"foley:generated/voice_spider_ambient_10",
-			"foley:generated/voice_spider_ambient_11"
-		]
-	},
-	"voice_spider_hurt": {
-		"subtitle": "subtitles.entity.spider.hurt",
-		"sounds": [
-			"foley:generated/voice_spider_hurt_0",
-			"foley:generated/voice_spider_hurt_1",
-			"foley:generated/voice_spider_hurt_2",
-			"foley:generated/voice_spider_hurt_3",
-			"foley:generated/voice_spider_hurt_4",
-			"foley:generated/voice_spider_hurt_5",
-			"foley:generated/voice_spider_hurt_6",
-			"foley:generated/voice_spider_hurt_7",
-			"foley:generated/voice_spider_hurt_8",
-			"foley:generated/voice_spider_hurt_9",
-			"foley:generated/voice_spider_hurt_10",
-			"foley:generated/voice_spider_hurt_11"
-		]
-	},
-	"voice_spider_death": {
-		"subtitle": "subtitles.entity.spider.death",
-		"sounds": [
-			"foley:generated/voice_spider_death_0",
-			"foley:generated/voice_spider_death_1",
-			"foley:generated/voice_spider_death_2",
-			"foley:generated/voice_spider_death_3",
-			"foley:generated/voice_spider_death_4",
-			"foley:generated/voice_spider_death_5",
-			"foley:generated/voice_spider_death_6",
-			"foley:generated/voice_spider_death_7",
-			"foley:generated/voice_spider_death_8",
-			"foley:generated/voice_spider_death_9",
-			"foley:generated/voice_spider_death_10",
-			"foley:generated/voice_spider_death_11"
-		]
-	},
-	"voice_cave_spider_ambient": {
-		"subtitle": "subtitles.entity.spider.ambient",
-		"sounds": [
-			"foley:generated/voice_cave_spider_ambient_0",
-			"foley:generated/voice_cave_spider_ambient_1",
-			"foley:generated/voice_cave_spider_ambient_2",
-			"foley:generated/voice_cave_spider_ambient_3",
-			"foley:generated/voice_cave_spider_ambient_4",
-			"foley:generated/voice_cave_spider_ambient_5",
-			"foley:generated/voice_cave_spider_ambient_6",
-			"foley:generated/voice_cave_spider_ambient_7",
-			"foley:generated/voice_cave_spider_ambient_8",
-			"foley:generated/voice_cave_spider_ambient_9",
-			"foley:generated/voice_cave_spider_ambient_10",
-			"foley:generated/voice_cave_spider_ambient_11"
-		]
-	},
-	"voice_cave_spider_hurt": {
-		"subtitle": "subtitles.entity.spider.hurt",
-		"sounds": [
-			"foley:generated/voice_cave_spider_hurt_0",
-			"foley:generated/voice_cave_spider_hurt_1",
-			"foley:generated/voice_cave_spider_hurt_2",
-			"foley:generated/voice_cave_spider_hurt_3",
-			"foley:generated/voice_cave_spider_hurt_4",
-			"foley:generated/voice_cave_spider_hurt_5",
-			"foley:generated/voice_cave_spider_hurt_6",
-			"foley:generated/voice_cave_spider_hurt_7",
-			"foley:generated/voice_cave_spider_hurt_8",
-			"foley:generated/voice_cave_spider_hurt_9",
-			"foley:generated/voice_cave_spider_hurt_10",
-			"foley:generated/voice_cave_spider_hurt_11"
-		]
-	},
-	"voice_cave_spider_death": {
-		"subtitle": "subtitles.entity.spider.death",
-		"sounds": [
-			"foley:generated/voice_cave_spider_death_0",
-			"foley:generated/voice_cave_spider_death_1",
-			"foley:generated/voice_cave_spider_death_2",
-			"foley:generated/voice_cave_spider_death_3",
-			"foley:generated/voice_cave_spider_death_4",
-			"foley:generated/voice_cave_spider_death_5",
-			"foley:generated/voice_cave_spider_death_6",
-			"foley:generated/voice_cave_spider_death_7",
-			"foley:generated/voice_cave_spider_death_8",
-			"foley:generated/voice_cave_spider_death_9",
-			"foley:generated/voice_cave_spider_death_10",
-			"foley:generated/voice_cave_spider_death_11"
-		]
-	},
-	"voice_creeper_primed": {
-		"subtitle": "subtitles.entity.creeper.primed",
-		"sounds": [
-			"foley:generated/voice_creeper_primed_0",
-			"foley:generated/voice_creeper_primed_1",
-			"foley:generated/voice_creeper_primed_2",
-			"foley:generated/voice_creeper_primed_3",
-			"foley:generated/voice_creeper_primed_4",
-			"foley:generated/voice_creeper_primed_5",
-			"foley:generated/voice_creeper_primed_6",
-			"foley:generated/voice_creeper_primed_7",
-			"foley:generated/voice_creeper_primed_8",
-			"foley:generated/voice_creeper_primed_9",
-			"foley:generated/voice_creeper_primed_10",
-			"foley:generated/voice_creeper_primed_11"
-		]
-	},
-	"voice_creeper_hurt": {
-		"subtitle": "subtitles.entity.creeper.hurt",
-		"sounds": [
-			"foley:generated/voice_creeper_hurt_0",
-			"foley:generated/voice_creeper_hurt_1",
-			"foley:generated/voice_creeper_hurt_2",
-			"foley:generated/voice_creeper_hurt_3",
-			"foley:generated/voice_creeper_hurt_4",
-			"foley:generated/voice_creeper_hurt_5",
-			"foley:generated/voice_creeper_hurt_6",
-			"foley:generated/voice_creeper_hurt_7",
-			"foley:generated/voice_creeper_hurt_8",
-			"foley:generated/voice_creeper_hurt_9",
-			"foley:generated/voice_creeper_hurt_10",
-			"foley:generated/voice_creeper_hurt_11"
-		]
-	},
-	"voice_creeper_death": {
-		"subtitle": "subtitles.entity.creeper.death",
-		"sounds": [
-			"foley:generated/voice_creeper_death_0",
-			"foley:generated/voice_creeper_death_1",
-			"foley:generated/voice_creeper_death_2",
-			"foley:generated/voice_creeper_death_3",
-			"foley:generated/voice_creeper_death_4",
-			"foley:generated/voice_creeper_death_5",
-			"foley:generated/voice_creeper_death_6",
-			"foley:generated/voice_creeper_death_7",
-			"foley:generated/voice_creeper_death_8",
-			"foley:generated/voice_creeper_death_9",
-			"foley:generated/voice_creeper_death_10",
-			"foley:generated/voice_creeper_death_11"
-		]
-	},
-	"voice_bat_ambient": {
-		"subtitle": "subtitles.entity.bat.ambient",
-		"sounds": [
-			"foley:generated/voice_bat_ambient_0",
-			"foley:generated/voice_bat_ambient_1",
-			"foley:generated/voice_bat_ambient_2",
-			"foley:generated/voice_bat_ambient_3",
-			"foley:generated/voice_bat_ambient_4",
-			"foley:generated/voice_bat_ambient_5",
-			"foley:generated/voice_bat_ambient_6",
-			"foley:generated/voice_bat_ambient_7",
-			"foley:generated/voice_bat_ambient_8",
-			"foley:generated/voice_bat_ambient_9",
-			"foley:generated/voice_bat_ambient_10",
-			"foley:generated/voice_bat_ambient_11"
-		]
-	},
-	"voice_bat_hurt": {
-		"subtitle": "subtitles.entity.bat.hurt",
-		"sounds": [
-			"foley:generated/voice_bat_hurt_0",
-			"foley:generated/voice_bat_hurt_1",
-			"foley:generated/voice_bat_hurt_2",
-			"foley:generated/voice_bat_hurt_3",
-			"foley:generated/voice_bat_hurt_4",
-			"foley:generated/voice_bat_hurt_5",
-			"foley:generated/voice_bat_hurt_6",
-			"foley:generated/voice_bat_hurt_7",
-			"foley:generated/voice_bat_hurt_8",
-			"foley:generated/voice_bat_hurt_9",
-			"foley:generated/voice_bat_hurt_10",
-			"foley:generated/voice_bat_hurt_11"
-		]
-	},
-	"voice_bat_death": {
-		"subtitle": "subtitles.entity.bat.death",
-		"sounds": [
-			"foley:generated/voice_bat_death_0",
-			"foley:generated/voice_bat_death_1",
-			"foley:generated/voice_bat_death_2",
-			"foley:generated/voice_bat_death_3",
-			"foley:generated/voice_bat_death_4",
-			"foley:generated/voice_bat_death_5",
-			"foley:generated/voice_bat_death_6",
-			"foley:generated/voice_bat_death_7",
-			"foley:generated/voice_bat_death_8",
-			"foley:generated/voice_bat_death_9",
-			"foley:generated/voice_bat_death_10",
-			"foley:generated/voice_bat_death_11"
+			"foley:generated/voice_zombie_villager_hurt_0",
+			"foley:generated/voice_zombie_villager_hurt_1",
+			"foley:generated/voice_zombie_villager_hurt_2",
+			"foley:generated/voice_zombie_villager_hurt_3",
+			"foley:generated/voice_zombie_villager_hurt_4",
+			"foley:generated/voice_zombie_villager_hurt_5",
+			"foley:generated/voice_zombie_villager_hurt_6",
+			"foley:generated/voice_zombie_villager_hurt_7",
+			"foley:generated/voice_zombie_villager_hurt_8",
+			"foley:generated/voice_zombie_villager_hurt_9",
+			"foley:generated/voice_zombie_villager_hurt_10",
+			"foley:generated/voice_zombie_villager_hurt_11"
 		]
 	}
 }

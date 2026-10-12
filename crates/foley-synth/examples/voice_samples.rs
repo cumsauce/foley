@@ -17,6 +17,23 @@ fn main() -> std::io::Result<()> {
                 vec![Call::Breath, Call::BreathHeavy, Call::AmbientNear]
             }
             Mob::Drowned => vec![Call::AmbientWater, Call::BreathHeavy],
+            Mob::Horse => vec![Call::Angry, Call::Snort],
+            Mob::Donkey | Mob::Llama => vec![Call::Angry],
+            Mob::Goat => vec![Call::Scream],
+            Mob::Fox => vec![Call::Screech, Call::Aggressive, Call::Snort, Call::Sleep],
+            Mob::Bee => vec![Call::Loop, Call::LoopAggressive],
+            Mob::PolarBear => vec![Call::Warning, Call::AmbientBaby],
+            Mob::Panda => vec![Call::Worried, Call::Aggressive, Call::Sneeze],
+            Mob::Villager => vec![Call::Yes, Call::No, Call::Trade, Call::Celebrate],
+            Mob::WanderingTrader => vec![Call::Yes, Call::No, Call::Trade],
+            Mob::Enderman => vec![Call::Stare, Call::Scream],
+            Mob::Witch | Mob::Pillager | Mob::Vindicator | Mob::Evoker => vec![Call::Celebrate],
+            Mob::Slime | Mob::SlimeSmall => vec![Call::Squish, Call::Jump, Call::Attack],
+            Mob::Phantom => vec![Call::Swoop, Call::Flap],
+            Mob::Ravager => vec![Call::Roar, Call::Stunned],
+            Mob::Vex => vec![Call::Charge],
+            Mob::Guardian | Mob::ElderGuardian => vec![Call::AmbientLand, Call::Flop],
+            Mob::Turtle => vec![Call::AmbientLand],
             _ => vec![],
         };
         extra.extend(calls);

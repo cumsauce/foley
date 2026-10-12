@@ -94,6 +94,10 @@ pub(super) struct Seg {
     pub ingressive: bool,
     /// Vibrato and tremolo: rate (Hz) and depth.
     pub tremolo: (f32, f32),
+    /// Biphonation: a second, independent source (as a horse's whinny has,
+    /// Briefer et al. 2015) at `bi_ratio` times the pitch, this loud.
+    pub bi: K,
+    pub bi_ratio: f32,
 }
 
 impl Seg {
@@ -120,7 +124,99 @@ impl Seg {
             jitter: 0.01,
             ingressive: false,
             tremolo: (0.0, 0.0),
+            bi: c(0.0),
+            bi_ratio: 1.0,
         }
+    }
+
+    pub(super) fn f0(mut self, keys: &[(f32, f32)]) -> Seg {
+        self.f0 = k(keys);
+        self
+    }
+
+    pub(super) fn rd(mut self, rd: f32) -> Seg {
+        self.rd = c(rd);
+        self
+    }
+
+    pub(super) fn loud(mut self, keys: &[(f32, f32)]) -> Seg {
+        self.loud = k(keys);
+        self
+    }
+
+    pub(super) fn breath(mut self, breath: f32) -> Seg {
+        self.breath = c(breath);
+        self
+    }
+
+    pub(super) fn voicing(mut self, voicing: f32) -> Seg {
+        self.voicing = c(voicing);
+        self
+    }
+
+    pub(super) fn chaos(mut self, chaos: f32) -> Seg {
+        self.chaos = c(chaos);
+        self
+    }
+
+    pub(super) fn sub(mut self, sub: f32) -> Seg {
+        self.sub = c(sub);
+        self
+    }
+
+    pub(super) fn creak(mut self, keys: &[(f32, f32)]) -> Seg {
+        self.creak = k(keys);
+        self
+    }
+
+    /// Mouth shut, through the nose.
+    pub(super) fn nasal(mut self) -> Seg {
+        self.lips = c(0.0);
+        self.velum = c(1.0);
+        self
+    }
+
+    pub(super) fn lips(mut self, keys: &[(f32, f32)]) -> Seg {
+        self.lips = k(keys);
+        self
+    }
+
+    pub(super) fn velum(mut self, keys: &[(f32, f32)]) -> Seg {
+        self.velum = k(keys);
+        self
+    }
+
+    pub(super) fn fric(mut self, amount: f32, place: f32, width: f32) -> Seg {
+        self.fric = c(amount);
+        self.fric_at = (place, width);
+        self
+    }
+
+    pub(super) fn inward(mut self) -> Seg {
+        self.ingressive = true;
+        self
+    }
+
+    pub(super) fn tremolo(mut self, rate: f32, depth: f32) -> Seg {
+        self.tremolo = (rate, depth);
+        self
+    }
+
+    pub(super) fn sidebands(mut self, depth: f32, hz: f32) -> Seg {
+        self.sidebands = c(depth);
+        self.sideband_hz = hz;
+        self
+    }
+
+    pub(super) fn bi(mut self, level: f32, ratio: f32) -> Seg {
+        self.bi = c(level);
+        self.bi_ratio = ratio;
+        self
+    }
+
+    pub(super) fn gap(mut self, gap: f32) -> Seg {
+        self.gap = gap;
+        self
     }
 
     pub(super) fn vowels(mut self, keys: &[(f32, Vowel)]) -> Seg {
@@ -174,6 +270,7 @@ pub(super) fn perform(rng: &mut Rng, voice: Voice, segments: &[Seg]) -> Vec<f32>
     let mut tract = Tract::new(voice.length);
     let mut out = Vec::new();
     let mut phase = 0.0f32;
+    let mut bi_phase = 0.0f32;
     let mut scale = 1.0f32;
     let mut amp = 1.0f32;
     let mut pulse = 0u32;
@@ -244,6 +341,11 @@ pub(super) fn perform(rng: &mut Rng, voice: Voice, segments: &[Seg]) -> Vec<f32>
             let (dg, flow) = lf::lookup(rd, cycle);
             let voicing = seg.voicing.at(t);
             let mut voiced = dg * amp * voicing * gain;
+            let bi = seg.bi.at(t);
+            if bi > 0.0 {
+                bi_phase = (bi_phase + f0 * seg.bi_ratio / rate).fract();
+                voiced += bi * lf::lookup(rd, bi_phase).0 * voicing * gain;
+            }
             let sidebands = seg.sidebands.at(t);
             if sidebands > 0.0 {
                 voiced *= 1.0 + sidebands * (TAU * seg.sideband_hz * time).sin();

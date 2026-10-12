@@ -4,7 +4,7 @@ Procedurally generated, physically based sound effects and ambience for Minecraf
 
 It runs alongside [Earshot](https://github.com/cumsauce/earshot), which shapes every sound Foley makes with its occlusion, reverb and HRTF. It also runs alongside [Yak VC](https://github.com/desocketed/yakvc), which it doesn't touch.
 
-Status: **0.1.0-beta.3 (M7).** Mob voices are being remade, most-heard mobs first (docs/PLAN.md, M7–M11).
+Status: **0.1.0-beta.4 (M8, M9).** Mob voices are being remade, most-heard mobs first (docs/PLAN.md, M7–M11); the Nether and End (M10) and the rarest (M11) are next.
 
 - **Rain** replaces the game's rain sounds. Drops fall at the rate the weather gives (about 10 mm/h in rain, 50 in a thunderstorm), sized by the Marshall–Palmer distribution, onto what's actually round you: water rings with bubbles, stone ticks, leaves patter, wood knocks, glass and metal ping, grass and sand thud softly. Under a roof you hear the drumming on the roof instead.
 - **Water, fire and lava** replace the game's ambience within 12 blocks, each played from where it is, so it pans (and Earshot occludes it). Streams babble with bubbles of 1 to 4 mm; waterfalls roar where they land, with bubbles of every size; fire roars and puffs, and crackles in a heavy-tailed mix of ticks and pops; lava rumbles, and its bubbles burst and ring as the cavities they leave. Still water is silent.
@@ -21,6 +21,23 @@ Status: **0.1.0-beta.3 (M7).** Mob voices are being remade, most-heard mobs firs
   - Cows, pigs, sheep, chickens, villagers, wolves (growls, pants, whines) and cats (purrs, hisses).
   - Zombies, husks, drowned and zombie villagers: rough, breathy groans. They breathe heavier, faster and louder as they close in on you.
   - Skeletons: rattling bones and chattering teeth. Spiders: stridulation and hissing. Creepers: a swelling fuse hiss. Bats: squeaks.
+  - Everyday animals:
+    - horses whinny in two voices at once, as real ones do;
+    - donkeys bray on the in-breath and the out-breath;
+    - goats bleat or scream, and llamas hum;
+    - foxes chatter, bark and scream, and parrots squawk (imitating mobs in Foley's voices for them);
+    - bees buzz on their wingbeats;
+    - polar bears huff and growl, pandas bleat, whimper and sneeze, and camels gurgle;
+    - rabbits and armadillos snuffle, turtles hiss, and ocelots chirp;
+    - villagers and wandering traders say "mm-hm", "mm-mm" and "hmm?";
+    - iron golems clang and creak, and snow golems crunch.
+  - Rarer hostiles:
+    - endermen mutter something like speech, on the in-breath;
+    - witches cackle;
+    - illagers grumble under their breath;
+    - phantoms screech, and ravagers roar;
+    - vexes twitter, and guardians moan like whales;
+    - slimes squelch, and silverfish and endermites chitter.
   - Babies are higher, and bigger variants lower. `cargo run --release -p foley-synth --example voice_samples` writes every call to WAV files.
 
 **Settings:** Options → Music & Sounds → Foley… (or Mod Menu). Foley's volume; each sound it replaces can be given back to the game, and each it adds switched off. Bind "Bypass Foley" in Controls to switch it all off and on while you listen.

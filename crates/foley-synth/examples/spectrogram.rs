@@ -1,7 +1,7 @@
 //! Spectrograms of a few calls, as one PNG, for looking at what a voice is
 //! made of: `cargo run --release -p foley-synth --example spectrogram -- out.png`.
-//! Rows: zombie groan, zombie close by, cow, sheep, cat, wolf growl. 0–8 kHz,
-//! log magnitude.
+//! Rows: zombie groan, zombie close by, cow, sheep, cat, wolf growl; or the
+//! M8 or M9 sets (a second argument `m8` or `m9`). 0–8 kHz, log magnitude.
 
 use foley_synth::{Call, Mob, voice};
 
@@ -14,14 +14,35 @@ fn main() -> std::io::Result<()> {
     let path = std::env::args()
         .nth(1)
         .unwrap_or_else(|| "spectrogram.png".into());
-    let rows = [
-        (Mob::Zombie, Call::Ambient),
-        (Mob::Zombie, Call::AmbientNear),
-        (Mob::Cow, Call::Ambient),
-        (Mob::Sheep, Call::Ambient),
-        (Mob::Cat, Call::Ambient),
-        (Mob::Wolf, Call::Growl),
-    ];
+    let set = std::env::args().nth(2).unwrap_or_default();
+    let rows: Vec<(Mob, Call)> = if set == "m8" {
+        vec![
+            (Mob::Horse, Call::Ambient),
+            (Mob::Donkey, Call::Ambient),
+            (Mob::Goat, Call::Scream),
+            (Mob::Llama, Call::Ambient),
+            (Mob::Camel, Call::Ambient),
+            (Mob::Bee, Call::Loop),
+        ]
+    } else if set == "m9" {
+        vec![
+            (Mob::Enderman, Call::Ambient),
+            (Mob::Witch, Call::Celebrate),
+            (Mob::Pillager, Call::Ambient),
+            (Mob::Ravager, Call::Roar),
+            (Mob::Guardian, Call::Ambient),
+            (Mob::Slime, Call::Squish),
+        ]
+    } else {
+        vec![
+            (Mob::Zombie, Call::Ambient),
+            (Mob::Zombie, Call::AmbientNear),
+            (Mob::Cow, Call::Ambient),
+            (Mob::Sheep, Call::Ambient),
+            (Mob::Cat, Call::Ambient),
+            (Mob::Wolf, Call::Growl),
+        ]
+    };
     let height = rows.len() * (BINS + 4);
     let mut image = vec![0u8; WIDTH * height];
     for (r, (mob, call)) in rows.iter().enumerate() {

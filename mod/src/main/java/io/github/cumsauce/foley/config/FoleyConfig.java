@@ -34,13 +34,13 @@ import java.nio.file.Path;
  */
 public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunder, boolean water, boolean fire,
 		boolean lava, boolean drips, boolean strikes, boolean footsteps, boolean birds, boolean crickets,
-		boolean frogs, int voices) {
+		boolean frogs, long voices) {
 	public static final FoleyConfig DEFAULT = new FoleyConfig(100, true, true, true, true, true, true, true, true, true,
 			true, true, true, 0);
 
 	/** Whether Foley voices the group at {@code index} in {@code Voices.GROUPS}. */
 	public boolean voice(int index) {
-		return index >= 0 && (voices & (1 << index)) != 0;
+		return index >= 0 && index < 64 && (voices & (1L << index)) != 0;
 	}
 
 	/** Foley's volume as a gain, 0 to 1. */
@@ -103,14 +103,13 @@ public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunde
 	}
 
 	/** The groups, as {@code Voices.GROUPS} (kept here so this class needs nothing of the game's). */
-	static final java.util.List<String> MOBS = java.util.List.of("cow", "pig", "sheep", "chicken", "villager",
-			"zombie", "wolf", "cat", "skeleton", "spider", "creeper", "bat");
+	static final java.util.List<String> MOBS = io.github.cumsauce.foley.audio.VoiceTable.GROUPS;
 
-	private static int voices(JsonObject json) {
+	private static long voices(JsonObject json) {
 		if (!(json.get("voices") instanceof JsonObject mobs)) return DEFAULT.voices;
-		int bits = 0;
+		long bits = 0;
 		for (int i = 0; i < MOBS.size(); i++) {
-			if (flag(mobs, MOBS.get(i), false)) bits |= 1 << i;
+			if (flag(mobs, MOBS.get(i), false)) bits |= 1L << i;
 		}
 		return bits;
 	}

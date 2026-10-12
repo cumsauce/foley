@@ -255,6 +255,43 @@ Fabric mod (Java)                                   foley-ffi (Rust cdylib, FFM)
 
 Each of M7–M11 is one release, ordered by how often players hear the mobs (spawn weights, where they live, how loud they are), so each release covers as much as it can. Every mob stays switchable between Foley's voice and the game's.
 
+## M8 and M9 results: everyday animals and rarer Overworld hostiles (2026-10-12)
+
+- **The engine grew:**
+  - **Biphonation:** a second, independent glottal source at a non-harmonic ratio, for horses, whose whinnies have two fundamentals (Briefer et al. 2015).
+  - **Builders:** methods for writing calls compactly.
+  - **Pseudo-speech:** consonant–vowel syllables with phrase intonation and stresses, the consonants made in the tract (closures released, nasals, fricatives, breaths), with pauses between "words".
+  - **Laughter:** bursts of breath and voice about five a second, falling, with an in-breath gasp.
+  - **Sniffing and snorting:** unvoiced nasal breaths, with nostril flutter for horses.
+- **Everyday animals:**
+  - horses, donkeys and mules: whinnies, a bray alternating inhaled "hee" and exhaled, rough "haw", and snorts;
+  - goats: a nasal, trembling bleat, and the screaming goat's rough one;
+  - llamas: a hum with the mouth shut, and a staccato alarm call;
+  - rabbits and armadillos snuffle;
+  - foxes: gekkering (rapid rough clicks of voice), barks, a vixen's scream, sniffing, and sleep breathing;
+  - parrots squawk, and imitate mobs in Foley's voices for them, pitched up;
+  - bees: a wingbeat buzz at about 230 Hz (255 angry), harmonic-rich and wavering. One second loops seamlessly (whole wingbeats, whole wavers, crossfaded), so the game's own looping instance is pointed at it rather than replaced, and keeps following the bee and rising in pitch as it flies;
+  - polar bears huff, cubs bleat, and adults give a growl as a warning;
+  - pandas bleat, whimper when worried, bark when aggressive, and sneeze;
+  - camels give a gurgling groan (sidebands at about 22 Hz, through the soft palate's pouch);
+  - turtles hiss, and ocelots chirp;
+  - villagers and wandering traders: "mm-hm!", "mm-mm", "hmm?" and a cheerful laugh. The trader is older and breathier;
+  - iron golems ring with M4's metal and stone modes, and their joints creak by stick–slip; dying, they fall apart. Snow golems creak, crunch and collapse as snow.
+- **Rarer hostiles:**
+  - endermen: pseudo-speech on the in-breath, low, through a tract a little too long for a human voice, creaking at the end of a phrase; an inhaled gasp rising when stared at, and an inhaled, rough cry when angry;
+  - witches cackle ("hee-hee-hee", pressed and falling, with a gasp) or mutter;
+  - illagers (pillager, vindicator, evoker, illusioner) grumble in nasal pseudo-speech under their breath, and cheer at a raid;
+  - phantoms screech, high and chaotic; their swoop is air rushing past, and their wings beat softly;
+  - ravagers huff and grunt, roar, and groan when stunned;
+  - vexes twitter, rising when they charge;
+  - guardians moan like whales, gliding, with a few bubbles. Elder guardians are deeper and longer. On land they gasp and flop with wet slaps;
+  - slimes: a gel body's low modes, heavily damped, under the sticky crackle of its surface, for squishing, jumping, attacking, hurt and death; small ones are higher;
+  - silverfish and endermites chitter like small spiders.
+- **One list, generated tables:** `scripts/gen_voices.py` holds the game's mobs and calls and Foley's for each. It checks them against the native enums, and writes `VoiceTable.java` and sounds.json's voice entries, with the game's own subtitles. That makes 52 native mobs, 43 calls and 215 voice events. The settings have 36 groups, each a bit of a 64-bit mask, with a button to voice them all (or none).
+- **Checked:** spectrograms of the M8 and M9 calls (`--example spectrogram -- out.png m8|m9`) showed the guardians' moan buried under bubble clicks after an underwater filter. Guardians now call unfiltered (Earshot muffles them if the listener is under water). Slime bubbles are quieter.
+- **Tests:** the bee loop's seam is no bigger than a step within it; a witch's cackle comes in at least four bursts; every mob's every call renders, bounded and finite. The gametest checks a horse, a screaming goat and a witch's cackle are Foley's, and that a bee's buzz is redirected.
+- Released together as **0.1.0-beta.4**.
+
 ## M7 results: voice engine 2, and the night's four (2026-10-12)
 
 - **The engine is built as planned:**

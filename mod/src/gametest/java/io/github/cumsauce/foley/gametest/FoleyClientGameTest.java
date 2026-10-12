@@ -24,7 +24,8 @@ import net.minecraft.sounds.SoundSource;
  * Foley's thunder and the game's is skipped (M3); breaking glass and stepping down on stone layer Foley's modal
  * strikes and shatters under the game's sounds (M4), and a footstep too (M5); crickets chirp in the grass at night,
  * the bypass gives the game its sounds back, and the settings open from Music &amp; Sounds (M5); a sheep switched to
- * Foley's voice is voiced by it (M6), a nearby zombie breathes and a creeper's fuse hisses (M7); and a generated
+ * Foley's voice is voiced by it (M6), a nearby zombie breathes and a creeper's fuse hisses (M7), horses, goats, witches
+ * and bees are Foley's (M8, M9); and a generated
  * one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null
  * backend.
  */
@@ -200,6 +201,33 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					mc.player.getZ())));
 			if (FoleyClient.replaced() != beforeFuse + 1) throw new AssertionError("the creeper's fuse wasn't Foley's");
 			singleplayer.getServer().runCommand("kill @e[type=zombie]");
+
+			// Everyday animals and rarer hostiles (M8, M9): a horse, a screaming goat and a witch's cackle are Foley's,
+			// and a bee's buzz is pointed at Foley's loop.
+			long more = 0;
+			for (String group : java.util.List.of("horse", "goat", "witch", "bee")) {
+				more |= 1L << io.github.cumsauce.foley.audio.Voices.GROUPS.indexOf(group);
+			}
+			long chosen = more;
+			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
+					settings.volume(), settings.rain(), settings.wind(), settings.thunder(), settings.water(),
+					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
+					settings.birds(), settings.crickets(), settings.frogs(), chosen)));
+			int beforeAnimals = FoleyClient.replaced();
+			int beforeRedirect = io.github.cumsauce.foley.audio.Voices.redirected();
+			context.runOnClient(mc -> {
+				for (var event : java.util.List.of(SoundEvents.HORSE_AMBIENT, SoundEvents.GOAT_SCREAMING_AMBIENT,
+						SoundEvents.WITCH_CELEBRATE, SoundEvents.BEE_LOOP)) {
+					mc.getSoundManager().play(new SimpleSoundInstance(event, SoundSource.NEUTRAL, 1f, 1f,
+							SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(), mc.player.getZ()));
+				}
+			});
+			if (FoleyClient.replaced() != beforeAnimals + 3) {
+				throw new AssertionError("horse, goat and witch: " + (FoleyClient.replaced() - beforeAnimals) + " voiced");
+			}
+			if (io.github.cumsauce.foley.audio.Voices.redirected() <= beforeRedirect) {
+				throw new AssertionError("the bee's buzz wasn't Foley's");
+			}
 			context.runOnClient(mc -> FoleyClient.apply(settings));
 
 			// The settings, where players look first: Options → Music & Sounds → Foley.

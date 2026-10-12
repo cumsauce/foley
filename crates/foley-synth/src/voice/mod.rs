@@ -6,7 +6,9 @@
 
 mod creatures;
 mod lf;
+mod mobs2;
 mod score;
+mod speech;
 mod tract;
 
 use creatures::{Bones, Call3, CreeperCall};
@@ -38,10 +40,44 @@ pub enum Mob {
     CaveSpider,
     Creeper,
     Bat,
+    Horse,
+    Donkey,
+    Mule,
+    Goat,
+    Llama,
+    Rabbit,
+    Fox,
+    Parrot,
+    Bee,
+    PolarBear,
+    Panda,
+    Frog,
+    Camel,
+    Armadillo,
+    Turtle,
+    Ocelot,
+    WanderingTrader,
+    IronGolem,
+    SnowGolem,
+    Enderman,
+    Witch,
+    Slime,
+    SlimeSmall,
+    Phantom,
+    Pillager,
+    Vindicator,
+    Evoker,
+    Illusioner,
+    Ravager,
+    Vex,
+    Guardian,
+    ElderGuardian,
+    Silverfish,
+    Endermite,
 }
 
 impl Mob {
-    pub const ALL: [Mob; 18] = [
+    pub const ALL: [Mob; 52] = [
         Mob::Cow,
         Mob::Pig,
         Mob::Sheep,
@@ -60,6 +96,40 @@ impl Mob {
         Mob::CaveSpider,
         Mob::Creeper,
         Mob::Bat,
+        Mob::Horse,
+        Mob::Donkey,
+        Mob::Mule,
+        Mob::Goat,
+        Mob::Llama,
+        Mob::Rabbit,
+        Mob::Fox,
+        Mob::Parrot,
+        Mob::Bee,
+        Mob::PolarBear,
+        Mob::Panda,
+        Mob::Frog,
+        Mob::Camel,
+        Mob::Armadillo,
+        Mob::Turtle,
+        Mob::Ocelot,
+        Mob::WanderingTrader,
+        Mob::IronGolem,
+        Mob::SnowGolem,
+        Mob::Enderman,
+        Mob::Witch,
+        Mob::Slime,
+        Mob::SlimeSmall,
+        Mob::Phantom,
+        Mob::Pillager,
+        Mob::Vindicator,
+        Mob::Evoker,
+        Mob::Illusioner,
+        Mob::Ravager,
+        Mob::Vex,
+        Mob::Guardian,
+        Mob::ElderGuardian,
+        Mob::Silverfish,
+        Mob::Endermite,
     ];
 
     pub fn from_index(index: usize) -> Option<Mob> {
@@ -82,6 +152,33 @@ impl Mob {
             Mob::ZombieVillager => (0.17, 95.0),
             Mob::Wolf => (0.2, 420.0),
             Mob::Cat => (0.08, 600.0),
+            Mob::Horse => (0.6, 500.0),
+            Mob::Donkey => (0.45, 200.0),
+            Mob::Mule => (0.5, 380.0),
+            Mob::Goat => (0.25, 380.0),
+            Mob::Llama => (0.4, 200.0),
+            Mob::Rabbit => (0.05, 1200.0),
+            Mob::Fox => (0.12, 700.0),
+            Mob::Parrot => (0.04, 1100.0),
+            Mob::PolarBear => (0.35, 90.0),
+            Mob::Panda => (0.3, 300.0),
+            Mob::Frog => (0.04, 1000.0),
+            Mob::Camel => (0.6, 90.0),
+            Mob::Armadillo => (0.04, 700.0),
+            Mob::Turtle => (0.06, 200.0),
+            Mob::Ocelot => (0.07, 750.0),
+            Mob::WanderingTrader => (0.17, 105.0),
+            Mob::Enderman => (0.22, 70.0),
+            Mob::Witch => (0.16, 280.0),
+            Mob::Phantom => (0.08, 1600.0),
+            Mob::Pillager => (0.17, 105.0),
+            Mob::Vindicator => (0.17, 95.0),
+            Mob::Evoker => (0.17, 90.0),
+            Mob::Illusioner => (0.17, 110.0),
+            Mob::Ravager => (0.7, 65.0),
+            Mob::Vex => (0.05, 1500.0),
+            Mob::Guardian => (0.3, 220.0),
+            Mob::ElderGuardian => (0.6, 110.0),
             _ => (0.17, 100.0),
         };
         Voice { length, f0 }
@@ -110,10 +207,37 @@ pub enum Call {
     BreathHeavy,
     /// The ambient call close to the listener: more effort, louder.
     AmbientNear,
+    Angry,
+    Snort,
+    Scream,
+    Screech,
+    Warning,
+    Sneeze,
+    Worried,
+    Aggressive,
+    Yes,
+    No,
+    Trade,
+    Celebrate,
+    Stare,
+    Squish,
+    Jump,
+    Attack,
+    Roar,
+    Stunned,
+    Charge,
+    Swoop,
+    Flap,
+    Flop,
+    AmbientLand,
+    Loop,
+    LoopAggressive,
+    Sleep,
+    AmbientBaby,
 }
 
 impl Call {
-    pub const ALL: [Call; 16] = [
+    pub const ALL: [Call; 43] = [
         Call::Ambient,
         Call::Hurt,
         Call::Death,
@@ -130,6 +254,33 @@ impl Call {
         Call::Breath,
         Call::BreathHeavy,
         Call::AmbientNear,
+        Call::Angry,
+        Call::Snort,
+        Call::Scream,
+        Call::Screech,
+        Call::Warning,
+        Call::Sneeze,
+        Call::Worried,
+        Call::Aggressive,
+        Call::Yes,
+        Call::No,
+        Call::Trade,
+        Call::Celebrate,
+        Call::Stare,
+        Call::Squish,
+        Call::Jump,
+        Call::Attack,
+        Call::Roar,
+        Call::Stunned,
+        Call::Charge,
+        Call::Swoop,
+        Call::Flap,
+        Call::Flop,
+        Call::AmbientLand,
+        Call::Loop,
+        Call::LoopAggressive,
+        Call::Sleep,
+        Call::AmbientBaby,
     ];
 
     pub fn from_index(index: usize) -> Option<Call> {
@@ -147,7 +298,7 @@ impl Call {
     }
 }
 
-fn vary(rng: &mut Rng, x: f32, by: f32) -> f32 {
+pub(super) fn vary(rng: &mut Rng, x: f32, by: f32) -> f32 {
     x * (1.0 + by * rng.signed())
 }
 
@@ -168,6 +319,42 @@ pub fn voice(mob: Mob, call: Call, seed: u64) -> Vec<f32> {
         Mob::Spider => (creatures::spider(&mut rng, three, 1.0), 0.5),
         Mob::CaveSpider => (creatures::spider(&mut rng, three, 1.5), 0.45),
         Mob::Bat => (creatures::bat(&mut rng, three), 0.4),
+        Mob::Bee => {
+            let sound = match call {
+                Call::Hurt => creatures::bee_cry(&mut rng, false),
+                Call::Death => creatures::bee_cry(&mut rng, true),
+                // A loop: no fades or tail, so it joins up.
+                _ => {
+                    let mut buzz = creatures::bee_loop(&mut rng, call == Call::LoopAggressive);
+                    let loudest = buzz.iter().fold(0f32, |m, x| m.max(x.abs()));
+                    buzz.iter_mut().for_each(|x| *x *= 0.35 / loudest.max(1e-6));
+                    return buzz;
+                }
+            };
+            (sound, 0.5)
+        }
+        Mob::Slime | Mob::SlimeSmall => {
+            let slime = match call {
+                Call::Jump => creatures::Slime::Jump,
+                Call::Attack => creatures::Slime::Attack,
+                Call::Hurt => creatures::Slime::Hurt,
+                Call::Death => creatures::Slime::Death,
+                _ => creatures::Slime::Squish,
+            };
+            let size = if mob == Mob::Slime { 1.0 } else { 0.4 };
+            (creatures::slime(&mut rng, slime, size), 0.5)
+        }
+        Mob::IronGolem => (creatures::iron_golem(&mut rng, three, seed), 0.6),
+        Mob::SnowGolem => (creatures::snow_golem(three, seed), 0.45),
+        Mob::Silverfish => (creatures::spider(&mut rng, three, 2.5), 0.4),
+        Mob::Endermite => (creatures::spider(&mut rng, three, 3.0), 0.4),
+        Mob::Frog if three == Call3::Ambient => (crate::frog(5.0 + 3.0 * rng.unit(), seed), 0.5),
+        Mob::Guardian | Mob::ElderGuardian if call == Call::Flop => {
+            (creatures::flop(&mut rng, mob == Mob::ElderGuardian), 0.55)
+        }
+        Mob::Phantom if call == Call::Swoop || call == Call::Flap => {
+            (creatures::phantom_air(&mut rng, call == Call::Swoop), 0.45)
+        }
         Mob::Creeper => {
             let call = match call {
                 Call::Hurt => CreeperCall::Hurt,
@@ -181,6 +368,13 @@ pub fn voice(mob: Mob, call: Call, seed: u64) -> Vec<f32> {
             let mut voice = mob.voice();
             voice.f0 *= 1.0 + 0.06 * rng.signed();
             let mut sound = perform(&mut rng, voice, &segments);
+            let submerged =
+                matches!(mob, Mob::Guardian | Mob::ElderGuardian) && call != Call::AmbientLand;
+            if submerged {
+                // Guardians live in water: a few bubbles rise as they call.
+                // (Earshot muffles it if the listener is under water too.)
+                sound = creatures::bubbles(&mut rng, sound, 3);
+            }
             if mob == Mob::Drowned {
                 sound = if in_water {
                     creatures::underwater(&mut rng, sound)
@@ -190,7 +384,21 @@ pub fn voice(mob: Mob, call: Call, seed: u64) -> Vec<f32> {
             }
             let hostile = matches!(
                 mob,
-                Mob::Zombie | Mob::Husk | Mob::Drowned | Mob::ZombieVillager
+                Mob::Zombie
+                    | Mob::Husk
+                    | Mob::Drowned
+                    | Mob::ZombieVillager
+                    | Mob::Enderman
+                    | Mob::Witch
+                    | Mob::Phantom
+                    | Mob::Pillager
+                    | Mob::Vindicator
+                    | Mob::Evoker
+                    | Mob::Illusioner
+                    | Mob::Ravager
+                    | Mob::Vex
+                    | Mob::Guardian
+                    | Mob::ElderGuardian
             );
             let peak = match call {
                 Call::Hurt => 0.7,
@@ -229,7 +437,17 @@ fn hurt(rng: &mut Rng, mob: Mob) -> Vec<Seg> {
             cry.mouth = vec![(0.0, AA), (1.0, OO)];
             cry.secs = vary(rng, 0.2, 0.2);
         }
-        Mob::Villager => cry.mouth = vec![(0.0, OO), (1.0, OH)],
+        Mob::Villager
+        | Mob::WanderingTrader
+        | Mob::Pillager
+        | Mob::Vindicator
+        | Mob::Evoker
+        | Mob::Illusioner => cry.mouth = vec![(0.0, OO), (1.0, OH)],
+        Mob::Horse | Mob::Mule => {
+            cry.bi = c(0.5);
+            cry.bi_ratio = 0.31;
+        }
+        Mob::Enderman => cry.ingressive = true,
         Mob::Cat => cry.mouth = vec![(0.0, EE), (0.4, AA), (1.0, OO)],
         _ => {}
     }
@@ -353,6 +571,9 @@ fn breathe(rng: &mut Rng, heavy: bool, dry: bool, nasal: bool) -> Vec<Seg> {
 }
 
 fn script(rng: &mut Rng, mob: Mob, call: Call) -> Vec<Seg> {
+    if let Some(segments) = mobs2::script(rng, mob, call) {
+        return segments;
+    }
     match (mob, call) {
         (_, Call::Hurt) => hurt(rng, mob),
         (_, Call::Death) => death(rng),
@@ -554,7 +775,8 @@ fn script(rng: &mut Rng, mob: Mob, call: Call) -> Vec<Seg> {
             }
             vec![h]
         }
-        _ => vec![Seg::new(0.3)],
+        // A call this mob doesn't have: its ambient one.
+        _ => mobs2::script(rng, mob, Call::Ambient).unwrap_or_else(|| vec![Seg::new(0.3)]),
     }
 }
 
@@ -625,6 +847,39 @@ mod tests {
         let light = voice(Mob::Zombie, Call::Breath, 3);
         let heavy = voice(Mob::Zombie, Call::BreathHeavy, 3);
         assert!(rms(&heavy) > rms(&light));
+    }
+
+    #[test]
+    fn a_bee_loops_seamlessly_and_a_witch_cackles_in_bursts() {
+        let buzz = voice(Mob::Bee, Call::Loop, 1);
+        assert_eq!(buzz.len(), SAMPLE_RATE as usize);
+        let step = (buzz[0] - buzz[buzz.len() - 1]).abs();
+        let typical = buzz
+            .windows(2)
+            .map(|w| (w[1] - w[0]).abs())
+            .fold(0f32, f32::max);
+        assert!(
+            step <= typical,
+            "loop seam {step} against steps up to {typical}"
+        );
+        // A cackle: separate bursts, so its envelope dips again and again.
+        let cackle = voice(Mob::Witch, Call::Celebrate, 2);
+        let window = SAMPLE_RATE as usize / 100;
+        let envelope: Vec<f32> = cackle.chunks(window).map(rms).collect();
+        let top = envelope.iter().fold(0f32, |m, x| m.max(*x));
+        let dips = envelope
+            .windows(2)
+            .filter(|w| w[0] > 0.3 * top && w[1] <= 0.3 * top)
+            .count();
+        assert!(dips >= 4, "{dips} bursts");
+    }
+
+    #[test]
+    fn a_donkey_brays_in_and_out() {
+        let bray = voice(Mob::Donkey, Call::Ambient, 1);
+        assert!(bray.len() > SAMPLE_RATE as usize, "{} samples", bray.len());
+        let horse = voice(Mob::Horse, Call::Ambient, 1);
+        assert!(horse.len() > SAMPLE_RATE as usize / 2);
     }
 
     #[test]

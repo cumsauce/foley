@@ -404,6 +404,24 @@ pub(super) fn underwater(rng: &mut Rng, voice: Vec<f32>) -> Vec<f32> {
     out
 }
 
+/// `count` bubbles rising through `sound`, quietly.
+pub(super) fn bubbles(rng: &mut Rng, mut sound: Vec<f32>, count: usize) -> Vec<f32> {
+    let rate = SAMPLE_RATE as f32;
+    let length = sound.len() as f32 / rate;
+    let peak = sound.iter().fold(0f32, |m, x| m.max(x.abs()));
+    for _ in 0..count {
+        let mut bubble = Bubble::new(0.003 + 0.004 * rng.unit(), 1.0);
+        let mut pop = Vec::new();
+        while !bubble.done() {
+            pop.push(bubble.sample());
+        }
+        let loudest = pop.iter().fold(0f32, |m, x| m.max(x.abs())).max(1e-6);
+        let quiet: Vec<f32> = pop.iter().map(|x| x * 0.15 * peak / loudest).collect();
+        add_at(&mut sound, (length * rng.unit() * rate) as usize, &quiet);
+    }
+    sound
+}
+
 /// A wet throat: a few bubbles bursting in it as it groans.
 pub(super) fn gurgle(rng: &mut Rng, mut voice: Vec<f32>) -> Vec<f32> {
     let rate = SAMPLE_RATE as f32;
@@ -417,4 +435,231 @@ pub(super) fn gurgle(rng: &mut Rng, mut voice: Vec<f32>) -> Vec<f32> {
         add_at(&mut voice, (length * rng.unit() * rate) as usize, &sound);
     }
     voice
+}
+
+/// A bee's buzz: its wings beating about 230 times a second (faster when
+/// angry), each stroke a pressure pulse rich in harmonics, wavering. One
+/// second that loops seamlessly: whole wingbeats, whole wavers, and its end
+/// crossfaded into its start.
+pub(super) fn bee_loop(rng: &mut Rng, angry: bool) -> Vec<f32> {
+    let rate = SAMPLE_RATE as f32;
+    let beat = if angry { 255.0 } else { 230.0 } + (rng.unit() * 6.0).floor();
+    let wobble = if angry { 5.0 } else { 2.0 };
+    let n = rate as usize;
+    let tail = n / 20;
+    let mut phase = 0.0f32;
+    let mut noise_lp = LowPass::new(2000.0);
+    let make = |i: usize, phase: &mut f32, noise: f32| {
+        let t = i as f32 / rate;
+        // FM over whole cycles of the waver nets to zero: the loop stays in tune.
+        let f = beat * (1.0 + 0.015 * (TAU * wobble * t).sin());
+        *phase += f / rate;
+        let mut s = 0.0;
+        let harmonics = if angry { 40 } else { 30 };
+        for h in 1..=harmonics {
+            if beat * h as f32 > 0.45 * rate {
+                break;
+            }
+            s += (TAU * h as f32 * *phase).sin() / (h as f32).powf(if angry { 0.7 } else { 0.9 });
+        }
+        let level = 1.0 + 0.2 * (TAU * 3.0 * t).sin();
+        level * (0.25 * s + 0.15 * noise)
+    };
+    let mut out: Vec<f32> = (0..n + tail)
+        .map(|i| make(i, &mut phase, noise_lp.process(rng.signed())))
+        .collect();
+    for i in 0..tail {
+        let w = i as f32 / tail as f32;
+        out[i] = out[i] * w + out[n + i] * (1.0 - w);
+    }
+    out.truncate(n);
+    out
+}
+
+/// A bee hurt (its buzz spiking) or dying (its buzz falling away).
+pub(super) fn bee_cry(rng: &mut Rng, death: bool) -> Vec<f32> {
+    let rate = SAMPLE_RATE as f32;
+    let seconds = if death { 0.7 } else { 0.3 };
+    let n = (seconds * rate) as usize;
+    let mut phase = 0.0f32;
+    (0..n)
+        .map(|i| {
+            let t = i as f32 / n as f32;
+            let f = if death {
+                300.0 * (1.0 - 0.6 * t)
+            } else {
+                260.0 * (1.0 + 0.5 * (PI * t).sin())
+            };
+            phase += f / rate;
+            let mut s = 0.0;
+            for h in 1..30 {
+                s += (TAU * h as f32 * phase).sin() / (h as f32).powf(0.8);
+            }
+            let envelope = if death {
+                (1.0 - t).powi(2)
+            } else {
+                (PI * t).sin()
+            };
+            envelope * (0.25 * s + 0.1 * rng.signed())
+        })
+        .collect()
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Slime {
+    Squish,
+    Jump,
+    Attack,
+    Hurt,
+    Death,
+}
+
+/// A slime: a body of gel whose low modes wobble, heavily damped, under the
+/// wet, sticky crackle of its surface parting and the pop of small bubbles.
+/// `size` 1 for a big one; smaller ones are higher.
+pub(super) fn slime(rng: &mut Rng, call: Slime, size: f32) -> Vec<f32> {
+    let rate = SAMPLE_RATE as f32;
+    let scale = 1.0 / size.max(0.3);
+    let (seconds, impact, wet) = match call {
+        Slime::Squish => (0.35, 0.8, 0.6),
+        Slime::Jump => (0.3, 0.3, 0.8),
+        Slime::Attack => (0.3, 1.0, 0.7),
+        Slime::Hurt => (0.4, 0.9, 0.9),
+        Slime::Death => (0.8, 1.0, 1.0),
+    };
+    let wobble: Vec<(f32, f32, f32)> = (0..3)
+        .map(|i| {
+            let f = (70.0 + 60.0 * i as f32) * scale * (1.0 + 0.1 * rng.signed());
+            (f, PI * f / 3.0, impact / (1.0 + i as f32))
+        })
+        .collect();
+    let mut out = ring(&wobble, 0.2 * impact, rng);
+    let n = (seconds * rate) as usize;
+    let mut band = BandPass::new(1200.0 * scale.sqrt(), 1.0);
+    let mut stick = 0.0f32;
+    let mut until = 0.0f32;
+    let film: Vec<f32> = (0..n)
+        .map(|i| {
+            let t = i as f32 / n as f32;
+            until -= 1.0 / rate;
+            if until <= 0.0 {
+                stick = 0.5 + 0.5 * rng.unit();
+                let rate = 40.0 + 40.0 * rng.unit();
+                until = rng.exponential(rate);
+            }
+            stick *= 0.995;
+            let envelope = if call == Slime::Jump {
+                t.sqrt() * (1.0 - t) * 2.0
+            } else {
+                (1.0 - t).powi(2)
+            };
+            wet * envelope * stick * band.process(rng.signed())
+        })
+        .collect();
+    add_at(&mut out, 0, &film);
+    let bubbles = if call == Slime::Death { 8 } else { 3 };
+    for _ in 0..bubbles {
+        let mut bubble = Bubble::new((0.001 + 0.002 * rng.unit()) * size.sqrt(), 0.03);
+        let mut pop = Vec::new();
+        while !bubble.done() {
+            pop.push(bubble.sample());
+        }
+        add_at(&mut out, (seconds * rng.unit() * rate) as usize, &pop);
+    }
+    out
+}
+
+/// An iron golem, struck (its iron and stone ring, and its joints creak by
+/// stick–slip) or falling apart.
+pub(super) fn iron_golem(rng: &mut Rng, call: Call3, seed: u64) -> Vec<f32> {
+    use crate::{Contact, Material, contact, fracture};
+    let mut out = Vec::new();
+    match call {
+        Call3::Death => {
+            add_at(&mut out, 0, &fracture(Material::Metal, seed));
+            add_at(
+                &mut out,
+                (0.05 * SAMPLE_RATE as f32) as usize,
+                &fracture(Material::Stone, seed + 1),
+            );
+        }
+        _ => {
+            add_at(
+                &mut out,
+                0,
+                &contact(Contact::Tap, Material::Metal, 2.0, seed),
+            );
+            add_at(
+                &mut out,
+                0,
+                &contact(Contact::Tap, Material::Stone, 2.0, seed + 1),
+            );
+            // Stick–slip: the joint grinds in jerks, slower and slower.
+            let mut at = 0.05;
+            let mut step = 0.015;
+            for _ in 0..8 + (rng.unit() * 8.0) as usize {
+                let f = 900.0 + 600.0 * rng.unit();
+                let click = ring(&[(f, 300.0, 0.15), (2.3 * f, 500.0, 0.08)], 0.05, rng);
+                add_at(&mut out, (at * SAMPLE_RATE as f32) as usize, &click);
+                at += step;
+                step *= 1.15;
+            }
+        }
+    }
+    out
+}
+
+/// A snow golem: snow creaking (ambient), crunching (hurt), or collapsing.
+pub(super) fn snow_golem(call: Call3, seed: u64) -> Vec<f32> {
+    use crate::{Contact, Material, contact, fracture};
+    match call {
+        Call3::Ambient => contact(Contact::Step, Material::Snow, 0.4, seed)
+            .iter()
+            .map(|x| 0.5 * x)
+            .collect(),
+        Call3::Hurt => contact(Contact::Land, Material::Snow, 2.0, seed),
+        Call3::Death => fracture(Material::Snow, seed),
+    }
+}
+
+/// A guardian flopping on land: a wet slap.
+pub(super) fn flop(rng: &mut Rng, big: bool) -> Vec<f32> {
+    let rate = SAMPLE_RATE as f32;
+    let f = if big { 90.0 } else { 160.0 } * (1.0 + 0.1 * rng.signed());
+    let mut out = ring(&[(f, 40.0, 1.0), (2.7 * f, 90.0, 0.4)], 0.8, rng);
+    let n = (0.12 * rate) as usize;
+    let mut band = BandPass::new(1500.0, 0.8);
+    let slap: Vec<f32> = (0..n)
+        .map(|i| (1.0 - i as f32 / n as f32).powi(3) * band.process(rng.signed()))
+        .collect();
+    add_at(&mut out, 0, &slap);
+    out
+}
+
+/// A phantom's wings: a few broad, soft beats; or its swoop, air rushing
+/// past and away.
+pub(super) fn phantom_air(rng: &mut Rng, swoop: bool) -> Vec<f32> {
+    let rate = SAMPLE_RATE as f32;
+    if swoop {
+        let n = (0.9 * rate) as usize;
+        let mut band = BandPass::new(800.0, 0.7);
+        (0..n)
+            .map(|i| {
+                let t = i as f32 / n as f32;
+                band.tune(1800.0 - 1200.0 * t, 0.7);
+                (PI * t).sin().powi(2) * band.process(rng.signed())
+            })
+            .collect()
+    } else {
+        let mut out = Vec::new();
+        let mut lp = LowPass::new(500.0);
+        for beat in 0..2 + (rng.unit() * 2.0) as usize {
+            let n = (0.08 * rate) as usize;
+            let thump: Vec<f32> = (0..n)
+                .map(|i| (PI * i as f32 / n as f32).sin() * lp.process(rng.signed()) * 3.0)
+                .collect();
+            add_at(&mut out, (beat as f32 * 0.35 * rate) as usize, &thump);
+        }
+        out
+    }
 }
