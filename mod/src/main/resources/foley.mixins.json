@@ -3,6 +3,7 @@
 	"package": "io.github.cumsauce.foley.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
+		"AbstractSoundInstanceAccessor",
 		"SoundBufferLibraryMixin",
 		"SoundEngineMixin",
 		"SoundManagerMixin"

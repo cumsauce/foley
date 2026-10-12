@@ -181,6 +181,26 @@ Fabric mod (Java)                                   foley-ffi (Rust cdylib, FFM)
 - The client gametest opens the settings from Music & Sounds (and screenshots them) and checks that, bypassed, Foley leaves the game's thunder alone. A unit test covers the settings file.
 - Released as **0.1.0-beta.1**.
 
+## M6 results: procedural mob voices (2026-10-12)
+
+- **A source–filter voice:**
+  - **Source:** Rosenberg glottal pulses, opening over 40 % of the period and closing over 16 %. They have cycle-to-cycle jitter and shimmer, roughness (every other pulse weaker: the period doubling of a growl or groan), and breath noise. The lips radiate the flow's change.
+  - **Tract:** a Klatt cascade of four formant resonators at F_n = (2n − 1)·c/4L for a tract L long, times each vowel's factors ([a], [e], [i], [o], [u], from a human tract's measured formants), with bandwidths a tenth of each. Mouth shut, a nasal murmur near 250 Hz is heard instead.
+  - **Size:** tract length sets formant spacing (ΔF = c/2L), and both follow body size, as Fitch found: a cow's 45 cm tract against a chicken's 7.
+- **Calls**, made up afresh each time, mob by mob:
+  - a cow's "mm-ooo";
+  - a pig's rough, nasal grunts;
+  - a sheep's "baa" with a bleat's tremolo;
+  - a hen's clucks and "bawk";
+  - a villager's "hmm", "hrm?" or "hm.", mouth shut;
+  - a zombie's rough, breathy groan;
+  - a wolf's panting or bark;
+  - a cat's "mi-a-ow".
+  Every mob also has a hurt call (higher, rough, sudden) and a death call (falling, fading, breathier).
+- **In the game** (`Voices`): off by default, switched on mob by mob in the settings. The game's ambient, hurt and death sounds are replaced in all their variants (`entity.wolf_big.hurt`, `entity.cat.ambient_baby`, a zombie villager's). Foley keeps the game's volume and pitch through an accessor mixin, as a sound's getters need it resolved. So babies are higher, and bigger and smaller variants a little lower or higher. The game's subtitles are kept.
+- The client gametest checks a sheep isn't voiced by default, and is once the sheep is switched to Foley's. The settings test covers the per-mob switches.
+- Released as **0.1.0-beta.2**.
+
 ## Milestones
 
 0. **M0 Groundwork.** Repo, Rust workspace, FFM bridge, CI and natives packaging, all copied from Earshot. Spike: one procedural `FabricSoundInstance` stream (a sine, then filtered noise), and one generated buffer through the `SoundBufferLibrary` mixin. Measure CPU on the M3. **Exit:** both paths play in game, and Earshot shapes them.

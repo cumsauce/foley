@@ -12,6 +12,7 @@ mod oneshot;
 mod rain;
 mod rng;
 mod thunder;
+mod voice;
 mod water;
 mod wind;
 
@@ -26,6 +27,7 @@ pub use crate::oneshot::{drip_into_water, drip_on_stone, lava_drip};
 pub use crate::rain::{Rain, RainScene, Surface};
 pub use crate::rng::Rng;
 pub use crate::thunder::{Segment, Thunder, ThunderScene, channel, strike};
+pub use crate::voice::{Call, Mob, voice};
 pub use crate::water::{Water, WaterScene, plunge_radius};
 pub use crate::wind::{Wind, WindScene};
 

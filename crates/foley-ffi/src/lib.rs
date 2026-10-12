@@ -12,9 +12,9 @@
 mod guard;
 
 use foley_synth::{
-    Contact, Fire, FireScene, Lava, LavaScene, Material, Rain, RainScene, Surface, Thunder,
-    ThunderScene, Water, WaterScene, Wind, WindScene, birdsong, contact, crickets, drip_into_water,
-    drip_on_stone, fracture, frog, lava_drip, to_pcm,
+    Call, Contact, Fire, FireScene, Lava, LavaScene, Material, Mob, Rain, RainScene, Surface,
+    Thunder, ThunderScene, Water, WaterScene, Wind, WindScene, birdsong, contact, crickets,
+    drip_into_water, drip_on_stone, fracture, frog, lava_drip, to_pcm, voice,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -29,7 +29,8 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 /// 6: strikes and breaks on materials, `foley_render_contact`.
 /// 7: ambient life one-shots: crickets, birdsong, frogs.
 /// 8: footsteps, and snow as a material.
-pub const FOLEY_ABI_VERSION: u32 = 8;
+/// 9: mob voices, `foley_render_voice`.
+pub const FOLEY_ABI_VERSION: u32 = 9;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -76,6 +77,13 @@ pub const FOLEY_CONTACT_PLACE: i32 = 1;
 pub const FOLEY_CONTACT_LAND: i32 = 2;
 pub const FOLEY_CONTACT_BREAK: i32 = 3;
 pub const FOLEY_CONTACT_STEP: i32 = 4;
+
+/// Mobs for `foley_render_voice`: cow, pig, sheep, chicken, villager,
+/// zombie, wolf, cat; and their calls: ambient, hurt, death.
+pub const FOLEY_MOBS: usize = 8;
+pub const FOLEY_CALL_AMBIENT: i32 = 0;
+pub const FOLEY_CALL_HURT: i32 = 1;
+pub const FOLEY_CALL_DEATH: i32 = 2;
 
 pub const FOLEY_OK: i32 = 0;
 /// A null pointer or out-of-range value.
@@ -405,6 +413,45 @@ pub unsafe extern "C" fn foley_render_contact(
     })
 }
 
+/// Renders a `call` (`FOLEY_CALL_*`) of `mob` (an index below
+/// [`FOLEY_MOBS`]), made up from `seed`. Writes it to `out` if `cap` samples
+/// are enough, and how many it needs to `*needed` either way.
+///
+/// # Safety
+/// `out` must be writable for `cap` samples; `needed` must be writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foley_render_voice(
+    mob: i32,
+    call: i32,
+    seed: u64,
+    out: *mut i16,
+    cap: usize,
+    needed: *mut usize,
+) -> i32 {
+    guard(|| {
+        // SAFETY: the caller guarantees `needed` is writable.
+        let needed = unsafe { out_arg(needed, "needed") }?;
+        // SAFETY: the caller guarantees `out` is writable for `cap` samples.
+        let out = unsafe { slice_mut_arg(out, cap, "out") }?;
+        let mob = usize::try_from(mob)
+            .ok()
+            .and_then(Mob::from_index)
+            .ok_or_else(|| FfiError::invalid("unknown mob"))?;
+        let call = usize::try_from(call)
+            .ok()
+            .and_then(Call::from_index)
+            .ok_or_else(|| FfiError::invalid("unknown call"))?;
+        let sound = voice(mob, call, seed);
+        if let Some(dest) = out.get_mut(..sound.len()) {
+            for (out, sample) in dest.iter_mut().zip(&sound) {
+                *out = to_pcm(*sample);
+            }
+        }
+        *needed = sound.len();
+        Ok(())
+    })
+}
+
 /// Copies this thread's last error message into `buf` (truncated to `cap`)
 /// and returns its full length, or 0 if there is none.
 ///
@@ -553,6 +600,39 @@ mod tests {
             );
             assert_eq!(
                 foley_render_contact(7, 0, 3.0, 1, std::ptr::null_mut(), 0, &mut needed),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+        }
+    }
+
+    #[test]
+    fn every_mob_speaks() {
+        for mob in 0..FOLEY_MOBS as i32 {
+            for call in [FOLEY_CALL_AMBIENT, FOLEY_CALL_HURT, FOLEY_CALL_DEATH] {
+                let mut needed = 0;
+                // SAFETY: a null buffer with capacity 0 is not written.
+                unsafe {
+                    assert_eq!(
+                        foley_render_voice(mob, call, 1, std::ptr::null_mut(), 0, &mut needed),
+                        FOLEY_OK
+                    );
+                }
+                let mut pcm = vec![0i16; needed];
+                // SAFETY: `pcm` is writable for `needed` samples.
+                unsafe {
+                    assert_eq!(
+                        foley_render_voice(mob, call, 1, pcm.as_mut_ptr(), needed, &mut needed),
+                        FOLEY_OK
+                    );
+                }
+                assert!(pcm.iter().any(|&s| s.abs() > 5000), "{mob} {call}");
+            }
+        }
+        let mut needed = 0;
+        // SAFETY: a null buffer with capacity 0 is not written.
+        unsafe {
+            assert_eq!(
+                foley_render_voice(8, 0, 1, std::ptr::null_mut(), 0, &mut needed),
                 FOLEY_ERR_INVALID_ARGUMENT
             );
         }

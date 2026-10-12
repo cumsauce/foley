@@ -30,12 +30,18 @@ import java.nio.file.Path;
  * @param birds      birdsong (added)
  * @param crickets   crickets (added)
  * @param frogs      frogs (added)
+ * @param voices     which mobs Foley voices (M6), a bit each in {@code Voices.MOBS}' order; none by default
  */
 public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunder, boolean water, boolean fire,
 		boolean lava, boolean drips, boolean strikes, boolean footsteps, boolean birds, boolean crickets,
-		boolean frogs) {
+		boolean frogs, int voices) {
 	public static final FoleyConfig DEFAULT = new FoleyConfig(100, true, true, true, true, true, true, true, true, true,
-			true, true, true);
+			true, true, true, 0);
+
+	/** Whether Foley voices the mob at {@code index} in {@code Voices.MOBS}. */
+	public boolean voice(int index) {
+		return index >= 0 && (voices & (1 << index)) != 0;
+	}
 
 	/** Foley's volume as a gain, 0 to 1. */
 	public float gain() {
@@ -72,7 +78,7 @@ public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunde
 				flag(json, "thunder", d.thunder), flag(json, "water", d.water), flag(json, "fire", d.fire),
 				flag(json, "lava", d.lava), flag(json, "drips", d.drips), flag(json, "strikes", d.strikes),
 				flag(json, "footsteps", d.footsteps), flag(json, "birds", d.birds), flag(json, "crickets", d.crickets),
-				flag(json, "frogs", d.frogs));
+				flag(json, "frogs", d.frogs), voices(json));
 	}
 
 	JsonObject toJson() {
@@ -90,7 +96,23 @@ public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunde
 		json.addProperty("birds", birds);
 		json.addProperty("crickets", crickets);
 		json.addProperty("frogs", frogs);
+		JsonObject mobs = new JsonObject();
+		for (int i = 0; i < MOBS.size(); i++) mobs.addProperty(MOBS.get(i), voice(i));
+		json.add("voices", mobs);
 		return json;
+	}
+
+	/** The mobs, as {@code Voices.MOBS} (kept here so this class needs nothing of the game's). */
+	static final java.util.List<String> MOBS = java.util.List.of("cow", "pig", "sheep", "chicken", "villager",
+			"zombie", "wolf", "cat");
+
+	private static int voices(JsonObject json) {
+		if (!(json.get("voices") instanceof JsonObject mobs)) return DEFAULT.voices;
+		int bits = 0;
+		for (int i = 0; i < MOBS.size(); i++) {
+			if (flag(mobs, MOBS.get(i), false)) bits |= 1 << i;
+		}
+		return bits;
 	}
 
 	private static boolean flag(JsonObject json, String key, boolean fallback) {

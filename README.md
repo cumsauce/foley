@@ -4,7 +4,7 @@ Procedurally generated, physically based sound effects and ambience for Minecraf
 
 It runs alongside [Earshot](https://github.com/cumsauce/earshot), which shapes every sound Foley makes with its occlusion, reverb and HRTF. It also runs alongside [Yak VC](https://github.com/desocketed/yakvc), which it doesn't touch.
 
-Status: **0.1.0-beta.1, the first beta (M5).** Everything planned through M5 is in; M6 (procedural mob voices, optional) is next.
+Status: **0.1.0-beta.2.** Everything planned is in, through M6.
 
 - **Rain** replaces the game's rain sounds. Drops fall at the rate the weather gives (about 10 mm/h in rain, 50 in a thunderstorm), sized by the Marshall–Palmer distribution, onto what's actually round you: water rings with bubbles, stone ticks, leaves patter, wood knocks, glass and metal ping, grass and sand thud softly. Under a roof you hear the drumming on the roof instead.
 - **Water, fire and lava** replace the game's ambience within 12 blocks, each played from where it is, so it pans (and Earshot occludes it). Streams babble with bubbles of 1 to 4 mm; waterfalls roar where they land, with bubbles of every size; fire roars and puffs, and crackles in a heavy-tailed mix of ticks and pops; lava rumbles, and its bubbles burst and ring as the cavities they leave. Still water is silent.
@@ -16,6 +16,8 @@ Status: **0.1.0-beta.1, the first beta (M5).** Everything planned through M5 is 
   - Frogs call from still water at night or in the rain; bigger ones in swamps.
 - **Dripstone drips** are generated: into water (the bubble rings), on stone (a tick), or lava (a thud and a sizzle).
 - **Wind** layers on top of the game's sounds. It rises with height above the ground round you (the log wind profile), drops in a forest or a valley, gusts, rustles the leaves round you, rises when you fly, and comes in low and muffled indoors. None in the Nether or the End.
+
+- **Mob voices** (experimental, off until you choose them, mob by mob): cows, pigs, sheep, chickens, villagers, zombies, wolves and cats can be voiced by Foley instead of the game. Each voice comes from a model of the animal's voice, with pitch and formants from its size. Babies are higher, and bigger variants lower.
 
 **Settings:** Options → Music & Sounds → Foley… (or Mod Menu). Foley's volume; each sound it replaces can be given back to the game, and each it adds switched off. Bind "Bypass Foley" in Controls to switch it all off and on while you listen.
 

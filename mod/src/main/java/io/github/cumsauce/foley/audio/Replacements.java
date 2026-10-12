@@ -49,6 +49,7 @@ public final class Replacements {
 	/** Whether to skip {@code sound}: true when Foley makes it instead. */
 	public static boolean replace(SoundInstance sound) {
 		Identifier id = sound.getIdentifier();
+		if (Voices.replace(sound)) return true;
 		if (RAIN.contains(id)) {
 			var rain = FoleyClient.rain();
 			return rain != null && rain.replacing() && counted();

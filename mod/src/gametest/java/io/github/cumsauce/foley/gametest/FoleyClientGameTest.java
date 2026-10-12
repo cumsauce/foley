@@ -23,7 +23,8 @@ import net.minecraft.sounds.SoundSource;
  * a bed placed where they are, and a dripstone drip is swapped for a generated one (M2); a lightning bolt strikes
  * Foley's thunder and the game's is skipped (M3); breaking glass and stepping down on stone layer Foley's modal
  * strikes and shatters under the game's sounds (M4), and a footstep too (M5); crickets chirp in the grass at night,
- * the bypass gives the game its sounds back, and the settings open from Music &amp; Sounds (M5); and a generated
+ * the bypass gives the game its sounds back, and the settings open from Music &amp; Sounds (M5); a sheep switched to
+ * Foley's voice is voiced by it (M6); and a generated
  * one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null
  * backend.
  */
@@ -161,6 +162,25 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 				FoleyClient.setBypassed(false);
 			});
 			if (FoleyClient.replaced() != beforeBypass) throw new AssertionError("bypassed, Foley still replaced thunder");
+
+			// Mob voices: off by default; with the sheep switched to Foley's, a sheep's bleat is Foley's.
+			var settings = FoleyClient.config();
+			int beforeVoice = FoleyClient.replaced();
+			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.SHEEP_AMBIENT,
+					SoundSource.NEUTRAL, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),
+					mc.player.getZ())));
+			if (FoleyClient.replaced() != beforeVoice) throw new AssertionError("a voice was replaced by default");
+			context.runOnClient(mc -> {
+				FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(settings.volume(), settings.rain(),
+						settings.wind(), settings.thunder(), settings.water(), settings.fire(), settings.lava(),
+						settings.drips(), settings.strikes(), settings.footsteps(), settings.birds(),
+						settings.crickets(), settings.frogs(), 1 << 2));
+				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.SHEEP_AMBIENT, SoundSource.NEUTRAL, 1f,
+						1.5f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),
+						mc.player.getZ()));
+				FoleyClient.apply(settings);
+			});
+			if (FoleyClient.replaced() != beforeVoice + 1) throw new AssertionError("the sheep wasn't voiced by Foley");
 
 			// The settings, where players look first: Options → Music & Sounds → Foley.
 			context.setScreen(() -> new SoundOptionsScreen(null, Minecraft.getInstance().options));

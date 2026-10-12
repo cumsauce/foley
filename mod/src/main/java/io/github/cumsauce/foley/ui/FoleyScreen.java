@@ -18,7 +18,7 @@ import net.minecraft.network.chat.Component;
 
 /**
  * Foley's settings, under Options → Music &amp; Sounds, in sections: its volume; weather; water, fire and lava; strikes
- * and steps; and life. Each sound Foley replaces can be given back to the game ("Foley" or "The game's"), and each it
+ * and steps; life; and mob voices (experimental, each mob off until chosen). Each sound Foley replaces can be given back to the game ("Foley" or "The game's"), and each it
  * adds switched off. Changes apply and are saved when the screen closes.
  */
 public final class FoleyScreen extends OptionsSubScreen {
@@ -39,6 +39,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 	private final OptionInstance<Boolean> birds;
 	private final OptionInstance<Boolean> crickets;
 	private final OptionInstance<Boolean> frogs;
+	private final List<OptionInstance<Boolean>> voices = new java.util.ArrayList<>();
 
 	/** The settings over {@code parent}, or an alert if Foley's synthesis isn't running. */
 	public static Screen open(Screen parent) {
@@ -69,6 +70,15 @@ public final class FoleyScreen extends OptionsSubScreen {
 		birds = added("foley.settings.birds", config.birds());
 		crickets = added("foley.settings.crickets", config.crickets());
 		frogs = added("foley.settings.frogs", config.frogs());
+		for (int i = 0; i < io.github.cumsauce.foley.audio.Voices.MOBS.size(); i++) {
+			String mob = io.github.cumsauce.foley.audio.Voices.MOBS.get(i);
+			voices.add(new OptionInstance<>("entity.minecraft." + mob,
+					OptionInstance.cachedConstantTooltip(Component.translatable("foley.settings.voice.tooltip")),
+					(caption, value) -> Component.translatable(
+							value ? "foley.settings.made_by.foley" : "foley.settings.made_by.game"),
+					new OptionInstance.Enum<>(List.of(true, false), Codec.BOOL), config.voice(i),
+					OptionInstance.NO_ACTION));
+		}
 	}
 
 	/** A sound Foley replaces: "Foley" or "The game's". */
@@ -106,6 +116,12 @@ public final class FoleyScreen extends OptionsSubScreen {
 		list.addSmall(birds, crickets);
 		list.addSmall(frogs, null);
 
+		list.addHeader(Component.translatable("foley.settings.section.voices"));
+		list.addBig(note(Component.translatable("foley.settings.voices.note")));
+		for (int i = 0; i < voices.size(); i += 2) {
+			list.addSmall(voices.get(i), i + 1 < voices.size() ? voices.get(i + 1) : null);
+		}
+
 		list.addBig(note(bypassHint()));
 		updateActive();
 	}
@@ -131,8 +147,10 @@ public final class FoleyScreen extends OptionsSubScreen {
 	/** At no volume, there's nothing to set. */
 	private void updateActive() {
 		boolean audible = volume.get() > 0;
-		for (OptionInstance<?> option : List.of(rain, wind, thunder, water, fire, lava, drips, strikes, footsteps,
-				birds, crickets, frogs)) {
+		List<OptionInstance<?>> all = new java.util.ArrayList<>(List.of(rain, wind, thunder, water, fire, lava, drips,
+				strikes, footsteps, birds, crickets, frogs));
+		all.addAll(voices);
+		for (OptionInstance<?> option : all) {
 			AbstractWidget widget = list.findOption(option);
 			if (widget != null) widget.active = audible;
 		}
@@ -147,8 +165,13 @@ public final class FoleyScreen extends OptionsSubScreen {
 
 	@Override
 	public void removed() {
+		int voiced = 0;
+		for (int i = 0; i < voices.size(); i++) {
+			if (voices.get(i).get()) voiced |= 1 << i;
+		}
 		FoleyConfig next = new FoleyConfig(volume.get(), rain.get(), wind.get(), thunder.get(), water.get(), fire.get(),
-				lava.get(), drips.get(), strikes.get(), footsteps.get(), birds.get(), crickets.get(), frogs.get());
+				lava.get(), drips.get(), strikes.get(), footsteps.get(), birds.get(), crickets.get(), frogs.get(),
+				voiced);
 		if (!next.equals(initial)) FoleyClient.apply(next);
 		super.removed();
 	}

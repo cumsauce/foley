@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class NativeBridge {
 	/** Must equal {@code FOLEY_ABI_VERSION} in {@code foley.h}. */
-	public static final int ABI_VERSION = 8;
+	public static final int ABI_VERSION = 9;
 	/** Surfaces rain lands on, in the order its scene takes them. */
 	public static final int SURFACES = 7;
 	public static final int SAMPLE_RATE = 48_000;
@@ -56,6 +56,7 @@ public final class NativeBridge {
 	private final MethodHandle bedStrike;
 	private final MethodHandle renderOneShot;
 	private final MethodHandle renderContact;
+	private final MethodHandle renderVoice;
 	private final MethodHandle lastError;
 
 	public NativeBridge(SymbolLookup library) {
@@ -76,6 +77,8 @@ public final class NativeBridge {
 		renderContact = linker.downcallHandle(find(library, "foley_render_contact"),
 				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_INT, JAVA_FLOAT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS),
 				critical);
+		renderVoice = linker.downcallHandle(find(library, "foley_render_voice"),
+				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_INT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS), critical);
 		lastError = linker.downcallHandle(find(library, "foley_last_error"),
 				FunctionDescriptor.of(SIZE_T, ADDRESS, SIZE_T));
 	}
@@ -135,6 +138,17 @@ public final class NativeBridge {
 		short[] out = new short[(int) needed[0]];
 		check((int) invoke(renderContact, contact, material, speed, seed, MemorySegment.ofArray(out),
 				(long) out.length, MemorySegment.ofArray(needed)));
+		return out;
+	}
+
+	/** A {@code call} (0 ambient, 1 hurt, 2 death) of {@code mob} ({@code Voices.MOBS}), as 16-bit PCM. */
+	public short[] renderVoice(int mob, int call, long seed) {
+		long[] needed = new long[1];
+		check((int) invoke(renderVoice, mob, call, seed, MemorySegment.ofArray(new short[0]), 0L,
+				MemorySegment.ofArray(needed)));
+		short[] out = new short[(int) needed[0]];
+		check((int) invoke(renderVoice, mob, call, seed, MemorySegment.ofArray(out), (long) out.length,
+				MemorySegment.ofArray(needed)));
 		return out;
 	}
 

@@ -31,6 +31,13 @@ public final class GeneratedSounds {
 	/** A bird's song, a cricket's chirping or a frog's call ({@link Life}), or {@code otherwise}. */
 	private static short @org.jspecify.annotations.Nullable [] life(NativeBridge bridge, String model, int variant,
 			short @org.jspecify.annotations.Nullable [] otherwise) {
+		if (model.startsWith("voice_")) {
+			String[] parts = model.split("_");
+			int mob = Voices.MOBS.indexOf(parts[1]);
+			int call = parts.length > 2 ? Voices.CALLS.indexOf(parts[2]) : -1;
+			if (mob < 0 || call < 0) return otherwise;
+			return bridge.renderVoice(mob, call, 0x701CEL * (mob + 1) + 31L * call + variant);
+		}
 		int split = model.lastIndexOf('_');
 		if (split < 0) return otherwise;
 		int n;
