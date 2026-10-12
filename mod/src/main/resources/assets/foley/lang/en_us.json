@@ -1,5 +1,9 @@
 {
 	"subtitles.foley.rain": "Rain",
 	"subtitles.foley.drip": "Water drips",
-	"subtitles.foley.wind": "Wind blows"
+	"subtitles.foley.wind": "Wind blows",
+	"subtitles.foley.water": "Water flows",
+	"subtitles.foley.fire": "Fire crackles",
+	"subtitles.foley.lava": "Lava bubbles",
+	"subtitles.foley.drip_lava": "Lava drips"
 }

@@ -2,6 +2,7 @@ package io.github.cumsauce.foley.audio;
 
 import io.github.cumsauce.foley.natives.NativeBridge;
 import net.minecraft.client.Minecraft;
+import net.minecraft.sounds.SoundSource;
 import org.jspecify.annotations.Nullable;
 
 /** Keeps Foley's wind blowing where there is any, following the scene four times a second. It layers on the game's own sounds. */
@@ -12,7 +13,7 @@ public final class WindController {
 	private static final float SHUT_IN = 0.02f;
 
 	private final NativeBridge bridge;
-	private @Nullable WindSound sound;
+	private @Nullable BedSound<WindScene> sound;
 	private WindScene scene = WindScene.CALM;
 	/** A speed set by command, overriding the weather, or null. */
 	private @Nullable Float forced;
@@ -26,7 +27,7 @@ public final class WindController {
 		return scene;
 	}
 
-	public @Nullable WindSound sound() {
+	public @Nullable BedSound<WindScene> sound() {
 		return sound;
 	}
 
@@ -50,7 +51,7 @@ public final class WindController {
 			return;
 		}
 		if (sound == null || !minecraft.getSoundManager().isActive(sound)) {
-			sound = new WindSound(bridge, scene);
+			sound = new BedSound<>("wind", SoundSource.AMBIENT, bridge, NativeBridge.BED_WIND, scene);
 			minecraft.getSoundManager().play(sound);
 		} else {
 			sound.setScene(scene);

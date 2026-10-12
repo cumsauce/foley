@@ -113,7 +113,7 @@ enum Voice {
 
 /// A struck surface: two damped modes and a short noise burst.
 #[derive(Debug)]
-struct Struck {
+pub(crate) struct Struck {
     /// Each mode as a phasor (re, im) turned by (cos, sin) of its step a
     /// sample and shrunk by its decay, so a mode costs a few multiplies a
     /// sample and no trigonometry.
@@ -125,7 +125,7 @@ struct Struck {
 }
 
 impl Struck {
-    fn new(rng: &mut Rng, surface: Surface, amplitude: f32) -> Struck {
+    pub(crate) fn new(rng: &mut Rng, surface: Surface, amplitude: f32) -> Struck {
         // Modes (frequency range, decay per second) for each surface.
         let (low, high, decay, click): (f32, f32, f32, f32) = match surface {
             Surface::Stone => (3000.0, 7000.0, 900.0, 0.8),
@@ -156,7 +156,7 @@ impl Struck {
         }
     }
 
-    fn sample(&mut self, noise: f32) -> f32 {
+    pub(crate) fn sample(&mut self, noise: f32) -> f32 {
         let dt = 1.0 / SAMPLE_RATE as f32;
         // Decays as running products: the same curve as e^(-dt), far cheaper.
         self.click *= self.click_step;
@@ -171,7 +171,7 @@ impl Struck {
         out
     }
 
-    fn done(&self) -> bool {
+    pub(crate) fn done(&self) -> bool {
         self.decay * self.age > 7.0
     }
 }

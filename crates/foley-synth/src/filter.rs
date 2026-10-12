@@ -38,6 +38,30 @@ impl BandPass {
     }
 }
 
+/// A one-pole low-pass, 6 dB an octave: for rumbles and roars.
+#[derive(Debug, Clone, Default)]
+pub struct LowPass {
+    a: f32,
+    y: f32,
+}
+
+impl LowPass {
+    pub fn new(cutoff: f32) -> LowPass {
+        let mut filter = LowPass::default();
+        filter.tune(cutoff);
+        filter
+    }
+
+    pub fn tune(&mut self, cutoff: f32) {
+        self.a = 1.0 - (-TAU * cutoff.max(1.0) / SAMPLE_RATE as f32).exp();
+    }
+
+    pub fn process(&mut self, x: f32) -> f32 {
+        self.y += self.a * (x - self.y);
+        self.y
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

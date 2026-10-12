@@ -17,6 +17,33 @@
 			}
 		]
 	},
+	"water": {
+		"subtitle": "subtitles.foley.water",
+		"sounds": [
+			{
+				"name": "fabric-sound-api-v1:empty",
+				"stream": true
+			}
+		]
+	},
+	"fire": {
+		"subtitle": "subtitles.foley.fire",
+		"sounds": [
+			{
+				"name": "fabric-sound-api-v1:empty",
+				"stream": true
+			}
+		]
+	},
+	"lava": {
+		"subtitle": "subtitles.foley.lava",
+		"sounds": [
+			{
+				"name": "fabric-sound-api-v1:empty",
+				"stream": true
+			}
+		]
+	},
 	"drip": {
 		"subtitle": "subtitles.foley.drip",
 		"sounds": [
@@ -36,6 +63,40 @@
 			"foley:generated/drip_13",
 			"foley:generated/drip_14",
 			"foley:generated/drip_15"
+		]
+	},
+	"drip_stone": {
+		"subtitle": "subtitles.foley.drip",
+		"sounds": [
+			"foley:generated/drip_stone_0",
+			"foley:generated/drip_stone_1",
+			"foley:generated/drip_stone_2",
+			"foley:generated/drip_stone_3",
+			"foley:generated/drip_stone_4",
+			"foley:generated/drip_stone_5",
+			"foley:generated/drip_stone_6",
+			"foley:generated/drip_stone_7",
+			"foley:generated/drip_stone_8",
+			"foley:generated/drip_stone_9",
+			"foley:generated/drip_stone_10",
+			"foley:generated/drip_stone_11",
+			"foley:generated/drip_stone_12",
+			"foley:generated/drip_stone_13",
+			"foley:generated/drip_stone_14",
+			"foley:generated/drip_stone_15"
+		]
+	},
+	"drip_lava": {
+		"subtitle": "subtitles.foley.drip_lava",
+		"sounds": [
+			"foley:generated/drip_lava_0",
+			"foley:generated/drip_lava_1",
+			"foley:generated/drip_lava_2",
+			"foley:generated/drip_lava_3",
+			"foley:generated/drip_lava_4",
+			"foley:generated/drip_lava_5",
+			"foley:generated/drip_lava_6",
+			"foley:generated/drip_lava_7"
 		]
 	}
 }

@@ -41,8 +41,13 @@ public final class GeneratedSounds {
 		String model = name.substring(0, split);
 		int variant = Integer.parseInt(name.substring(split + 1));
 		short[] pcm = switch (model) {
-			// Drips trap bubbles of about 0.6 to 3 mm, spread over the variants.
-			case "drip" -> bridge.renderDrip(0.6f * (float) Math.pow(5, variant / 15.0), 0x5EED + variant);
+			// Drips into water trap bubbles of about 0.6 to 3 mm, spread over the variants.
+			case "drip" -> bridge.renderOneShot(NativeBridge.SHOT_DRIP_INTO_WATER,
+					0.6f * (float) Math.pow(5, variant / 15.0), 0x5EED + variant);
+			// Drops falling from a stalactite are 2 to 2.8 mm across their radius (about the capillary length).
+			case "drip_stone" -> bridge.renderOneShot(NativeBridge.SHOT_DRIP_ON_STONE, 2f + 0.8f * variant / 15f,
+					0xD121 + variant);
+			case "drip_lava" -> bridge.renderOneShot(NativeBridge.SHOT_LAVA_DRIP, 1f, 0x1A7A + variant);
 			default -> null;
 		};
 		if (pcm == null) return null;

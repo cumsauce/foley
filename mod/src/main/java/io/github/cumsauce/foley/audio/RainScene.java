@@ -19,7 +19,7 @@ import net.minecraft.world.phys.Vec3;
  * @param roof     the surface overhead, or -1 under the sky
  * @param height   how far above the ear the roof is, in blocks
  */
-public record RainScene(float rate, float[] surfaces, int roof, float height) {
+public record RainScene(float rate, float[] surfaces, int roof, float height) implements Scene {
 	public static final RainScene DRY = new RainScene(0, new float[] {0, 0, 0, 0, 1, 0, 0}, -1, 0);
 	static final int RADIUS = 8;
 	private static final int STEP = 2;
@@ -72,6 +72,16 @@ public record RainScene(float rate, float[] surfaces, int roof, float height) {
 			if (roof == -1 && open <= 0) return DRY;
 		}
 		return new RainScene(rate, surfaces, roof, height);
+	}
+
+	@Override
+	public float[] params() {
+		float[] params = new float[surfaces.length + 3];
+		params[0] = rate;
+		System.arraycopy(surfaces, 0, params, 1, surfaces.length);
+		params[surfaces.length + 1] = roof;
+		params[surfaces.length + 2] = height;
+		return params;
 	}
 
 	@Override

@@ -2,6 +2,7 @@ package io.github.cumsauce.foley.audio;
 
 import io.github.cumsauce.foley.natives.NativeBridge;
 import net.minecraft.client.Minecraft;
+import net.minecraft.sounds.SoundSource;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -14,7 +15,7 @@ public final class RainController {
 	private static final int LINGER = 100;
 
 	private final NativeBridge bridge;
-	private @Nullable RainSound sound;
+	private @Nullable BedSound<RainScene> sound;
 	private RainScene scene = RainScene.DRY;
 	/** A rate set by command, overriding the weather, or null. */
 	private @Nullable Float forced;
@@ -34,7 +35,7 @@ public final class RainController {
 		return scene;
 	}
 
-	public @Nullable RainSound sound() {
+	public @Nullable BedSound<RainScene> sound() {
 		return sound;
 	}
 
@@ -64,7 +65,7 @@ public final class RainController {
 		}
 		dryFor = 0;
 		if (sound == null || !minecraft.getSoundManager().isActive(sound)) {
-			sound = new RainSound(bridge, scene);
+			sound = new BedSound<>("rain", SoundSource.WEATHER, bridge, NativeBridge.BED_RAIN, scene);
 			minecraft.getSoundManager().play(sound);
 		} else {
 			sound.setScene(scene);

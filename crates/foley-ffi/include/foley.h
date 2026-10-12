@@ -12,15 +12,48 @@
  * 1: rain beds and drips (the M0 spike).
  * 2: rain takes a scene: its rate, what it lands on and any roof.
  * 3: wind beds.
+ * 4: every bed through `foley_bed_*`, by kind, with water, fire and lava;
+ *    one-shots through `foley_render_one_shot`.
  */
-#define FOLEY_ABI_VERSION 3
+#define FOLEY_ABI_VERSION 4
 
 /**
- * Surfaces rain lands on, in the order `foley_rain_set_scene` takes their
- * shares: water, stone, leaves, wood, soft (grass, dirt, sand, wool,
- * snow), glass, metal.
+ * Surfaces rain lands on, in the order its scene takes their shares:
+ * water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
+ * metal.
  */
 #define FOLEY_SURFACES 7
+
+/**
+ * Bed kinds, and the floats each one's scene takes, in order:
+ *
+ * - rain: rate (mm/h, 0 to 200), the [`FOLEY_SURFACES`] shares of what it
+ *   lands on, the roof's surface (-1 for none) and its height above the ear
+ *   in blocks;
+ * - wind: mean speed (m/s, 0 to 60), exposure (0 to 1), leaves (0 to 1);
+ * - water: blocks flowing, blocks where a waterfall lands, gain (0 to 1);
+ * - fire: blocks burning, gain;
+ * - lava: blocks open to the air, gain.
+ */
+#define FOLEY_BED_RAIN 0
+
+#define FOLEY_BED_WIND 1
+
+#define FOLEY_BED_WATER 2
+
+#define FOLEY_BED_FIRE 3
+
+#define FOLEY_BED_LAVA 4
+
+/**
+ * One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
+ * water drips, and unused for lava.
+ */
+#define FOLEY_SHOT_DRIP_INTO_WATER 0
+
+#define FOLEY_SHOT_DRIP_ON_STONE 1
+
+#define FOLEY_SHOT_LAVA_DRIP 2
 
 #define FOLEY_OK 0
 
@@ -35,14 +68,9 @@
 #define FOLEY_ERR_PANIC -3
 
 /**
- * Opaque handle to a rain bed.
+ * Opaque handle to a bed: a sound made as it plays, endlessly.
  */
-typedef struct FoleyRain FoleyRain;
-
-/**
- * Opaque handle to a wind bed.
- */
-typedef struct FoleyWind FoleyWind;
+typedef struct FoleyBed FoleyBed;
 
 /**
  * Returns [`FOLEY_ABI_VERSION`]. Safe to call before anything else.
@@ -50,91 +78,55 @@ typedef struct FoleyWind FoleyWind;
 uint32_t foley_abi_version(void);
 
 /**
- * Starts a rain bed, silent until `foley_rain_set_scene` gives it rain.
+ * Starts a bed of `kind` (`FOLEY_BED_*`), silent until
+ * `foley_bed_set_scene` gives it a scene.
  *
  * # Safety
  * `out` must be writable.
  */
-int32_t foley_rain_create(uint64_t seed, struct FoleyRain **out);
+int32_t foley_bed_create(int32_t kind, uint64_t seed, struct FoleyBed **out);
 
 /**
- * Sets what the rain round the listener is like: `rate` in mm/h (0 for
- * none, up to 200), the shares of what it lands on ([`FOLEY_SURFACES`]
- * floats in their order), and the roof the listener shelters under, as a
- * surface index and its height above the ear in blocks (`roof` -1 for none).
+ * Sets what the world round a bed is like: `count` floats, as its kind
+ * takes them (see `FOLEY_BED_RAIN`).
  *
  * # Safety
- * `rain` must be live and not used on another thread during the call;
- * `surfaces` must point to `FOLEY_SURFACES` floats.
+ * `bed` must be live and not used on another thread during the call;
+ * `params` must point to `count` floats.
  */
-int32_t foley_rain_set_scene(struct FoleyRain *rain,
-                             float rate,
-                             const float *surfaces,
-                             int32_t roof,
-                             float roof_height);
+int32_t foley_bed_set_scene(struct FoleyBed *bed, const float *params, size_t count);
 
 /**
- * Frees a rain bed. Null is ignored.
+ * Renders the next `frames` samples of `bed` into `out`, as 16-bit PCM.
  *
  * # Safety
- * `rain` must come from `foley_rain_create` and not be used afterwards.
+ * `bed` must be live and not used on another thread during the call; `out`
+ * must be writable for `frames` samples.
  */
-void foley_rain_destroy(struct FoleyRain *rain);
+int32_t foley_bed_render(struct FoleyBed *bed, int16_t *out, size_t frames);
 
 /**
- * Renders the next `frames` samples of `rain` into `out`, as 16-bit PCM.
+ * Frees a bed. Null is ignored.
  *
  * # Safety
- * `rain` must be live and not used on another thread during the call;
- * `out` must be writable for `frames` samples.
+ * `bed` must come from `foley_bed_create` and not be used afterwards.
  */
-int32_t foley_rain_render(struct FoleyRain *rain, int16_t *out, size_t frames);
+void foley_bed_destroy(struct FoleyBed *bed);
 
 /**
- * Starts a wind bed, calm until `foley_wind_set_scene` gives it wind.
- *
- * # Safety
- * `out` must be writable.
- */
-int32_t foley_wind_create(uint64_t seed, struct FoleyWind **out);
-
-/**
- * Sets the wind round the listener: its mean `speed` in m/s (0 to 60), how
- * `exposed` to it the listener is (0 shut in to 1 in the open) and how much
- * of what's round about is `leaves` (0 to 1).
- *
- * # Safety
- * `wind` must be live and not used on another thread during the call.
- */
-int32_t foley_wind_set_scene(struct FoleyWind *wind, float speed, float exposure, float leaves);
-
-/**
- * Renders the next `frames` samples of `wind` into `out`, as 16-bit PCM.
- *
- * # Safety
- * `wind` must be live and not used on another thread during the call;
- * `out` must be writable for `frames` samples.
- */
-int32_t foley_wind_render(struct FoleyWind *wind, int16_t *out, size_t frames);
-
-/**
- * Frees a wind bed. Null is ignored.
- *
- * # Safety
- * `wind` must come from `foley_wind_create` and not be used afterwards.
- */
-void foley_wind_destroy(struct FoleyWind *wind);
-
-/**
- * A water drip: a drop's tick on landing, then the bubble it traps ringing
- * at its Minnaert frequency. `radius` is the bubble's, in millimetres (0.1
- * to 10). Writes it to `out` if `cap` samples are enough, and how many it
- * needs to `*needed` either way.
+ * Renders a one-shot of `kind` (`FOLEY_SHOT_*`) from `seed`. Writes it to
+ * `out` if `cap` samples are enough, and how many it needs to `*needed`
+ * either way.
  *
  * # Safety
  * `out` must be writable for `cap` samples; `needed` must be writable.
  */
-int32_t foley_render_drip(float radius, uint64_t seed, int16_t *out, size_t cap, size_t *needed);
+int32_t foley_render_one_shot(int32_t kind,
+                              float size,
+                              uint64_t seed,
+                              int16_t *out,
+                              size_t cap,
+                              size_t *needed);
 
 /**
  * Copies this thread's last error message into `buf` (truncated to `cap`)

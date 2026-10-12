@@ -95,6 +95,29 @@ Fabric mod (Java)                                   foley-ffi (Rust cdylib, FFM)
 - **Cost** (bed_bench, M3 VM, one core): rain 0.2 % at 2 mm/h, 0.4 % at 10 and 50 mm/h (near drops are capped, the rest is texture). Wind 0.03 % at any speed. Phasor oscillators cut rain about 12× from M0.
 - **To check by ear:** standing under a tree, on stone and by a lake in the rain; the wind on a mountain top against a valley.
 
+## M2 results (2026-10-12)
+
+- **Beds are now generic** (ABI 4): `foley_bed_create(kind, ...)` and a scene of floats for each kind, and `foley_render_one_shot(kind, ...)`. Water, fire and lava are **placed beds**: one stream each, played from the power-weighted centre of what's heard and moved as that changes, so they pan and Earshot occludes them. Distance is in the scene's gain (2/d_eff for the power-weighted distance, as power falls as 1/d²), not OpenAL's falloff. With rain and wind, that is at most 5 of the game's 8 streams.
+- **What's heard** (`Surroundings`): every block within 12 across and 8 up and down, skipping chunk sections with none of them (`maybeHas`):
+  - water flowing at its surface;
+  - a waterfall where it lands (1) and down its face (0.1);
+  - lava open to the air;
+  - fire (1) and a lit campfire (0.6).
+  Still water is silent. The game's water, lava and fire ambience (`block.water.ambient`, `block.lava.ambient`, `block.lava.pop`, `block.fire.ambient`, `block.campfire.crackle`) is skipped from within that reach and kept beyond it.
+- **Water:** bubble populations. A stream entrains 60 bubbles a second per block, 1 to 4 mm across (log-uniform; brooks peak near 1 to 3 kHz). A waterfall entrains 700 per block where it lands, sized by Deane and Stokes (N(a) ∝ a^−3/2 below the 1 mm Hinze scale and a^−10/3 above, so about 9 % are over 1 mm), over the low roar and spray of water striking water. Each bubble rings at its Minnaert frequency (M0). Past 3,000 a second, each one is louder instead (√ of the ratio, as incoherent sources add).
+- **Fire:** combustion roar, low-passed lower the bigger the fire, puffing at f ≈ 1.5/√D Hz for a fire D m across (Cetegen and Ahmed). Crackles are a Poisson process, 7 a second per block, with sizes from P(E) ∝ E^−1.7 (crackling noise): mostly ticks of 0.2 ms, now and then a 2 ms pop.
+- **Lava:** a rumble below 60 Hz, and bubbles bursting 0.35 a second per block. Each is 1 to 6 cm, and its cavity rings as a Helmholtz resonator, f = (c/2π)·√(A/(V·L)), with radiation Q = 2π·√(V(L/A)³). A 3 cm bubble opening 1.5 cm rings near 1.2 kHz with Q ≈ 9, halved for the melt's viscosity. Each has a thump below it and a sizzle of spatter.
+- **Drips:** the game's dripstone drips are swapped for generated ones where the drop lands:
+  - into water or a cauldron: the M0 bubble drip;
+  - on stone: a 2 to 2.8 mm drop's tick through stone's modes, with a bright splash;
+  - lava: a thud and a sizzle.
+- The client gametest builds a waterfall, a fire on netherrack and a pool of lava round the player and checks each bed plays; then plays the game's dripstone drip and checks it was swapped.
+- **Cost** (bed_bench, M3 VM, one core):
+  - a stream of 20 blocks: 1.4 %;
+  - with a 10-block waterfall: 1.8 %;
+  - fire of 20 blocks: 0.03 %;
+  - lava of 200 blocks: 0.1 %.
+
 ## Milestones
 
 0. **M0 Groundwork.** Repo, Rust workspace, FFM bridge, CI and natives packaging, all copied from Earshot. Spike: one procedural `FabricSoundInstance` stream (a sine, then filtered noise), and one generated buffer through the `SoundBufferLibrary` mixin. Measure CPU on the M3. **Exit:** both paths play in game, and Earshot shapes them.

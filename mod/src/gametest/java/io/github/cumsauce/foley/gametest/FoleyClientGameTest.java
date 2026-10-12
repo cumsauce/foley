@@ -6,12 +6,18 @@ import io.github.cumsauce.foley.natives.NativeBridge;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import io.github.cumsauce.foley.audio.BedSound;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 
 /**
  * Starts the real client and checks: the native synthesis loaded; when it rains, Foley's rain (a synthesized stream)
  * plays through the game's sound engine, follows what it lands on and any roof, and replaces the game's rain sounds
- * (M1); the wind blows out in the open and drops under a roof (M1); and a generated one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null backend.
+ * (M1); the wind blows out in the open and drops under a roof (M1); a waterfall, a fire and a pool of lava each start
+ * a bed placed where they are, and a dripstone drip is swapped for a generated one (M2); and a generated one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null backend.
  */
 @SuppressWarnings("UnstableApiUsage")
 public class FoleyClientGameTest implements FabricClientGameTest {
@@ -69,6 +75,34 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 				throw new AssertionError("the roof doesn't shelter from the wind: " + FoleyClient.wind().scene(), e);
 			}
 			singleplayer.getServer().runCommand("weather clear");
+			singleplayer.getServer().runCommand("fill ~-3 ~3 ~-3 ~3 ~3 ~3 air");
+
+			// Water falling three blocks and spreading, fire on netherrack, and lava in a hole: each heard, placed.
+			singleplayer.getServer().runCommand("setblock ~4 ~3 ~ water");
+			singleplayer.getServer().runCommand("setblock ~-4 ~-1 ~ netherrack");
+			singleplayer.getServer().runCommand("setblock ~-4 ~ ~ fire");
+			singleplayer.getServer().runCommand("setblock ~ ~-1 ~6 lava");
+			try {
+				context.waitFor(mc -> {
+					var placed = FoleyClient.placed();
+					if (placed == null) return false;
+					var around = placed.around();
+					return around.water().falls() > 0 && around.water().flow() > 0 && around.fire().size() > 0
+							&& around.lava().area() > 0 && playing(mc, placed.water()) && playing(mc, placed.fire())
+							&& playing(mc, placed.lava());
+				}, 20 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				var placed = FoleyClient.placed();
+				throw new AssertionError("water, fire and lava aren't all heard: "
+						+ (placed == null ? "off" : placed.around()), e);
+			}
+
+			// A dripstone drip is swapped for one of Foley's.
+			int before = FoleyClient.replaced();
+			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(
+					SoundEvents.POINTED_DRIPSTONE_DRIP_WATER, SoundSource.BLOCKS, 1f, 1f,
+					SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(), mc.player.getZ())));
+			if (FoleyClient.replaced() <= before) throw new AssertionError("the game's drip wasn't replaced");
 
 			// The one-shot: a generated buffer, played like any sound.
 			SimpleSoundInstance drip = context.computeOnClient(mc -> FoleyClient.drip(
@@ -79,5 +113,9 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 				throw new AssertionError("the generated drip never played", e);
 			}
 		}
+	}
+
+	private static boolean playing(Minecraft minecraft, BedSound<?> sound) {
+		return sound != null && minecraft.getSoundManager().isActive(sound) && sound.rendered() > 0;
 	}
 }

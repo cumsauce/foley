@@ -21,45 +21,44 @@ import java.nio.charset.StandardCharsets;
  */
 public final class NativeBridge {
 	/** Must equal {@code FOLEY_ABI_VERSION} in {@code foley.h}. */
-	public static final int ABI_VERSION = 3;
-	/** Surfaces rain lands on, in {@code foley_rain_set_scene}'s order. */
+	public static final int ABI_VERSION = 4;
+	/** Surfaces rain lands on, in the order its scene takes them. */
 	public static final int SURFACES = 7;
 	public static final int SAMPLE_RATE = 48_000;
+	/** Bed kinds ({@code FOLEY_BED_*}). */
+	public static final int BED_RAIN = 0;
+	public static final int BED_WIND = 1;
+	public static final int BED_WATER = 2;
+	public static final int BED_FIRE = 3;
+	public static final int BED_LAVA = 4;
+	/** One-shot kinds ({@code FOLEY_SHOT_*}). */
+	public static final int SHOT_DRIP_INTO_WATER = 0;
+	public static final int SHOT_DRIP_ON_STONE = 1;
+	public static final int SHOT_LAVA_DRIP = 2;
 
 	private static final ValueLayout.OfLong SIZE_T = JAVA_LONG;
 
 	private final MethodHandle abiVersion;
-	private final MethodHandle rainCreate;
-	private final MethodHandle rainDestroy;
-	private final MethodHandle rainSetScene;
-	private final MethodHandle rainRender;
-	private final MethodHandle windCreate;
-	private final MethodHandle windSetScene;
-	private final MethodHandle windRender;
-	private final MethodHandle windDestroy;
-	private final MethodHandle renderDrip;
+	private final MethodHandle bedCreate;
+	private final MethodHandle bedSetScene;
+	private final MethodHandle bedRender;
+	private final MethodHandle bedDestroy;
+	private final MethodHandle renderOneShot;
 	private final MethodHandle lastError;
 
 	public NativeBridge(SymbolLookup library) {
 		Linker linker = Linker.nativeLinker();
 		Linker.Option critical = Linker.Option.critical(true);
 		abiVersion = linker.downcallHandle(find(library, "foley_abi_version"), FunctionDescriptor.of(JAVA_INT));
-		rainCreate = linker.downcallHandle(find(library, "foley_rain_create"),
-				FunctionDescriptor.of(JAVA_INT, JAVA_LONG, ADDRESS), critical);
-		rainSetScene = linker.downcallHandle(find(library, "foley_rain_set_scene"),
-				FunctionDescriptor.of(JAVA_INT, ADDRESS, JAVA_FLOAT, ADDRESS, JAVA_INT, JAVA_FLOAT), critical);
-		rainDestroy = linker.downcallHandle(find(library, "foley_rain_destroy"), FunctionDescriptor.ofVoid(ADDRESS));
-		rainRender = linker.downcallHandle(find(library, "foley_rain_render"),
+		bedCreate = linker.downcallHandle(find(library, "foley_bed_create"),
+				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_LONG, ADDRESS), critical);
+		bedSetScene = linker.downcallHandle(find(library, "foley_bed_set_scene"),
+				FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, SIZE_T), critical);
+		bedRender = linker.downcallHandle(find(library, "foley_bed_render"),
 				FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, SIZE_T));
-		windCreate = linker.downcallHandle(find(library, "foley_wind_create"),
-				FunctionDescriptor.of(JAVA_INT, JAVA_LONG, ADDRESS), critical);
-		windSetScene = linker.downcallHandle(find(library, "foley_wind_set_scene"),
-				FunctionDescriptor.of(JAVA_INT, ADDRESS, JAVA_FLOAT, JAVA_FLOAT, JAVA_FLOAT), critical);
-		windRender = linker.downcallHandle(find(library, "foley_wind_render"),
-				FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, SIZE_T));
-		windDestroy = linker.downcallHandle(find(library, "foley_wind_destroy"), FunctionDescriptor.ofVoid(ADDRESS));
-		renderDrip = linker.downcallHandle(find(library, "foley_render_drip"),
-				FunctionDescriptor.of(JAVA_INT, JAVA_FLOAT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS), critical);
+		bedDestroy = linker.downcallHandle(find(library, "foley_bed_destroy"), FunctionDescriptor.ofVoid(ADDRESS));
+		renderOneShot = linker.downcallHandle(find(library, "foley_render_one_shot"),
+				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_FLOAT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS), critical);
 		lastError = linker.downcallHandle(find(library, "foley_last_error"),
 				FunctionDescriptor.of(SIZE_T, ADDRESS, SIZE_T));
 	}
@@ -68,69 +67,34 @@ public final class NativeBridge {
 		return (int) invoke(abiVersion);
 	}
 
-	/** Starts a rain bed, silent until {@link #rainSetScene}. Free it with {@link #rainDestroy}. */
-	public MemorySegment rainCreate(long seed) {
+	/** Starts a bed of {@code kind} ({@code BED_*}), silent until {@link #bedSetScene}. Free it with {@link #bedDestroy}. */
+	public MemorySegment bedCreate(int kind, long seed) {
 		long[] out = new long[1];
-		check((int) invoke(rainCreate, seed, MemorySegment.ofArray(out)));
+		check((int) invoke(bedCreate, kind, seed, MemorySegment.ofArray(out)));
 		return MemorySegment.ofAddress(out[0]);
 	}
 
-	/**
-	 * What the rain round the listener is like.
-	 *
-	 * @param rate     mm/h, 0 for none
-	 * @param surfaces the shares of what it lands on ({@value #SURFACES}, in order)
-	 * @param roof     the surface the listener shelters under, or -1
-	 * @param height   the roof's height above the ear, in blocks
-	 */
-	public void rainSetScene(MemorySegment rain, float rate, float[] surfaces, int roof, float height) {
-		if (surfaces.length != SURFACES) throw new IllegalArgumentException("surfaces: " + surfaces.length);
-		check((int) invoke(rainSetScene, rain, rate, MemorySegment.ofArray(surfaces), roof, height));
+	/** What the world round a bed is like: the floats its kind takes, in order (see {@code foley.h}). */
+	public void bedSetScene(MemorySegment bed, float[] params) {
+		check((int) invoke(bedSetScene, bed, MemorySegment.ofArray(params), (long) params.length));
 	}
 
-	public void rainDestroy(MemorySegment rain) {
-		invoke(rainDestroy, rain);
+	/** Renders the next samples of {@code bed} into {@code out}, which must be native memory, 2 bytes a sample. */
+	public void bedRender(MemorySegment bed, MemorySegment out) {
+		check((int) invoke(bedRender, bed, out, out.byteSize() / 2));
 	}
 
-	/** Renders the next samples of {@code rain} into {@code out}, which must be native memory, 2 bytes a sample. */
-	public void rainRender(MemorySegment rain, MemorySegment out) {
-		check((int) invoke(rainRender, rain, out, out.byteSize() / 2));
+	public void bedDestroy(MemorySegment bed) {
+		invoke(bedDestroy, bed);
 	}
 
-	/** Starts a wind bed, calm until {@link #windSetScene}. Free it with {@link #windDestroy}. */
-	public MemorySegment windCreate(long seed) {
-		long[] out = new long[1];
-		check((int) invoke(windCreate, seed, MemorySegment.ofArray(out)));
-		return MemorySegment.ofAddress(out[0]);
-	}
-
-	/**
-	 * The wind round the listener.
-	 *
-	 * @param speed    the mean wind at the ear, m/s (0 to 60)
-	 * @param exposure 0 shut in to 1 in the open
-	 * @param leaves   how much of what's round about is leaves, 0 to 1
-	 */
-	public void windSetScene(MemorySegment wind, float speed, float exposure, float leaves) {
-		check((int) invoke(windSetScene, wind, speed, exposure, leaves));
-	}
-
-	/** Renders the next samples of {@code wind} into {@code out}, which must be native memory, 2 bytes a sample. */
-	public void windRender(MemorySegment wind, MemorySegment out) {
-		check((int) invoke(windRender, wind, out, out.byteSize() / 2));
-	}
-
-	public void windDestroy(MemorySegment wind) {
-		invoke(windDestroy, wind);
-	}
-
-	/** A water drip whose bubble is {@code radiusMm} millimetres, as 16-bit PCM. */
-	public short[] renderDrip(float radiusMm, long seed) {
+	/** A one-shot of {@code kind} ({@code SHOT_*}), as 16-bit PCM; {@code sizeMm} is a drip's radius. */
+	public short[] renderOneShot(int kind, float sizeMm, long seed) {
 		long[] needed = new long[1];
-		check((int) invoke(renderDrip, radiusMm, seed, MemorySegment.ofArray(new short[0]), 0L,
+		check((int) invoke(renderOneShot, kind, sizeMm, seed, MemorySegment.ofArray(new short[0]), 0L,
 				MemorySegment.ofArray(needed)));
 		short[] out = new short[(int) needed[0]];
-		check((int) invoke(renderDrip, radiusMm, seed, MemorySegment.ofArray(out), (long) out.length,
+		check((int) invoke(renderOneShot, kind, sizeMm, seed, MemorySegment.ofArray(out), (long) out.length,
 				MemorySegment.ofArray(needed)));
 		return out;
 	}

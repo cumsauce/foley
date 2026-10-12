@@ -1,9 +1,15 @@
-//! What the rain and wind beds cost: `cargo run --release -p foley-synth --example
+//! What the beds cost: `cargo run --release -p foley-synth --example
 //! bed_bench`. Prints a Markdown table, and appends it to the CI summary.
 
 use std::time::Instant;
 
-use foley_synth::{Rain, RainScene, SAMPLE_RATE, Surface, Wind, WindScene};
+use foley_synth::{
+    Fire, FireScene, Lava, LavaScene, Rain, RainScene, SAMPLE_RATE, Surface, Water, WaterScene,
+    Wind, WindScene,
+};
+
+/// Renders a bed's next samples.
+type Renderer = Box<dyn FnMut(&mut [f32])>;
 
 fn main() {
     let mut table = format!(
@@ -51,6 +57,53 @@ fn main() {
         let per_second = start.elapsed().as_secs_f64() / 10.0;
         table += &format!(
             "| {speed} m/s | {:.2} ms | {:.1} % |\n",
+            per_second * 1e3,
+            per_second * 100.0
+        );
+    }
+    table += "\n### Water, fire and lava beds\n\n| Bed | Time per second of audio | Share of a core |\n| --- | --- | --- |\n";
+    let mut beds: Vec<(&str, Renderer)> = Vec::new();
+    let mut stream = Water::new(1);
+    stream.set_scene(WaterScene {
+        flow: 20.0,
+        falls: 0.0,
+        gain: 1.0,
+    });
+    beds.push((
+        "Stream, 20 blocks flowing",
+        Box::new(move |out| stream.render(out)),
+    ));
+    let mut fall = Water::new(1);
+    fall.set_scene(WaterScene {
+        flow: 20.0,
+        falls: 10.0,
+        gain: 1.0,
+    });
+    beds.push((
+        "Waterfall, 10 blocks landing",
+        Box::new(move |out| fall.render(out)),
+    ));
+    let mut fire = Fire::new(1);
+    fire.set_scene(FireScene {
+        size: 20.0,
+        gain: 1.0,
+    });
+    beds.push(("Fire, 20 blocks", Box::new(move |out| fire.render(out))));
+    let mut lava = Lava::new(1);
+    lava.set_scene(LavaScene {
+        area: 200.0,
+        gain: 1.0,
+    });
+    beds.push(("Lava, 200 blocks", Box::new(move |out| lava.render(out))));
+    for (name, mut render) in beds {
+        let mut out = vec![0.0f32; SAMPLE_RATE as usize];
+        let start = Instant::now();
+        for _ in 0..10 {
+            render(&mut out);
+        }
+        let per_second = start.elapsed().as_secs_f64() / 10.0;
+        table += &format!(
+            "| {name} | {:.2} ms | {:.1} % |\n",
             per_second * 1e3,
             per_second * 100.0
         );

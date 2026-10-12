@@ -2,6 +2,8 @@ package io.github.cumsauce.foley;
 
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
+import io.github.cumsauce.foley.audio.PlacedBeds;
+import io.github.cumsauce.foley.audio.Replacements;
 import io.github.cumsauce.foley.audio.RainController;
 import io.github.cumsauce.foley.audio.WindController;
 import io.github.cumsauce.foley.natives.NativeBridge;
@@ -15,8 +17,6 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -24,12 +24,11 @@ import org.slf4j.LoggerFactory;
 
 public final class FoleyClient implements ClientModInitializer {
 	public static final Logger LOGGER = LoggerFactory.getLogger("foley");
-	private static final SoundEvent DRIP = SoundEvent.createVariableRangeEvent(
-			Identifier.fromNamespaceAndPath("foley", "drip"));
 
 	private static @Nullable NativeBridge bridge;
 	private static @Nullable RainController rain;
 	private static @Nullable WindController wind;
+	private static @Nullable PlacedBeds placed;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
 
 	public static Path configDir() {
@@ -48,6 +47,11 @@ public final class FoleyClient implements ClientModInitializer {
 	/** What keeps Foley's wind blowing, or null if Foley is off. */
 	public static @Nullable WindController wind() {
 		return wind;
+	}
+
+	/** What keeps the water, fire and lava going, or null if Foley is off. */
+	public static @Nullable PlacedBeds placed() {
+		return placed;
 	}
 
 	/** Counts a game sound Foley replaced (skipped). */
@@ -83,12 +87,15 @@ public final class FoleyClient implements ClientModInitializer {
 		WindController blowing = new WindController(loaded);
 		wind = blowing;
 		ClientTickEvents.END_CLIENT_TICK.register(blowing::tick);
+		PlacedBeds beds = new PlacedBeds(loaded);
+		placed = beds;
+		ClientTickEvents.END_CLIENT_TICK.register(beds::tick);
 		registerCommands(loaded);
 	}
 
 	/** A generated drip at the player's feet, a different one each time. */
 	public static SimpleSoundInstance drip(double x, double y, double z) {
-		SimpleSoundInstance drip = new SimpleSoundInstance(DRIP, SoundSource.AMBIENT, 1f, 1f,
+		SimpleSoundInstance drip = new SimpleSoundInstance(Replacements.DRIP, SoundSource.AMBIENT, 1f, 1f,
 				net.minecraft.client.resources.sounds.SoundInstance.createUnseededRandom(), x, y, z);
 		Minecraft.getInstance().getSoundManager().play(drip);
 		return drip;
@@ -124,8 +131,10 @@ public final class FoleyClient implements ClientModInitializer {
 											return 1;
 										})))
 						.then(ClientCommands.literal("scene").executes(c -> {
-							c.getSource().sendFeedback(Component.literal(rain == null || wind == null ? "Foley is off"
-									: rain.scene() + "\n" + wind.scene()));
+							c.getSource().sendFeedback(Component.literal(rain == null || wind == null || placed == null
+									? "Foley is off"
+									: rain.scene() + "\n" + wind.scene() + "\n" + placed.around().water() + "\n"
+											+ placed.around().fire() + "\n" + placed.around().lava()));
 							return 1;
 						}))
 						.then(ClientCommands.literal("drip").executes(c -> {

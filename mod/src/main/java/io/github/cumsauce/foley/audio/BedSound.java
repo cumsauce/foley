@@ -8,46 +8,54 @@ import java.util.concurrent.CompletableFuture;
 import javax.sound.sampled.AudioFormat;
 import net.minecraft.client.resources.sounds.AbstractSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.client.resources.sounds.TickableSoundInstance;
 import net.minecraft.client.sounds.AudioStream;
 import net.minecraft.client.sounds.SoundBufferLibrary;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.phys.Vec3;
 
 /**
- * A bed (rain, wind): a native synth rendered as it plays, an endless stream the game reads like any streaming sound,
- * through Fabric's {@code getAudioStream}, so it plays through the game's own OpenAL channels. Around the listener, not
- * from a point. {@link #setScene} keeps it following the world.
+ * A bed (rain, wind, water, fire, lava): a native synth rendered as it plays, an endless stream the game reads like
+ * any streaming sound, through Fabric's {@code getAudioStream}, so it plays through the game's own OpenAL channels.
+ * Either all round the listener, or {@linkplain #place placed} where the sound comes from (and moved as that changes),
+ * so it pans and Earshot occludes it. Distance is in the scene's gain, not OpenAL's falloff. {@link #setScene} keeps it
+ * following the world.
  *
  * @param <S> what the bed is told about the world
  */
-abstract class BedSound<S> extends AbstractSoundInstance {
+public final class BedSound<S extends Scene> extends AbstractSoundInstance implements TickableSoundInstance {
 	static final AudioFormat FORMAT = new AudioFormat(NativeBridge.SAMPLE_RATE, 16, 1, true, false);
 
-	final NativeBridge bridge;
+	private final NativeBridge bridge;
+	private final int kind;
 	private volatile S scene;
 	private volatile long rendered;
 	private Stream stream;
 
-	BedSound(String name, SoundSource source, NativeBridge bridge, S scene) {
+	/**
+	 * @param name its sound event, {@code foley:<name>} in sounds.json
+	 * @param kind its native kind, {@code NativeBridge.BED_*}
+	 */
+	public BedSound(String name, SoundSource source, NativeBridge bridge, int kind, S scene) {
 		super(SoundEvent.createVariableRangeEvent(Identifier.fromNamespaceAndPath("foley", name)), source,
 				SoundInstance.createUnseededRandom());
 		this.bridge = bridge;
+		this.kind = kind;
 		this.scene = scene;
 		this.relative = true;
 		this.attenuation = SoundInstance.Attenuation.NONE;
 	}
 
-	/** Starts the native bed. */
-	abstract MemorySegment create(long seed);
-
-	/** Tells the native bed about {@code scene}. */
-	abstract void apply(MemorySegment bed, S scene);
-
-	/** Renders the next samples into {@code out}, native memory 2 bytes a sample. */
-	abstract void render(MemorySegment bed, MemorySegment out);
-
-	abstract void destroy(MemorySegment bed);
+	/** Places it at {@code at} in the world, from now on. Called on the client thread. */
+	public BedSound<S> place(Vec3 at) {
+		relative = false;
+		x = at.x;
+		y = at.y;
+		z = at.z;
+		return this;
+	}
 
 	/** Samples rendered so far. For the client gametest. */
 	public long rendered() {
@@ -65,9 +73,17 @@ abstract class BedSound<S> extends AbstractSoundInstance {
 	}
 
 	@Override
+	public boolean isStopped() {
+		return false;
+	}
+
+	@Override
+	public void tick() {}
+
+	@Override
 	public synchronized CompletableFuture<AudioStream> getAudioStream(SoundBufferLibrary loader, Identifier id,
 			boolean repeat) {
-		stream = new Stream(create(random.nextLong()));
+		stream = new Stream(bridge.bedCreate(kind, random.nextLong()));
 		stream.apply(scene);
 		return CompletableFuture.completedFuture(stream);
 	}
@@ -82,7 +98,7 @@ abstract class BedSound<S> extends AbstractSoundInstance {
 		}
 
 		synchronized void apply(S scene) {
-			if (!closed) BedSound.this.apply(bed, scene);
+			if (!closed) bridge.bedSetScene(bed, scene.params());
 		}
 
 		@Override
@@ -95,7 +111,7 @@ abstract class BedSound<S> extends AbstractSoundInstance {
 			int bytes = size & ~1;
 			ByteBuffer buffer = ByteBuffer.allocateDirect(bytes).order(ByteOrder.LITTLE_ENDIAN);
 			if (closed) return buffer.limit(0);
-			render(bed, MemorySegment.ofBuffer(buffer));
+			bridge.bedRender(bed, MemorySegment.ofBuffer(buffer));
 			rendered += bytes / 2;
 			return buffer;
 		}
@@ -104,7 +120,7 @@ abstract class BedSound<S> extends AbstractSoundInstance {
 		public synchronized void close() {
 			if (closed) return;
 			closed = true;
-			destroy(bed);
+			bridge.bedDestroy(bed);
 		}
 	}
 }

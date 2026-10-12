@@ -25,7 +25,7 @@ import net.minecraft.world.phys.Vec3;
  * @param exposure 0 shut in to 1 in the open
  * @param leaves   0 to 1
  */
-public record WindScene(float speed, float exposure, float leaves) {
+public record WindScene(float speed, float exposure, float leaves) implements Scene {
 	public static final WindScene CALM = new WindScene(0, 0, 0);
 	static final float CLEAR = 5;
 	static final float RAIN = 9;
@@ -77,6 +77,11 @@ public record WindScene(float speed, float exposure, float leaves) {
 		float sky = level.canSeeSky(BlockPos.containing(eye)) ? 1 : 0;
 		float exposure = Math.clamp(0.5f * sky + 0.5f * open, 0, 1);
 		return new WindScene((float) Math.min(speed, 60), exposure, Math.clamp(leaves, 0, 1));
+	}
+
+	@Override
+	public float[] params() {
+		return new float[] {speed, exposure, leaves};
 	}
 
 	@Override

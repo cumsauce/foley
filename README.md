@@ -4,9 +4,11 @@ Procedurally generated, physically based sound effects and ambience for Minecraf
 
 It runs alongside [Earshot](https://github.com/cumsauce/earshot), which shapes every sound Foley makes with its occlusion, reverb and HRTF. It also runs alongside [Yak VC](https://github.com/desocketed/yakvc), which it doesn't touch.
 
-Status: **M1, rain and wind.**
+Status: **M2, water, fire and lava.**
 
 - **Rain** replaces the game's rain sounds. Drops fall at the rate the weather gives (about 10 mm/h in rain, 50 in a thunderstorm), sized by the Marshall–Palmer distribution, onto what's actually round you: water rings with bubbles, stone ticks, leaves patter, wood knocks, glass and metal ping, grass and sand thud softly. Under a roof you hear the drumming on the roof instead.
+- **Water, fire and lava** replace the game's ambience within 12 blocks, each played from where it is, so it pans (and Earshot occludes it). Streams babble with bubbles of 1 to 4 mm; waterfalls roar where they land, with bubbles of every size; fire roars and puffs, and crackles in a heavy-tailed mix of ticks and pops; lava rumbles, and its bubbles burst and ring as the cavities they leave. Still water is silent.
+- **Dripstone drips** are generated: into water (the bubble rings), on stone (a tick), or lava (a thud and a sizzle).
 - **Wind** layers on top of the game's sounds. It rises with height above the ground round you (the log wind profile), drops in a forest or a valley, gusts, rustles the leaves round you, rises when you fly, and comes in low and muffled indoors. None in the Nether or the End.
 
 Commands: `/foley rain <mm/h>|auto`, `/foley wind <m/s>|auto`, `/foley scene` (what Foley hears round you), `/foley drip`. [docs/PLAN.md](docs/PLAN.md) has the design and results.

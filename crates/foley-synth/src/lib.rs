@@ -3,14 +3,22 @@
 
 mod bubble;
 mod filter;
+mod fire;
+mod lava;
+mod oneshot;
 mod rain;
 mod rng;
+mod water;
 mod wind;
 
 pub use crate::bubble::{Bubble, minnaert_hz};
-pub use crate::filter::BandPass;
+pub use crate::filter::{BandPass, LowPass};
+pub use crate::fire::{Fire, FireScene};
+pub use crate::lava::{Lava, LavaScene, helmholtz};
+pub use crate::oneshot::{drip_into_water, drip_on_stone, lava_drip};
 pub use crate::rain::{Rain, RainScene, Surface};
 pub use crate::rng::Rng;
+pub use crate::water::{Water, WaterScene, plunge_radius};
 pub use crate::wind::{Wind, WindScene};
 
 /// Samples a second, for everything Foley makes.
