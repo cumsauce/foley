@@ -29,8 +29,8 @@ fn main() -> std::io::Result<()> {
         let frames = ((sound.len().saturating_sub(N)) / HOP).min(WIDTH);
         for f in 0..frames {
             let spectrum = magnitudes(&sound[f * HOP..f * HOP + N]);
-            for b in 0..BINS {
-                let db = 20.0 * spectrum[b].max(1e-7).log10();
+            for (b, magnitude) in spectrum.iter().take(BINS).enumerate() {
+                let db = 20.0 * magnitude.max(1e-7).log10();
                 let v = ((db + 90.0) / 90.0).clamp(0.0, 1.0);
                 let y = r * (BINS + 4) + (BINS - 1 - b);
                 image[y * WIDTH + f] = (v * 255.0) as u8;
