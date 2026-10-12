@@ -35,7 +35,14 @@ Checked against the 26.3 game and Fabric API (2026-10-12):
 | **Footsteps** (optional layer) | Modal contact on the block's material, plus granular crunch for snow, gravel and sand (the grain count follows weight and speed) | Player and mob movement |
 | **Ambient life** | Insects as FM chirps with temperature-dependent rate (Dolbear's law for crickets: chirps/min ≈ 7·T + 30, T in °C); birdsong from a syrinx-inspired FM model | Biome, time of day, temperature, weather |
 
-For each one, the vanilla sound it replaces can be switched off in the settings, or layered with it.
+## With or instead of vanilla (decided 2026-10-12)
+
+- **Soundscapes are added on top.** Wind, ambient life and cave atmosphere layer over the game's own sounds and music; vanilla has nothing for them anyway.
+- **Continuous environmental sounds Foley models replace vanilla's:** rain, flowing water and waterfalls, fire, lava, thunder. Two rains at once would be wrong, and Foley's version follows the world.
+- **One-shots keep vanilla's:** mob sounds (a cow's moo), item and UI sounds, and the like. Foley's impacts and breaking layer under them, without replacing them.
+- **Mob voices** can later be made procedurally too (M6), as an option you select, off by default.
+
+Every replacement can still be switched back to vanilla, per sound, in the settings.
 
 ## Architecture
 
@@ -63,6 +70,7 @@ Fabric mod (Java)                                   foley-ffi (Rust cdylib, FFM)
 3. **M3 Thunder.** The Ribner–Roy channel model, replacing vanilla thunder (Earshot's thunder delay still applies).
 4. **M4 Modal impacts and breaking.** Material modal tables, block breaking and landing, glass and stone fracture.
 5. **M5 Ambient life, footsteps, settings, first prerelease.**
+6. **M6 Procedural mob voices (optional, off by default).** Vocal-tract models for the animals and monsters: source-filter synthesis, with formants and pitch from each mob's size and kind (a cow's low moo, a chicken's cluck, a villager's "hmm"). Each mob can be switched between Foley's voice and vanilla's.
 
 ## Risks
 
@@ -73,8 +81,8 @@ Fabric mod (Java)                                   foley-ffi (Rust cdylib, FFM)
 | Clashing with resource packs that replace the same sounds | Replaced vanilla sounds are opt-in per sound. |
 | CPU on weaker machines | Presets, plus a cap on drops, bubbles and voices per second. |
 
-## Open questions
+## Decided
 
-1. **Name:** "Foley" is a placeholder; keep it?
-2. **Default:** layer over vanilla sounds, or replace them where Foley has a model?
-3. **Order:** rain and wind first (most audible all the time), or impacts first (most noticeable per event)?
+1. **Name:** Foley.
+2. **Vanilla:** soundscapes on top; rain, water, fire, lava and thunder replaced; one-shots such as mob sounds kept (see above).
+3. **Order:** rain and wind first, the most audible all the time.
