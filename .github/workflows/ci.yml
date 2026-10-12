@@ -95,9 +95,9 @@ jobs:
         run: |
           jar=$(ls dist/foley-*.jar)
           unzip -l "$jar" | tee contents
-          entries="natives/natives.sha256 natives/linux-x86_64/libfoley_ffi.so.xz
-            natives/linux-aarch64/libfoley_ffi.so.xz natives/windows-x86_64/foley_ffi.dll.xz
-            natives/macos-universal/libfoley_ffi.dylib.xz META-INF/jars/xz-1.10.jar foley.mixins.json"
+          entries="foley/natives/natives.sha256 foley/natives/linux-x86_64/libfoley_ffi.so.xz
+            foley/natives/linux-aarch64/libfoley_ffi.so.xz foley/natives/windows-x86_64/foley_ffi.dll.xz
+            foley/natives/macos-universal/libfoley_ffi.dylib.xz META-INF/jars/xz-1.10.jar foley.mixins.json"
           for entry in $entries; do
             grep -q " $entry\$" contents || { echo "$jar has no $entry" >&2; exit 1; }
           done
