@@ -1,0 +1,32 @@
+{
+	"schemaVersion": 1,
+	"id": "foley",
+	"version": "${version}",
+	"name": "Foley",
+	"description": "Procedurally generated, physically based sound effects and ambience. Client only.",
+	"license": "MIT OR Apache-2.0",
+	"contact": {
+		"homepage": "https://github.com/cumsauce/foley",
+		"sources": "https://github.com/cumsauce/foley",
+		"issues": "https://github.com/cumsauce/foley/issues"
+	},
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"io.github.cumsauce.foley.FoleyClient"
+		]
+	},
+	"mixins": [
+		"foley.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"earshot": "*",
+		"yakvc": "*"
+	}
+}

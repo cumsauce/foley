@@ -1,0 +1,15 @@
+{
+	"schemaVersion": 1,
+	"id": "foley-gametest",
+	"version": "0.0.0",
+	"name": "Foley game tests",
+	"environment": "client",
+	"entrypoints": {
+		"fabric-client-gametest": [
+			"io.github.cumsauce.foley.gametest.FoleyClientGameTest"
+		]
+	},
+	"depends": {
+		"foley": "*"
+	}
+}

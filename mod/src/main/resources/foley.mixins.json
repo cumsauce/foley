@@ -1,0 +1,15 @@
+{
+	"required": true,
+	"package": "io.github.cumsauce.foley.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"SoundBufferLibraryMixin",
+		"SoundManagerMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

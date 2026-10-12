@@ -1,0 +1,32 @@
+{
+	"rain": {
+		"subtitle": "subtitles.foley.rain",
+		"sounds": [
+			{
+				"name": "fabric-sound-api-v1:empty",
+				"stream": true
+			}
+		]
+	},
+	"drip": {
+		"subtitle": "subtitles.foley.drip",
+		"sounds": [
+			"foley:generated/drip_0",
+			"foley:generated/drip_1",
+			"foley:generated/drip_2",
+			"foley:generated/drip_3",
+			"foley:generated/drip_4",
+			"foley:generated/drip_5",
+			"foley:generated/drip_6",
+			"foley:generated/drip_7",
+			"foley:generated/drip_8",
+			"foley:generated/drip_9",
+			"foley:generated/drip_10",
+			"foley:generated/drip_11",
+			"foley:generated/drip_12",
+			"foley:generated/drip_13",
+			"foley:generated/drip_14",
+			"foley:generated/drip_15"
+		]
+	}
+}

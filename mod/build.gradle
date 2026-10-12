@@ -1,0 +1,186 @@
+// For CompressNatives below.
+buildscript {
+	repositories { mavenCentral() }
+	dependencies { classpath "org.tukaani:xz:${xz_version}" }
+}
+
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+base {
+	archivesName = 'foley'
+}
+
+repositories {
+	maven {
+		name = 'TerraformersMC'
+		url = 'https://maven.terraformersmc.com/releases/'
+		content { includeGroup 'com.terraformersmc' }
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// Unpacks the xz-compressed natives (CompressNatives below). 0BSD licence, bundled in the jar.
+	implementation "org.tukaani:xz:${project.xz_version}"
+	include "org.tukaani:xz:${project.xz_version}"
+	// Optional: only Mod Menu's API is compiled against; Foley loads without Mod Menu.
+	compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+
+	testImplementation platform("org.junit:junit-bom:${project.junit_version}")
+	testImplementation 'org.junit.jupiter:junit-jupiter'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+// Native library staging, as in yakvc. By default `cargo xtask natives` builds foley-ffi for the host;
+// `-Pfoley.prebuiltNatives=<dir>` uses an already staged directory instead (CI packaging) and skips cargo.
+def prebuiltNatives = providers.gradleProperty('foley.prebuiltNatives')
+def hostNativesDir = layout.buildDirectory.dir('natives')
+
+def cargoNatives = tasks.register('cargoNatives', Exec) {
+	description = 'Builds foley-ffi for the host with `cargo xtask natives`.'
+	workingDir = rootDir.parentFile
+	def out = hostNativesDir.get().asFile
+	commandLine 'cargo', 'xtask', 'natives', '--target', 'host', '--out', out.absolutePath
+	outputs.dir(out)
+	// Cargo does its own up-to-date checking.
+	outputs.upToDateWhen { false }
+}
+
+/**
+ * Copies staged natives with each library xz-compressed (`<platform>/<library>.xz`), which makes them about 30 %
+ * smaller than the jar's own deflate. `natives.sha256` is copied as is: it holds the hashes of the uncompressed
+ * libraries, which NativeLoader checks after unpacking.
+ */
+abstract class CompressNatives extends DefaultTask {
+	@InputFiles
+	abstract ConfigurableFileCollection getNatives()
+
+	@OutputDirectory
+	abstract DirectoryProperty getOutput()
+
+	@TaskAction
+	void compress() {
+		File out = output.get().asFile
+		out.deleteDir()
+		natives.asFileTree.visit { FileVisitDetails entry ->
+			if (entry.directory) return
+			boolean manifest = entry.name == 'natives.sha256'
+			File target = new File(out, entry.relativePath.pathString + (manifest ? '' : '.xz'))
+			target.parentFile.mkdirs()
+			if (manifest) {
+				entry.copyTo(target)
+				return
+			}
+			def options = new org.tukaani.xz.LZMA2Options(9)
+			options.dictSize = 32 << 20
+			target.withOutputStream { stream ->
+				def xz = new org.tukaani.xz.XZOutputStream(stream, options)
+				entry.file.withInputStream { it.transferTo(xz) }
+				xz.finish()
+			}
+		}
+	}
+}
+
+def compressNatives = tasks.register('compressNatives', CompressNatives) {
+	natives.from(prebuiltNatives.isPresent() ? prebuiltNatives.map { file(it) } : cargoNatives)
+	output = layout.buildDirectory.dir('natives-xz')
+}
+
+processResources {
+	def version = project.version
+	inputs.property 'version', version
+	filesMatching('fabric.mod.json') {
+		expand 'version': version
+	}
+
+	from(compressNatives) { into 'natives' }
+}
+
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "foley-gametest"
+		// Client-only mod: no server game tests, so no EULA acceptance is needed.
+		enableGameTests = false
+		enableClientGameTests = true
+	}
+}
+
+// Minecraft locks its saves, which a VirtioFS shared folder (a VM building in a folder shared from the host) can't:
+// `-Pfoley.runDir=<dir on a local disk>` moves the game directories of the runs there.
+def runDirOverride = providers.gradleProperty('foley.runDir')
+
+loom {
+	runs {
+		configureEach {
+			vmArg '--enable-native-access=ALL-UNNAMED'
+			if (runDirOverride.isPresent()) runDir = "${runDirOverride.get()}/${name}"
+		}
+	}
+}
+
+test {
+	useJUnitPlatform()
+	jvmArgs '--enable-native-access=ALL-UNNAMED'
+}
+
+jar {
+	from(rootProject.file('../LICENSE-MIT'))
+	from(rootProject.file('../LICENSE-APACHE'))
+	// JEP 472: lets FFM load the natives without a warning where the jar is the launched application. Minecraft
+	// launchers don't launch mod jars, so players still need --enable-native-access=ALL-UNNAMED (see README).
+	manifest {
+		attributes 'Enable-Native-Access': 'ALL-UNNAMED'
+	}
+	doLast {
+		StoreXz.rewrite(archiveFile.get().asFile)
+	}
+}
+
+/**
+ * Gradle compresses every jar entry the same way, so the already compressed `.xz` natives get deflated again, which
+ * only adds bytes and work when unpacking. This rewrites the jar with them stored as they are and every other entry
+ * unchanged.
+ */
+class StoreXz {
+	static void rewrite(File jar) {
+		File tmp = new File(jar.path + '.tmp')
+		new java.util.zip.ZipFile(jar).withCloseable { zip ->
+			new java.util.zip.ZipOutputStream(new FileOutputStream(tmp)).withCloseable { out ->
+				for (def entry : zip.entries()) {
+					byte[] data = zip.getInputStream(entry).readAllBytes()
+					def copy = new java.util.zip.ZipEntry(entry.name)
+					copy.time = entry.time
+					if (entry.name.endsWith('.xz')) {
+						def crc = new java.util.zip.CRC32()
+						crc.update(data)
+						copy.method = java.util.zip.ZipEntry.STORED
+						copy.size = data.length
+						copy.compressedSize = data.length
+						copy.crc = crc.value
+					}
+					out.putNextEntry(copy)
+					out.write(data)
+					out.closeEntry()
+				}
+			}
+		}
+		java.nio.file.Files.move(tmp.toPath(), jar.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+	}
+}

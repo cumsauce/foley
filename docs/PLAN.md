@@ -62,6 +62,20 @@ Fabric mod (Java)                                   foley-ffi (Rust cdylib, FFM)
 - **Variation:** every one-shot is generated from a seed, so no two drips or crackles are the same, and none ever repeats exactly.
 - **CPU budget:** beds about 2–4 % of a core, and one-shots rendered ahead on a worker (about 0.1 ms per 100 ms of audio). A preset system like Earshot's (Low to Ultra) scales drop counts, bubble populations and model detail.
 
+## M0 results (2026-10-12)
+
+- **Both paths play in the real game**, checked by the client gametest on the M3 VM:
+  - a synthesized stream (rain on water) through `FabricSoundInstance.getAudioStream`, read buffer after buffer by the game's stream thread;
+  - a generated one-shot (a drip) served as an ordinary buffer by a `SoundBufferLibrary.getCompleteBuffer` mixin, from `foley:generated/drip_0..15` in sounds.json. A `SoundManager.validateSoundResource` mixin keeps these names: the game would drop them for having no file.
+- **Audio format:** 48 kHz mono 16-bit signed PCM. The game's OpenAL streams take only 8- and 16-bit.
+- **Physics so far:**
+  - a bubble's Minnaert resonance, f = (1/2πr)·√(3γp/ρ) (3.29 kHz at 1 mm);
+  - its ring decaying at π·f·δ with Devin's total damping δ ≈ 0.045 (about 15 ms for 1 mm), rising in pitch as it surfaces;
+  - rain as Poisson drops, each trapping a bubble of 0.2–1.5 mm, plus splash hiss.
+  The van den Doel damping formula as first written gave 4 ms rings, several times too short against measured δ, so measured damping is used.
+- **Cost** (bed_bench, M3 VM, one core): 100 drops/s 0.1 %, 400 drops/s 0.3 %, 1,500 drops/s 1.2 %, 5,000 drops/s (a downpour) 3.7 %.
+- **To check by ear:** that Earshot shapes both. It hooks every game channel, and these play through the game's channels like any sound.
+
 ## Milestones
 
 0. **M0 Groundwork.** Repo, Rust workspace, FFM bridge, CI and natives packaging, all copied from Earshot. Spike: one procedural `FabricSoundInstance` stream (a sine, then filtered noise), and one generated buffer through the `SoundBufferLibrary` mixin. Measure CPU on the M3. **Exit:** both paths play in game, and Earshot shapes them.
