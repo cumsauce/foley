@@ -28,7 +28,8 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 /// 5: thunder, a bed struck by `foley_bed_strike`.
 /// 6: strikes and breaks on materials, `foley_render_contact`.
 /// 7: ambient life one-shots: crickets, birdsong, frogs.
-pub const FOLEY_ABI_VERSION: u32 = 7;
+/// 8: footsteps, and snow as a material.
+pub const FOLEY_ABI_VERSION: u32 = 8;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -66,14 +67,15 @@ pub const FOLEY_SHOT_BIRDSONG: i32 = 4;
 pub const FOLEY_SHOT_FROG: i32 = 5;
 
 /// Materials for `foley_render_contact`: stone, wood, metal, glass, ice,
-/// earth, granular (sand, gravel), plant, soft (wool, snow).
-pub const FOLEY_MATERIALS: usize = 9;
+/// earth, granular (sand, gravel), plant, soft (wool), snow.
+pub const FOLEY_MATERIALS: usize = 10;
 /// Contacts for `foley_render_contact`: a tool tapping, a block set down, a
-/// body landing, and the block breaking.
+/// body landing, the block breaking, and a footstep.
 pub const FOLEY_CONTACT_TAP: i32 = 0;
 pub const FOLEY_CONTACT_PLACE: i32 = 1;
 pub const FOLEY_CONTACT_LAND: i32 = 2;
 pub const FOLEY_CONTACT_BREAK: i32 = 3;
+pub const FOLEY_CONTACT_STEP: i32 = 4;
 
 pub const FOLEY_OK: i32 = 0;
 /// A null pointer or out-of-range value.
@@ -387,15 +389,11 @@ pub unsafe extern "C" fn foley_render_contact(
         }
         let sound = match kind {
             FOLEY_CONTACT_BREAK => fracture(material, seed),
-            kind => contact(
-                usize::try_from(kind)
-                    .ok()
-                    .and_then(Contact::from_index)
-                    .ok_or_else(|| FfiError::invalid("unknown contact"))?,
-                material,
-                speed,
-                seed,
-            ),
+            FOLEY_CONTACT_TAP => contact(Contact::Tap, material, speed, seed),
+            FOLEY_CONTACT_PLACE => contact(Contact::Place, material, speed, seed),
+            FOLEY_CONTACT_LAND => contact(Contact::Land, material, speed, seed),
+            FOLEY_CONTACT_STEP => contact(Contact::Step, material, speed, seed),
+            _ => return Err(FfiError::invalid("unknown contact")),
         };
         if let Some(dest) = out.get_mut(..sound.len()) {
             for (out, sample) in dest.iter_mut().zip(&sound) {
@@ -508,6 +506,7 @@ mod tests {
             FOLEY_CONTACT_PLACE,
             FOLEY_CONTACT_LAND,
             FOLEY_CONTACT_BREAK,
+            FOLEY_CONTACT_STEP,
         ] {
             for material in 0..FOLEY_MATERIALS as i32 {
                 let mut needed = 0;
@@ -549,7 +548,7 @@ mod tests {
         // SAFETY: a null buffer with capacity 0 is not written.
         unsafe {
             assert_eq!(
-                foley_render_contact(0, 9, 3.0, 1, std::ptr::null_mut(), 0, &mut needed),
+                foley_render_contact(0, 10, 3.0, 1, std::ptr::null_mut(), 0, &mut needed),
                 FOLEY_ERR_INVALID_ARGUMENT
             );
             assert_eq!(

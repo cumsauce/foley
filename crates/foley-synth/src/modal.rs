@@ -20,12 +20,15 @@ pub enum Material {
     Granular,
     /// Leaves, plants, crops.
     Plant,
-    /// Wool, snow, slime.
+    /// Wool, slime, carpets.
     Soft,
+    /// Snow: soft, but it crunches and squeaks as the bonds between its
+    /// grains break.
+    Snow,
 }
 
 impl Material {
-    pub const ALL: [Material; 9] = [
+    pub const ALL: [Material; 10] = [
         Material::Stone,
         Material::Wood,
         Material::Metal,
@@ -35,6 +38,7 @@ impl Material {
         Material::Granular,
         Material::Plant,
         Material::Soft,
+        Material::Snow,
     ];
 
     pub fn from_index(index: usize) -> Option<Material> {
@@ -70,6 +74,8 @@ impl Material {
             Material::Granular => p(100e6, 1600.0, 0.3, 0.5, 0.3, 0, 0.1, 0.0),
             Material::Plant => p(0.5e9, 700.0, 0.3, 0.08, 0.002, 0, 0.2, 0.0),
             Material::Soft => p(1e6, 300.0, 0.3, 0.6, 0.3, 0, 0.1, 0.0),
+            // Settled snow: a few MPa, a third the density of water.
+            Material::Snow => p(5e6, 300.0, 0.3, 0.5, 0.3, 0, 0.1, 0.0),
         }
     }
 }
@@ -119,10 +125,13 @@ pub enum Contact {
     Place,
     /// A body landing on it: 70 kg on shoe soles (10 MPa), 10 cm round.
     Land,
+    /// A footstep: a heel strike, about 8 kg of foot and shank on a 5 cm
+    /// heel of shoe sole.
+    Step,
 }
 
 impl Contact {
-    pub const ALL: [Contact; 3] = [Contact::Tap, Contact::Place, Contact::Land];
+    pub const ALL: [Contact; 4] = [Contact::Tap, Contact::Place, Contact::Land, Contact::Step];
 
     pub fn from_index(index: usize) -> Option<Contact> {
         Contact::ALL.get(index).copied()
@@ -341,7 +350,10 @@ pub fn contact(contact: Contact, material: Material, speed: f32, seed: u64) -> V
         Contact::Tap => (0.5, 0.01, (200e9, 0.3), 0.35),
         Contact::Place => (2.0, 0.05, target, 0.5),
         Contact::Land => (70.0, 0.1, (10e6, 0.45), 0.7),
+        Contact::Step => (8.0, 0.05, (10e6, 0.45), 0.4),
     };
+    // Grains crushed go with the blow's momentum, against a landing's.
+    let crush = (mass * speed / 350.0).sqrt().clamp(0.1, 1.5);
     let stiffness = effective_modulus(striker, target);
     let tau = hertz_time(mass, radius, stiffness, speed);
     let mut out = Vec::new();
@@ -357,16 +369,28 @@ pub fn contact(contact: Contact, material: Material, speed: f32, seed: u64) -> V
     for (i, sample) in out[..pulse].iter_mut().enumerate() {
         *sample += 0.6 * (PI * i as f32 / pulse as f32).cos();
     }
-    match material {
-        Material::Granular => grains(&mut rng, &mut out, 40, 0.06, 0.3, 0.7),
-        Material::Earth => grains(&mut rng, &mut out, 12, 0.04, 0.2, 0.2),
-        Material::Plant => noise_burst(&mut rng, &mut out, 0, 0.08, 4000.0, 0.6),
-        _ => {}
-    }
-    // A lower-passed tail for long contacts, as the click itself is dull.
+    // A long contact's click is dull: low-pass it (but not the grains,
+    // which crunch on their own).
     let mut smooth = LowPass::new((1.0 / tau).clamp(80.0, 20_000.0) * 2.0);
     for sample in &mut out {
         *sample = smooth.process(*sample);
+    }
+    match material {
+        Material::Granular => grains(&mut rng, &mut out, (60.0 * crush) as usize, 0.06, 0.3, 0.7),
+        Material::Earth => grains(&mut rng, &mut out, (16.0 * crush) as usize, 0.04, 0.2, 0.2),
+        Material::Snow => {
+            // Bonds breaking as it compacts: crackling bursts, sizes ∝ E^-1.7,
+            // over the 0.1 s the foot takes to sink in.
+            // In snow, the crunch is most of what's heard.
+            for _ in 0..((120.0 * crush) as usize).max(12) {
+                let at = (0.1 * rng.unit().sqrt() * SAMPLE_RATE as f32) as usize;
+                let energy = (1.0 + rng.unit() * (30f32.powf(-0.7) - 1.0)).powf(-1.0 / 0.7);
+                let centre = 1500.0 + 2500.0 * rng.unit();
+                noise_burst(&mut rng, &mut out, at, 0.003, centre, 0.8 * energy.sqrt());
+            }
+        }
+        Material::Plant => noise_burst(&mut rng, &mut out, 0, 0.08, 4000.0, 0.6),
+        _ => {}
     }
     normalize(&mut out, peak * loudness(&props));
     out
@@ -405,6 +429,7 @@ pub fn fracture(material: Material, seed: u64) -> Vec<f32> {
         Material::Earth => grains(&mut rng, &mut out, 150, 0.25, 0.15, 0.25),
         Material::Granular => grains(&mut rng, &mut out, 300, 0.35, 0.2, 0.7),
         Material::Plant => noise_burst(&mut rng, &mut out, 0, 0.18, 4500.0, 0.4),
+        Material::Snow => grains(&mut rng, &mut out, 80, 0.2, 0.1, 0.4),
         Material::Metal | Material::Soft => {
             // Coming apart, it's no longer held to ring: five times the damping.
             let loose = Props {
@@ -532,6 +557,18 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn steps_are_soft_and_snow_crunches() {
+        let peak = |s: &[f32]| s.iter().fold(0f32, |p, x| p.max(x.abs()));
+        let step = contact(Contact::Step, Material::Stone, 1.0, 1);
+        let tap = contact(Contact::Tap, Material::Stone, 3.0, 1);
+        assert!(crossings(&step[..2400.min(step.len())]) < crossings(&tap[..2400.min(tap.len())]));
+        // Snow keeps crunching after the heel lands.
+        let snow = contact(Contact::Step, Material::Snow, 1.0, 1);
+        assert!(snow.len() > SAMPLE_RATE as usize / 20);
+        assert!(peak(&snow[SAMPLE_RATE as usize / 50..]) > 0.3 * peak(&snow));
     }
 
     #[test]

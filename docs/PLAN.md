@@ -164,6 +164,12 @@ Fabric mod (Java)                                   foley-ffi (Rust cdylib, FFM)
   Each call is a generated one-shot played where the animal is, so it pans and Earshot shapes it. Variants: 12 species × 4 songs, crickets at 5 temperatures × 4, frogs at 3 sizes × 4.
 - The client gametest sets midnight on a superflat and checks crickets chirp.
 
+## M5 results, part 2: footsteps (2026-10-12)
+
+- **Footsteps** are a fifth contact, layered under the game's step sounds (for players and mobs alike). Each is a heel strike: about 8 kg of foot and shank on a 5 cm heel of shoe sole, at 1 m/s. Hertz gives tens of milliseconds of contact, so a step is a dull thud through the block's modes. Grains crushed go with the blow's momentum (√(m·v / 350 kg·m/s), against a landing's), so gravel and sand crunch under a step and more under a landing.
+- **Snow** is now its own material: settled snow, a few MPa and a third the density of water. It crunches and squeaks as the bonds between its grains break: crackling bursts between 1.5 and 4 kHz with sizes ∝ E^−1.7, over the 0.1 s the foot takes to sink in. In snow, that is most of what's heard. A thud's low-pass now applies to the click alone, not the grains.
+- Variants: 5 contacts × 10 materials × 8. The client gametest also plays the game's snow step and checks it got Foley's layer.
+
 ## Milestones
 
 0. **M0 Groundwork.** Repo, Rust workspace, FFM bridge, CI and natives packaging, all copied from Earshot. Spike: one procedural `FabricSoundInstance` stream (a sine, then filtered noise), and one generated buffer through the `SoundBufferLibrary` mixin. Measure CPU on the M3. **Exit:** both paths play in game, and Earshot shapes them.

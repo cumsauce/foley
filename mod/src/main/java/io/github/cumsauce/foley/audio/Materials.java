@@ -14,7 +14,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * What a block is made of, as the native modal synthesis takes it ({@code Material}'s order): from the block's tags
- * where they say (ice, leaves and plants, dirt, sand, wool and snow), else from its {@link SoundType}, which the game
+ * where they say (ice, leaves and plants, dirt, sand, snow, wool), else from its {@link SoundType}, which the game
  * already picks by material. Sound types are told apart by their names (the game is unobfuscated), read once.
  */
 public final class Materials {
@@ -27,7 +27,8 @@ public final class Materials {
 	public static final int GRANULAR = 6;
 	public static final int PLANT = 7;
 	public static final int SOFT = 8;
-	public static final String[] NAMES = {"stone", "wood", "metal", "glass", "ice", "earth", "granular", "plant", "soft"};
+	public static final int SNOW = 9;
+	public static final String[] NAMES = {"stone", "wood", "metal", "glass", "ice", "earth", "granular", "plant", "soft", "snow"};
 
 	private static final Map<SoundType, Integer> BY_SOUND = new IdentityHashMap<>();
 	private static final Map<String, SoundType> BY_EVENT = new HashMap<>();
@@ -60,7 +61,8 @@ public final class Materials {
 		}
 		if (state.is(BlockTags.DIRT)) return EARTH;
 		if (state.is(BlockTags.SAND)) return GRANULAR;
-		if (state.is(BlockTags.WOOL) || state.is(BlockTags.WOOL_CARPETS) || state.is(BlockTags.SNOW)) return SOFT;
+		if (state.is(BlockTags.SNOW)) return SNOW;
+		if (state.is(BlockTags.WOOL) || state.is(BlockTags.WOOL_CARPETS)) return SOFT;
 		return of(state.getSoundType());
 	}
 
@@ -82,7 +84,8 @@ public final class Materials {
 		}
 		if (has(n, "WOOD", "PLANK", "BAMBOO", "STEM", "LADDER", "SCAFFOLDING", "BOOKSHELF", "HANGING_SIGN")) return WOOD;
 		if (has(n, "GRAVEL", "SAND", "SOUL_SOIL", "SUSPICIOUS")) return GRANULAR;
-		if (has(n, "WOOL", "SNOW", "SLIME", "HONEY", "CARPET", "SPONGE", "FROGSPAWN")) return SOFT;
+		if (has(n, "SNOW")) return SNOW;
+		if (has(n, "WOOL", "SLIME", "HONEY", "CARPET", "SPONGE", "FROGSPAWN")) return SOFT;
 		if (has(n, "MUD", "DIRT", "CLAY", "FARMLAND", "MOSS")) return EARTH;
 		if (has(n, "GRASS", "LEAVES", "AZALEA", "VINE", "CROP", "BERRY", "WART", "LILY", "FLOWER", "ROOTS", "FUNGUS",
 				"SPORE", "DRIPLEAF", "PETALS", "SAPLING", "HANGING_MOSS", "LEAF_LITTER", "BUSH", "CACTUS")) {

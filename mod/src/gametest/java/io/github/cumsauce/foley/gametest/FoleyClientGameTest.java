@@ -19,7 +19,7 @@ import net.minecraft.sounds.SoundSource;
  * (M1); the wind blows out in the open and drops under a roof (M1); a waterfall, a fire and a pool of lava each start
  * a bed placed where they are, and a dripstone drip is swapped for a generated one (M2); a lightning bolt strikes
  * Foley's thunder and the game's is skipped (M3); breaking glass and stepping down on stone layer Foley's modal
- * strikes and shatters under the game's sounds (M4); crickets chirp in the grass at night (M5); and a generated one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null backend.
+ * strikes and shatters under the game's sounds (M4), and a footstep too (M5); crickets chirp in the grass at night (M5); and a generated one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null backend.
  */
 @SuppressWarnings("UnstableApiUsage")
 public class FoleyClientGameTest implements FabricClientGameTest {
@@ -130,8 +130,10 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 						random, mc.player.getX(), mc.player.getY(), mc.player.getZ()));
 				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.STONE_FALL, SoundSource.BLOCKS, 1f, 1f,
 						random, mc.player.getX(), mc.player.getY() + 1, mc.player.getZ()));
+				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.SNOW_STEP, SoundSource.PLAYERS, 1f, 1f,
+						random, mc.player.getX(), mc.player.getY(), mc.player.getZ()));
 			});
-			if (FoleyClient.layered() < layeredBefore + 2) {
+			if (FoleyClient.layered() < layeredBefore + 3) {
 				throw new AssertionError("strikes weren't layered: " + (FoleyClient.layered() - layeredBefore));
 			}
 

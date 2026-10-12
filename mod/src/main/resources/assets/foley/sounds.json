@@ -959,5 +959,173 @@
 				"attenuation_distance": 32
 			}
 		]
+	},
+	"tap_snow": {
+		"sounds": [
+			"foley:generated/tap_snow_0",
+			"foley:generated/tap_snow_1",
+			"foley:generated/tap_snow_2",
+			"foley:generated/tap_snow_3",
+			"foley:generated/tap_snow_4",
+			"foley:generated/tap_snow_5",
+			"foley:generated/tap_snow_6",
+			"foley:generated/tap_snow_7"
+		]
+	},
+	"place_snow": {
+		"sounds": [
+			"foley:generated/place_snow_0",
+			"foley:generated/place_snow_1",
+			"foley:generated/place_snow_2",
+			"foley:generated/place_snow_3",
+			"foley:generated/place_snow_4",
+			"foley:generated/place_snow_5",
+			"foley:generated/place_snow_6",
+			"foley:generated/place_snow_7"
+		]
+	},
+	"land_snow": {
+		"sounds": [
+			"foley:generated/land_snow_0",
+			"foley:generated/land_snow_1",
+			"foley:generated/land_snow_2",
+			"foley:generated/land_snow_3",
+			"foley:generated/land_snow_4",
+			"foley:generated/land_snow_5",
+			"foley:generated/land_snow_6",
+			"foley:generated/land_snow_7"
+		]
+	},
+	"break_snow": {
+		"sounds": [
+			"foley:generated/break_snow_0",
+			"foley:generated/break_snow_1",
+			"foley:generated/break_snow_2",
+			"foley:generated/break_snow_3",
+			"foley:generated/break_snow_4",
+			"foley:generated/break_snow_5",
+			"foley:generated/break_snow_6",
+			"foley:generated/break_snow_7"
+		]
+	},
+	"step_stone": {
+		"sounds": [
+			"foley:generated/step_stone_0",
+			"foley:generated/step_stone_1",
+			"foley:generated/step_stone_2",
+			"foley:generated/step_stone_3",
+			"foley:generated/step_stone_4",
+			"foley:generated/step_stone_5",
+			"foley:generated/step_stone_6",
+			"foley:generated/step_stone_7"
+		]
+	},
+	"step_wood": {
+		"sounds": [
+			"foley:generated/step_wood_0",
+			"foley:generated/step_wood_1",
+			"foley:generated/step_wood_2",
+			"foley:generated/step_wood_3",
+			"foley:generated/step_wood_4",
+			"foley:generated/step_wood_5",
+			"foley:generated/step_wood_6",
+			"foley:generated/step_wood_7"
+		]
+	},
+	"step_metal": {
+		"sounds": [
+			"foley:generated/step_metal_0",
+			"foley:generated/step_metal_1",
+			"foley:generated/step_metal_2",
+			"foley:generated/step_metal_3",
+			"foley:generated/step_metal_4",
+			"foley:generated/step_metal_5",
+			"foley:generated/step_metal_6",
+			"foley:generated/step_metal_7"
+		]
+	},
+	"step_glass": {
+		"sounds": [
+			"foley:generated/step_glass_0",
+			"foley:generated/step_glass_1",
+			"foley:generated/step_glass_2",
+			"foley:generated/step_glass_3",
+			"foley:generated/step_glass_4",
+			"foley:generated/step_glass_5",
+			"foley:generated/step_glass_6",
+			"foley:generated/step_glass_7"
+		]
+	},
+	"step_ice": {
+		"sounds": [
+			"foley:generated/step_ice_0",
+			"foley:generated/step_ice_1",
+			"foley:generated/step_ice_2",
+			"foley:generated/step_ice_3",
+			"foley:generated/step_ice_4",
+			"foley:generated/step_ice_5",
+			"foley:generated/step_ice_6",
+			"foley:generated/step_ice_7"
+		]
+	},
+	"step_earth": {
+		"sounds": [
+			"foley:generated/step_earth_0",
+			"foley:generated/step_earth_1",
+			"foley:generated/step_earth_2",
+			"foley:generated/step_earth_3",
+			"foley:generated/step_earth_4",
+			"foley:generated/step_earth_5",
+			"foley:generated/step_earth_6",
+			"foley:generated/step_earth_7"
+		]
+	},
+	"step_granular": {
+		"sounds": [
+			"foley:generated/step_granular_0",
+			"foley:generated/step_granular_1",
+			"foley:generated/step_granular_2",
+			"foley:generated/step_granular_3",
+			"foley:generated/step_granular_4",
+			"foley:generated/step_granular_5",
+			"foley:generated/step_granular_6",
+			"foley:generated/step_granular_7"
+		]
+	},
+	"step_plant": {
+		"sounds": [
+			"foley:generated/step_plant_0",
+			"foley:generated/step_plant_1",
+			"foley:generated/step_plant_2",
+			"foley:generated/step_plant_3",
+			"foley:generated/step_plant_4",
+			"foley:generated/step_plant_5",
+			"foley:generated/step_plant_6",
+			"foley:generated/step_plant_7"
+		]
+	},
+	"step_soft": {
+		"sounds": [
+			"foley:generated/step_soft_0",
+			"foley:generated/step_soft_1",
+			"foley:generated/step_soft_2",
+			"foley:generated/step_soft_3",
+			"foley:generated/step_soft_4",
+			"foley:generated/step_soft_5",
+			"foley:generated/step_soft_6",
+			"foley:generated/step_soft_7"
+		]
+	},
+	"step_snow": {
+		"sounds": [
+			"foley:generated/step_snow_0",
+			"foley:generated/step_snow_1",
+			"foley:generated/step_snow_2",
+			"foley:generated/step_snow_3",
+			"foley:generated/step_snow_4",
+			"foley:generated/step_snow_5",
+			"foley:generated/step_snow_6",
+			"foley:generated/step_snow_7"
+		]
 	}
 }

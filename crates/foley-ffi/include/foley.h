@@ -17,8 +17,9 @@
  * 5: thunder, a bed struck by `foley_bed_strike`.
  * 6: strikes and breaks on materials, `foley_render_contact`.
  * 7: ambient life one-shots: crickets, birdsong, frogs.
+ * 8: footsteps, and snow as a material.
  */
-#define FOLEY_ABI_VERSION 7
+#define FOLEY_ABI_VERSION 8
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -73,13 +74,13 @@
 
 /**
  * Materials for `foley_render_contact`: stone, wood, metal, glass, ice,
- * earth, granular (sand, gravel), plant, soft (wool, snow).
+ * earth, granular (sand, gravel), plant, soft (wool), snow.
  */
-#define FOLEY_MATERIALS 9
+#define FOLEY_MATERIALS 10
 
 /**
  * Contacts for `foley_render_contact`: a tool tapping, a block set down, a
- * body landing, and the block breaking.
+ * body landing, the block breaking, and a footstep.
  */
 #define FOLEY_CONTACT_TAP 0
 
@@ -88,6 +89,8 @@
 #define FOLEY_CONTACT_LAND 2
 
 #define FOLEY_CONTACT_BREAK 3
+
+#define FOLEY_CONTACT_STEP 4
 
 #define FOLEY_OK 0
 

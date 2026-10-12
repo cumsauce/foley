@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class NativeBridge {
 	/** Must equal {@code FOLEY_ABI_VERSION} in {@code foley.h}. */
-	public static final int ABI_VERSION = 7;
+	public static final int ABI_VERSION = 8;
 	/** Surfaces rain lands on, in the order its scene takes them. */
 	public static final int SURFACES = 7;
 	public static final int SAMPLE_RATE = 48_000;
@@ -44,6 +44,7 @@ public final class NativeBridge {
 	public static final int CONTACT_PLACE = 1;
 	public static final int CONTACT_LAND = 2;
 	public static final int CONTACT_BREAK = 3;
+	public static final int CONTACT_STEP = 4;
 
 	private static final ValueLayout.OfLong SIZE_T = JAVA_LONG;
 
