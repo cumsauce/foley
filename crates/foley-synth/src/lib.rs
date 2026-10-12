@@ -1,6 +1,7 @@
 //! Physically based sound synthesis: each sound is made from the physics
 //! that dominates what is heard (docs/PLAN.md), at [`SAMPLE_RATE`], mono.
 
+mod air;
 mod bubble;
 mod filter;
 mod fire;
@@ -8,9 +9,11 @@ mod lava;
 mod oneshot;
 mod rain;
 mod rng;
+mod thunder;
 mod water;
 mod wind;
 
+pub use crate::air::{absorption_cutoff, absorption_db_per_m};
 pub use crate::bubble::{Bubble, minnaert_hz};
 pub use crate::filter::{BandPass, LowPass};
 pub use crate::fire::{Fire, FireScene};
@@ -18,6 +21,7 @@ pub use crate::lava::{Lava, LavaScene, helmholtz};
 pub use crate::oneshot::{drip_into_water, drip_on_stone, lava_drip};
 pub use crate::rain::{Rain, RainScene, Surface};
 pub use crate::rng::Rng;
+pub use crate::thunder::{Segment, Thunder, ThunderScene, channel, strike};
 pub use crate::water::{Water, WaterScene, plunge_radius};
 pub use crate::wind::{Wind, WindScene};
 

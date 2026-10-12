@@ -5,7 +5,7 @@ use std::time::Instant;
 
 use foley_synth::{
     Fire, FireScene, Lava, LavaScene, Rain, RainScene, SAMPLE_RATE, Surface, Water, WaterScene,
-    Wind, WindScene,
+    Wind, WindScene, strike,
 };
 
 /// Renders a bed's next samples.
@@ -106,6 +106,16 @@ fn main() {
             "| {name} | {:.2} ms | {:.1} % |\n",
             per_second * 1e3,
             per_second * 100.0
+        );
+    }
+    table += "\n### Thunder\n\nMade once a flash, on the stream thread.\n\n| Flash | Time to make it | Length |\n| --- | --- | --- |\n";
+    for distance in [300.0, 4000.0] {
+        let start = Instant::now();
+        let sound = strike([distance, 0.0, 0.0], 1, 15.0, 90.0);
+        table += &format!(
+            "| {distance} m away | {:.1} ms | {:.1} s |\n",
+            start.elapsed().as_secs_f64() * 1e3,
+            sound.len() as f64 / f64::from(SAMPLE_RATE)
         );
     }
     print!("{table}");

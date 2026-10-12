@@ -118,6 +118,18 @@ Fabric mod (Java)                                   foley-ffi (Rust cdylib, FFM)
   - fire of 20 blocks: 0.03 %;
   - lava of 200 blocks: 0.1 %.
 
+## M3 results (2026-10-12)
+
+- **The Ribner–Roy model of thunder:**
+  - **Channel:** a tortuous lightning channel, 2.5 to 4 km from the ground into the cloud, made of segments 8 to 38 m long. Each segment turns from the last by a mean of 16°, as Hill measured on photographs. There are 3 to 6 branches off the lower part at 0.3 of the energy, and 1 to 4 later strokes 30 to 100 ms apart down the main channel, weaker each time.
+  - **N-wave:** each segment's shock relaxes into an N-wave. Its length starts at Few's 1/f_m = R₀/0.63c, with R₀ = √(E/πp) ≈ 1.3 m for 5×10⁵ J/m, and grows as r^¼ as a weak shock ages. Its amplitude goes as R₀·L/r.
+  - **Clap or rumble:** each N-wave is averaged over the time sound takes along its segment, L·|cos φ|/c, as Ribner and Roy had it. Side-on segments clap and end-on ones rumble, so the channel's shape against the listener makes the thunder.
+  - **Air:** ISO 9613-1 absorption over each segment's own distance takes the highs off far parts. The cutoff is where the air takes 6 dB, and two one-pole low-passes apply it. The formula is checked against ISO 9613-2's table: 5.0, 22.9 and 76.6 dB/km at 1, 4 and 8 kHz, at 20 °C and 70 %.
+  - **Results:** a flash 300 m off first sounds after 0.87 s, as sound takes. It cracks, then rumbles for 9 s. One 4 km off is a tenth as loud at its peak, duller, and lasts 15 s.
+- **In the game:** Foley strikes when a lightning bolt entity appears on the client, at the flash, and skips the game's thunder and impact sounds. Earshot delays the game's own thunder by holding it back; striking from the bolt makes Foley's timing right whichever mod's mixin runs first. One thunder bed, all round the listener, mixes every flash still rumbling (at most 6) and stops 25 s after the last. The air's temperature comes from the biome and its humidity from the rain. Shut in, it is low-passed down to 200 Hz, using the wind's exposure to the sky.
+- The client gametest summons a bolt 40 blocks off and checks the thunder plays and the game's is replaced.
+- **Cost:** about 4 ms to make each flash's thunder, once, on the stream thread.
+
 ## Milestones
 
 0. **M0 Groundwork.** Repo, Rust workspace, FFM bridge, CI and natives packaging, all copied from Earshot. Spike: one procedural `FabricSoundInstance` stream (a sine, then filtered noise), and one generated buffer through the `SoundBufferLibrary` mixin. Measure CPU on the M3. **Exit:** both paths play in game, and Earshot shapes them.

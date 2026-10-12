@@ -17,7 +17,8 @@ import net.minecraft.sounds.SoundSource;
  * Starts the real client and checks: the native synthesis loaded; when it rains, Foley's rain (a synthesized stream)
  * plays through the game's sound engine, follows what it lands on and any roof, and replaces the game's rain sounds
  * (M1); the wind blows out in the open and drops under a roof (M1); a waterfall, a fire and a pool of lava each start
- * a bed placed where they are, and a dripstone drip is swapped for a generated one (M2); and a generated one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null backend.
+ * a bed placed where they are, and a dripstone drip is swapped for a generated one (M2); a lightning bolt strikes
+ * Foley's thunder and the game's is skipped (M3); and a generated one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null backend.
  */
 @SuppressWarnings("UnstableApiUsage")
 public class FoleyClientGameTest implements FabricClientGameTest {
@@ -103,6 +104,22 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					SoundEvents.POINTED_DRIPSTONE_DRIP_WATER, SoundSource.BLOCKS, 1f, 1f,
 					SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(), mc.player.getZ())));
 			if (FoleyClient.replaced() <= before) throw new AssertionError("the game's drip wasn't replaced");
+
+			// Thunder: a bolt 40 blocks off strikes Foley's thunder, which rumbles, and the game's is replaced.
+			int replacedBefore = FoleyClient.replaced();
+			singleplayer.getServer().runCommand("summon lightning_bolt ~40 ~ ~");
+			try {
+				context.waitFor(mc -> {
+					var thunder = FoleyClient.thunder();
+					return thunder != null && thunder.strikes() > 0 && playing(mc, thunder.sound())
+							&& thunder.sound().rendered() > NativeBridge.SAMPLE_RATE
+							&& FoleyClient.replaced() > replacedBefore;
+				}, 20 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				var thunder = FoleyClient.thunder();
+				throw new AssertionError("no thunder: " + (thunder == null ? "off" : thunder.strikes() + " strikes, sound "
+						+ thunder.sound() + ", replaced " + (FoleyClient.replaced() - replacedBefore)), e);
+			}
 
 			// The one-shot: a generated buffer, played like any sound.
 			SimpleSoundInstance drip = context.computeOnClient(mc -> FoleyClient.drip(

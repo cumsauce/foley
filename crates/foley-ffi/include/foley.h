@@ -14,8 +14,9 @@
  * 3: wind beds.
  * 4: every bed through `foley_bed_*`, by kind, with water, fire and lava;
  *    one-shots through `foley_render_one_shot`.
+ * 5: thunder, a bed struck by `foley_bed_strike`.
  */
-#define FOLEY_ABI_VERSION 4
+#define FOLEY_ABI_VERSION 5
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -33,7 +34,10 @@
  * - wind: mean speed (m/s, 0 to 60), exposure (0 to 1), leaves (0 to 1);
  * - water: blocks flowing, blocks where a waterfall lands, gain (0 to 1);
  * - fire: blocks burning, gain;
- * - lava: blocks open to the air, gain.
+ * - lava: blocks open to the air, gain;
+ * - thunder: the air's temperature (°C) and relative humidity (percent),
+ *   and the listener's exposure to the sky (0 to 1). Each flash is added
+ *   with `foley_bed_strike`.
  */
 #define FOLEY_BED_RAIN 0
 
@@ -44,6 +48,8 @@
 #define FOLEY_BED_FIRE 3
 
 #define FOLEY_BED_LAVA 4
+
+#define FOLEY_BED_THUNDER 5
 
 /**
  * One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
@@ -104,6 +110,16 @@ int32_t foley_bed_set_scene(struct FoleyBed *bed, const float *params, size_t co
  * must be writable for `frames` samples.
  */
 int32_t foley_bed_render(struct FoleyBed *bed, int16_t *out, size_t frames);
+
+/**
+ * A flash of lightning striking the ground at (`x`, `y`, `z`) metres from
+ * the listener (y up), now: a thunder bed makes its thunder, arriving as
+ * sound would. Other beds refuse it.
+ *
+ * # Safety
+ * `bed` must be live and not used on another thread during the call.
+ */
+int32_t foley_bed_strike(struct FoleyBed *bed, float x, float y, float z, uint64_t seed);
 
 /**
  * Frees a bed. Null is ignored.

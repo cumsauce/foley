@@ -33,6 +33,8 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 	private volatile S scene;
 	private volatile long rendered;
 	private Stream stream;
+	/** Strikes made before the game opened the stream, as {x, y, z, seed}. */
+	private final java.util.List<double[]> strikes = new java.util.ArrayList<>();
 
 	/**
 	 * @param name its sound event, {@code foley:<name>} in sounds.json
@@ -72,6 +74,15 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 		return scene;
 	}
 
+	/** A flash at ({@code x}, {@code y}, {@code z}) blocks from the listener, for a thunder bed. Client thread. */
+	public synchronized void strike(float x, float y, float z, long seed) {
+		if (stream != null) {
+			stream.strike(x, y, z, seed);
+		} else {
+			strikes.add(new double[] {x, y, z, seed});
+		}
+	}
+
 	@Override
 	public boolean isStopped() {
 		return false;
@@ -85,6 +96,10 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 			boolean repeat) {
 		stream = new Stream(bridge.bedCreate(kind, random.nextLong()));
 		stream.apply(scene);
+		for (double[] strike : strikes) {
+			stream.strike((float) strike[0], (float) strike[1], (float) strike[2], (long) strike[3]);
+		}
+		strikes.clear();
 		return CompletableFuture.completedFuture(stream);
 	}
 
@@ -99,6 +114,10 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 
 		synchronized void apply(S scene) {
 			if (!closed) bridge.bedSetScene(bed, scene.params());
+		}
+
+		synchronized void strike(float x, float y, float z, long seed) {
+			if (!closed) bridge.bedStrike(bed, x, y, z, seed);
 		}
 
 		@Override

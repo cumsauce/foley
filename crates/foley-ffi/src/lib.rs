@@ -12,8 +12,8 @@
 mod guard;
 
 use foley_synth::{
-    Fire, FireScene, Lava, LavaScene, Rain, RainScene, Surface, Water, WaterScene, Wind, WindScene,
-    drip_into_water, drip_on_stone, lava_drip, to_pcm,
+    Fire, FireScene, Lava, LavaScene, Rain, RainScene, Surface, Thunder, ThunderScene, Water,
+    WaterScene, Wind, WindScene, drip_into_water, drip_on_stone, lava_drip, to_pcm,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -24,7 +24,8 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 /// 3: wind beds.
 /// 4: every bed through `foley_bed_*`, by kind, with water, fire and lava;
 ///    one-shots through `foley_render_one_shot`.
-pub const FOLEY_ABI_VERSION: u32 = 4;
+/// 5: thunder, a bed struck by `foley_bed_strike`.
+pub const FOLEY_ABI_VERSION: u32 = 5;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -39,12 +40,16 @@ pub const FOLEY_SURFACES: usize = 7;
 /// - wind: mean speed (m/s, 0 to 60), exposure (0 to 1), leaves (0 to 1);
 /// - water: blocks flowing, blocks where a waterfall lands, gain (0 to 1);
 /// - fire: blocks burning, gain;
-/// - lava: blocks open to the air, gain.
+/// - lava: blocks open to the air, gain;
+/// - thunder: the air's temperature (°C) and relative humidity (percent),
+///   and the listener's exposure to the sky (0 to 1). Each flash is added
+///   with `foley_bed_strike`.
 pub const FOLEY_BED_RAIN: i32 = 0;
 pub const FOLEY_BED_WIND: i32 = 1;
 pub const FOLEY_BED_WATER: i32 = 2;
 pub const FOLEY_BED_FIRE: i32 = 3;
 pub const FOLEY_BED_LAVA: i32 = 4;
+pub const FOLEY_BED_THUNDER: i32 = 5;
 
 /// One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
 /// water drips, and unused for lava.
@@ -65,6 +70,7 @@ enum Synth {
     Water(Water),
     Fire(Fire),
     Lava(Lava),
+    Thunder(Thunder),
 }
 
 /// Opaque handle to a bed: a sound made as it plays, endlessly.
@@ -96,6 +102,7 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
             FOLEY_BED_WATER => Synth::Water(Water::new(seed)),
             FOLEY_BED_FIRE => Synth::Fire(Fire::new(seed)),
             FOLEY_BED_LAVA => Synth::Lava(Lava::new(seed)),
+            FOLEY_BED_THUNDER => Synth::Thunder(Thunder::new()),
             _ => return Err(FfiError::invalid("unknown bed kind")),
         };
         *out = Box::into_raw(Box::new(FoleyBed {
@@ -129,7 +136,7 @@ pub unsafe extern "C" fn foley_bed_set_scene(
         }
         let wanted = match bed.synth {
             Synth::Rain(_) => 3 + FOLEY_SURFACES,
-            Synth::Wind(_) | Synth::Water(_) => 3,
+            Synth::Wind(_) | Synth::Water(_) | Synth::Thunder(_) => 3,
             Synth::Fire(_) | Synth::Lava(_) => 2,
         };
         if p.len() != wanted {
@@ -195,6 +202,16 @@ pub unsafe extern "C" fn foley_bed_set_scene(
                 area: amount(p[0])?,
                 gain: gain(p[1])?,
             }),
+            Synth::Thunder(thunder) => {
+                if !(-50.0..=60.0).contains(&p[0]) || !(0.0..=100.0).contains(&p[1]) {
+                    return Err(FfiError::invalid("temperature or humidity out of range"));
+                }
+                thunder.set_scene(ThunderScene {
+                    celsius: p[0],
+                    humidity: p[1],
+                    exposure: gain(p[2])?,
+                });
+            }
         }
         Ok(())
     })
@@ -220,10 +237,43 @@ pub unsafe extern "C" fn foley_bed_render(bed: *mut FoleyBed, out: *mut i16, fra
             Synth::Water(synth) => synth.render(&mut bed.scratch),
             Synth::Fire(synth) => synth.render(&mut bed.scratch),
             Synth::Lava(synth) => synth.render(&mut bed.scratch),
+            Synth::Thunder(synth) => synth.render(&mut bed.scratch),
         }
         for (out, sample) in out.iter_mut().zip(&bed.scratch) {
             *out = to_pcm(*sample);
         }
+        Ok(())
+    })
+}
+
+/// A flash of lightning striking the ground at (`x`, `y`, `z`) metres from
+/// the listener (y up), now: a thunder bed makes its thunder, arriving as
+/// sound would. Other beds refuse it.
+///
+/// # Safety
+/// `bed` must be live and not used on another thread during the call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foley_bed_strike(
+    bed: *mut FoleyBed,
+    x: f32,
+    y: f32,
+    z: f32,
+    seed: u64,
+) -> i32 {
+    guard(|| {
+        // SAFETY: the caller guarantees `bed` is live and used by this thread
+        // alone.
+        let bed = unsafe { bed.as_mut() }.ok_or_else(|| FfiError::invalid("bed is null"))?;
+        let Synth::Thunder(thunder) = &mut bed.synth else {
+            return Err(FfiError::invalid("only thunder is struck"));
+        };
+        if ![x, y, z]
+            .iter()
+            .all(|c| c.is_finite() && c.abs() <= 100_000.0)
+        {
+            return Err(FfiError::invalid("strike out of range"));
+        }
+        thunder.strike([x, y, z], seed);
         Ok(())
     })
 }
@@ -351,6 +401,29 @@ mod tests {
             );
             foley_bed_destroy(bed);
         }
+    }
+
+    #[test]
+    fn thunder_is_struck() {
+        let mut bed = std::ptr::null_mut();
+        let mut pcm = vec![0i16; 2 * 48_000];
+        let scene = [15.0f32, 90.0, 1.0];
+        // SAFETY: every pointer is valid for its length; `bed` is freed last.
+        unsafe {
+            assert_eq!(foley_bed_create(FOLEY_BED_THUNDER, 1, &mut bed), FOLEY_OK);
+            assert_eq!(foley_bed_set_scene(bed, scene.as_ptr(), 3), FOLEY_OK);
+            assert_eq!(foley_bed_strike(bed, 200.0, 0.0, 0.0, 3), FOLEY_OK);
+            assert_eq!(foley_bed_render(bed, pcm.as_mut_ptr(), pcm.len()), FOLEY_OK);
+            foley_bed_destroy(bed);
+            let mut wind = std::ptr::null_mut();
+            assert_eq!(foley_bed_create(FOLEY_BED_WIND, 1, &mut wind), FOLEY_OK);
+            assert_eq!(
+                foley_bed_strike(wind, 200.0, 0.0, 0.0, 3),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+            foley_bed_destroy(wind);
+        }
+        assert!(pcm.iter().any(|&s| s.abs() > 5000), "a crack");
     }
 
     #[test]

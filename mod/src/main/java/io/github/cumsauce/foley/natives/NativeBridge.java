@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class NativeBridge {
 	/** Must equal {@code FOLEY_ABI_VERSION} in {@code foley.h}. */
-	public static final int ABI_VERSION = 4;
+	public static final int ABI_VERSION = 5;
 	/** Surfaces rain lands on, in the order its scene takes them. */
 	public static final int SURFACES = 7;
 	public static final int SAMPLE_RATE = 48_000;
@@ -31,6 +31,7 @@ public final class NativeBridge {
 	public static final int BED_WATER = 2;
 	public static final int BED_FIRE = 3;
 	public static final int BED_LAVA = 4;
+	public static final int BED_THUNDER = 5;
 	/** One-shot kinds ({@code FOLEY_SHOT_*}). */
 	public static final int SHOT_DRIP_INTO_WATER = 0;
 	public static final int SHOT_DRIP_ON_STONE = 1;
@@ -43,6 +44,7 @@ public final class NativeBridge {
 	private final MethodHandle bedSetScene;
 	private final MethodHandle bedRender;
 	private final MethodHandle bedDestroy;
+	private final MethodHandle bedStrike;
 	private final MethodHandle renderOneShot;
 	private final MethodHandle lastError;
 
@@ -57,6 +59,8 @@ public final class NativeBridge {
 		bedRender = linker.downcallHandle(find(library, "foley_bed_render"),
 				FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, SIZE_T));
 		bedDestroy = linker.downcallHandle(find(library, "foley_bed_destroy"), FunctionDescriptor.ofVoid(ADDRESS));
+		bedStrike = linker.downcallHandle(find(library, "foley_bed_strike"),
+				FunctionDescriptor.of(JAVA_INT, ADDRESS, JAVA_FLOAT, JAVA_FLOAT, JAVA_FLOAT, JAVA_LONG), critical);
 		renderOneShot = linker.downcallHandle(find(library, "foley_render_one_shot"),
 				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_FLOAT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS), critical);
 		lastError = linker.downcallHandle(find(library, "foley_last_error"),
@@ -86,6 +90,11 @@ public final class NativeBridge {
 
 	public void bedDestroy(MemorySegment bed) {
 		invoke(bedDestroy, bed);
+	}
+
+	/** A flash striking the ground at ({@code x}, {@code y}, {@code z}) blocks from the listener, for a thunder bed. */
+	public void bedStrike(MemorySegment bed, float x, float y, float z, long seed) {
+		check((int) invoke(bedStrike, bed, x, y, z, seed));
 	}
 
 	/** A one-shot of {@code kind} ({@code SHOT_*}), as 16-bit PCM; {@code sizeMm} is a drip's radius. */

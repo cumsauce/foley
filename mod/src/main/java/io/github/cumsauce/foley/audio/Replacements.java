@@ -18,6 +18,7 @@ import net.minecraft.world.level.material.Fluids;
  *
  * <ul>
  *   <li>its rain, while Foley's rain plays;</li>
+ *   <li>its thunder (Foley strikes from the bolt itself, so whether Earshot held this back doesn't matter);</li>
  *   <li>its water, lava and fire ambience, from within reach of Foley's {@link Surroundings} (beyond, it stays);</li>
  *   <li>dripstone drips, swapped for a generated drip where the drop lands: into water if it lands in water or a
  *       cauldron, on stone otherwise, or a drop of lava.</li>
@@ -26,6 +27,8 @@ import net.minecraft.world.level.material.Fluids;
 public final class Replacements {
 	private static final Set<Identifier> RAIN = Set.of(SoundEvents.WEATHER_RAIN.location(),
 			SoundEvents.WEATHER_RAIN_ABOVE.location());
+	private static final Set<Identifier> THUNDER = Set.of(SoundEvents.LIGHTNING_BOLT_THUNDER.location(),
+			SoundEvents.LIGHTNING_BOLT_IMPACT.location());
 	private static final Set<Identifier> AMBIENCE = Set.of(SoundEvents.WATER_AMBIENT.location(),
 			SoundEvents.LAVA_AMBIENT.location(), SoundEvents.LAVA_POP.location(), SoundEvents.FIRE_AMBIENT.location(),
 			SoundEvents.CAMPFIRE_CRACKLE.location());
@@ -46,6 +49,10 @@ public final class Replacements {
 		if (RAIN.contains(id)) {
 			var rain = FoleyClient.rain();
 			return rain != null && rain.replacing() && counted();
+		}
+		if (THUNDER.contains(id)) {
+			var thunder = FoleyClient.thunder();
+			return thunder != null && thunder.replacing() && counted();
 		}
 		Minecraft minecraft = Minecraft.getInstance();
 		if (FoleyClient.placed() == null || minecraft.level == null || minecraft.player == null) return false;

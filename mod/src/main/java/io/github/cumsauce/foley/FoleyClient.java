@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.FloatArgumentType;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
 import io.github.cumsauce.foley.audio.PlacedBeds;
 import io.github.cumsauce.foley.audio.Replacements;
+import io.github.cumsauce.foley.audio.ThunderController;
 import io.github.cumsauce.foley.audio.RainController;
 import io.github.cumsauce.foley.audio.WindController;
 import io.github.cumsauce.foley.natives.NativeBridge;
@@ -12,6 +13,7 @@ import java.nio.file.Path;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
@@ -29,6 +31,7 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable RainController rain;
 	private static @Nullable WindController wind;
 	private static @Nullable PlacedBeds placed;
+	private static @Nullable ThunderController thunder;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
 
 	public static Path configDir() {
@@ -52,6 +55,11 @@ public final class FoleyClient implements ClientModInitializer {
 	/** What keeps the water, fire and lava going, or null if Foley is off. */
 	public static @Nullable PlacedBeds placed() {
 		return placed;
+	}
+
+	/** What makes the thunder, or null if Foley is off. */
+	public static @Nullable ThunderController thunder() {
+		return thunder;
 	}
 
 	/** Counts a game sound Foley replaced (skipped). */
@@ -90,6 +98,10 @@ public final class FoleyClient implements ClientModInitializer {
 		PlacedBeds beds = new PlacedBeds(loaded);
 		placed = beds;
 		ClientTickEvents.END_CLIENT_TICK.register(beds::tick);
+		ThunderController rumbling = new ThunderController(loaded);
+		thunder = rumbling;
+		ClientTickEvents.END_CLIENT_TICK.register(rumbling::tick);
+		ClientEntityEvents.ENTITY_LOAD.register((entity, level) -> rumbling.entityLoaded(entity));
 		registerCommands(loaded);
 	}
 
