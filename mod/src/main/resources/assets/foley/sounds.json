@@ -107,5 +107,437 @@
 			"foley:generated/drip_lava_6",
 			"foley:generated/drip_lava_7"
 		]
+	},
+	"tap_stone": {
+		"sounds": [
+			"foley:generated/tap_stone_0",
+			"foley:generated/tap_stone_1",
+			"foley:generated/tap_stone_2",
+			"foley:generated/tap_stone_3",
+			"foley:generated/tap_stone_4",
+			"foley:generated/tap_stone_5",
+			"foley:generated/tap_stone_6",
+			"foley:generated/tap_stone_7"
+		]
+	},
+	"tap_wood": {
+		"sounds": [
+			"foley:generated/tap_wood_0",
+			"foley:generated/tap_wood_1",
+			"foley:generated/tap_wood_2",
+			"foley:generated/tap_wood_3",
+			"foley:generated/tap_wood_4",
+			"foley:generated/tap_wood_5",
+			"foley:generated/tap_wood_6",
+			"foley:generated/tap_wood_7"
+		]
+	},
+	"tap_metal": {
+		"sounds": [
+			"foley:generated/tap_metal_0",
+			"foley:generated/tap_metal_1",
+			"foley:generated/tap_metal_2",
+			"foley:generated/tap_metal_3",
+			"foley:generated/tap_metal_4",
+			"foley:generated/tap_metal_5",
+			"foley:generated/tap_metal_6",
+			"foley:generated/tap_metal_7"
+		]
+	},
+	"tap_glass": {
+		"sounds": [
+			"foley:generated/tap_glass_0",
+			"foley:generated/tap_glass_1",
+			"foley:generated/tap_glass_2",
+			"foley:generated/tap_glass_3",
+			"foley:generated/tap_glass_4",
+			"foley:generated/tap_glass_5",
+			"foley:generated/tap_glass_6",
+			"foley:generated/tap_glass_7"
+		]
+	},
+	"tap_ice": {
+		"sounds": [
+			"foley:generated/tap_ice_0",
+			"foley:generated/tap_ice_1",
+			"foley:generated/tap_ice_2",
+			"foley:generated/tap_ice_3",
+			"foley:generated/tap_ice_4",
+			"foley:generated/tap_ice_5",
+			"foley:generated/tap_ice_6",
+			"foley:generated/tap_ice_7"
+		]
+	},
+	"tap_earth": {
+		"sounds": [
+			"foley:generated/tap_earth_0",
+			"foley:generated/tap_earth_1",
+			"foley:generated/tap_earth_2",
+			"foley:generated/tap_earth_3",
+			"foley:generated/tap_earth_4",
+			"foley:generated/tap_earth_5",
+			"foley:generated/tap_earth_6",
+			"foley:generated/tap_earth_7"
+		]
+	},
+	"tap_granular": {
+		"sounds": [
+			"foley:generated/tap_granular_0",
+			"foley:generated/tap_granular_1",
+			"foley:generated/tap_granular_2",
+			"foley:generated/tap_granular_3",
+			"foley:generated/tap_granular_4",
+			"foley:generated/tap_granular_5",
+			"foley:generated/tap_granular_6",
+			"foley:generated/tap_granular_7"
+		]
+	},
+	"tap_plant": {
+		"sounds": [
+			"foley:generated/tap_plant_0",
+			"foley:generated/tap_plant_1",
+			"foley:generated/tap_plant_2",
+			"foley:generated/tap_plant_3",
+			"foley:generated/tap_plant_4",
+			"foley:generated/tap_plant_5",
+			"foley:generated/tap_plant_6",
+			"foley:generated/tap_plant_7"
+		]
+	},
+	"tap_soft": {
+		"sounds": [
+			"foley:generated/tap_soft_0",
+			"foley:generated/tap_soft_1",
+			"foley:generated/tap_soft_2",
+			"foley:generated/tap_soft_3",
+			"foley:generated/tap_soft_4",
+			"foley:generated/tap_soft_5",
+			"foley:generated/tap_soft_6",
+			"foley:generated/tap_soft_7"
+		]
+	},
+	"place_stone": {
+		"sounds": [
+			"foley:generated/place_stone_0",
+			"foley:generated/place_stone_1",
+			"foley:generated/place_stone_2",
+			"foley:generated/place_stone_3",
+			"foley:generated/place_stone_4",
+			"foley:generated/place_stone_5",
+			"foley:generated/place_stone_6",
+			"foley:generated/place_stone_7"
+		]
+	},
+	"place_wood": {
+		"sounds": [
+			"foley:generated/place_wood_0",
+			"foley:generated/place_wood_1",
+			"foley:generated/place_wood_2",
+			"foley:generated/place_wood_3",
+			"foley:generated/place_wood_4",
+			"foley:generated/place_wood_5",
+			"foley:generated/place_wood_6",
+			"foley:generated/place_wood_7"
+		]
+	},
+	"place_metal": {
+		"sounds": [
+			"foley:generated/place_metal_0",
+			"foley:generated/place_metal_1",
+			"foley:generated/place_metal_2",
+			"foley:generated/place_metal_3",
+			"foley:generated/place_metal_4",
+			"foley:generated/place_metal_5",
+			"foley:generated/place_metal_6",
+			"foley:generated/place_metal_7"
+		]
+	},
+	"place_glass": {
+		"sounds": [
+			"foley:generated/place_glass_0",
+			"foley:generated/place_glass_1",
+			"foley:generated/place_glass_2",
+			"foley:generated/place_glass_3",
+			"foley:generated/place_glass_4",
+			"foley:generated/place_glass_5",
+			"foley:generated/place_glass_6",
+			"foley:generated/place_glass_7"
+		]
+	},
+	"place_ice": {
+		"sounds": [
+			"foley:generated/place_ice_0",
+			"foley:generated/place_ice_1",
+			"foley:generated/place_ice_2",
+			"foley:generated/place_ice_3",
+			"foley:generated/place_ice_4",
+			"foley:generated/place_ice_5",
+			"foley:generated/place_ice_6",
+			"foley:generated/place_ice_7"
+		]
+	},
+	"place_earth": {
+		"sounds": [
+			"foley:generated/place_earth_0",
+			"foley:generated/place_earth_1",
+			"foley:generated/place_earth_2",
+			"foley:generated/place_earth_3",
+			"foley:generated/place_earth_4",
+			"foley:generated/place_earth_5",
+			"foley:generated/place_earth_6",
+			"foley:generated/place_earth_7"
+		]
+	},
+	"place_granular": {
+		"sounds": [
+			"foley:generated/place_granular_0",
+			"foley:generated/place_granular_1",
+			"foley:generated/place_granular_2",
+			"foley:generated/place_granular_3",
+			"foley:generated/place_granular_4",
+			"foley:generated/place_granular_5",
+			"foley:generated/place_granular_6",
+			"foley:generated/place_granular_7"
+		]
+	},
+	"place_plant": {
+		"sounds": [
+			"foley:generated/place_plant_0",
+			"foley:generated/place_plant_1",
+			"foley:generated/place_plant_2",
+			"foley:generated/place_plant_3",
+			"foley:generated/place_plant_4",
+			"foley:generated/place_plant_5",
+			"foley:generated/place_plant_6",
+			"foley:generated/place_plant_7"
+		]
+	},
+	"place_soft": {
+		"sounds": [
+			"foley:generated/place_soft_0",
+			"foley:generated/place_soft_1",
+			"foley:generated/place_soft_2",
+			"foley:generated/place_soft_3",
+			"foley:generated/place_soft_4",
+			"foley:generated/place_soft_5",
+			"foley:generated/place_soft_6",
+			"foley:generated/place_soft_7"
+		]
+	},
+	"land_stone": {
+		"sounds": [
+			"foley:generated/land_stone_0",
+			"foley:generated/land_stone_1",
+			"foley:generated/land_stone_2",
+			"foley:generated/land_stone_3",
+			"foley:generated/land_stone_4",
+			"foley:generated/land_stone_5",
+			"foley:generated/land_stone_6",
+			"foley:generated/land_stone_7"
+		]
+	},
+	"land_wood": {
+		"sounds": [
+			"foley:generated/land_wood_0",
+			"foley:generated/land_wood_1",
+			"foley:generated/land_wood_2",
+			"foley:generated/land_wood_3",
+			"foley:generated/land_wood_4",
+			"foley:generated/land_wood_5",
+			"foley:generated/land_wood_6",
+			"foley:generated/land_wood_7"
+		]
+	},
+	"land_metal": {
+		"sounds": [
+			"foley:generated/land_metal_0",
+			"foley:generated/land_metal_1",
+			"foley:generated/land_metal_2",
+			"foley:generated/land_metal_3",
+			"foley:generated/land_metal_4",
+			"foley:generated/land_metal_5",
+			"foley:generated/land_metal_6",
+			"foley:generated/land_metal_7"
+		]
+	},
+	"land_glass": {
+		"sounds": [
+			"foley:generated/land_glass_0",
+			"foley:generated/land_glass_1",
+			"foley:generated/land_glass_2",
+			"foley:generated/land_glass_3",
+			"foley:generated/land_glass_4",
+			"foley:generated/land_glass_5",
+			"foley:generated/land_glass_6",
+			"foley:generated/land_glass_7"
+		]
+	},
+	"land_ice": {
+		"sounds": [
+			"foley:generated/land_ice_0",
+			"foley:generated/land_ice_1",
+			"foley:generated/land_ice_2",
+			"foley:generated/land_ice_3",
+			"foley:generated/land_ice_4",
+			"foley:generated/land_ice_5",
+			"foley:generated/land_ice_6",
+			"foley:generated/land_ice_7"
+		]
+	},
+	"land_earth": {
+		"sounds": [
+			"foley:generated/land_earth_0",
+			"foley:generated/land_earth_1",
+			"foley:generated/land_earth_2",
+			"foley:generated/land_earth_3",
+			"foley:generated/land_earth_4",
+			"foley:generated/land_earth_5",
+			"foley:generated/land_earth_6",
+			"foley:generated/land_earth_7"
+		]
+	},
+	"land_granular": {
+		"sounds": [
+			"foley:generated/land_granular_0",
+			"foley:generated/land_granular_1",
+			"foley:generated/land_granular_2",
+			"foley:generated/land_granular_3",
+			"foley:generated/land_granular_4",
+			"foley:generated/land_granular_5",
+			"foley:generated/land_granular_6",
+			"foley:generated/land_granular_7"
+		]
+	},
+	"land_plant": {
+		"sounds": [
+			"foley:generated/land_plant_0",
+			"foley:generated/land_plant_1",
+			"foley:generated/land_plant_2",
+			"foley:generated/land_plant_3",
+			"foley:generated/land_plant_4",
+			"foley:generated/land_plant_5",
+			"foley:generated/land_plant_6",
+			"foley:generated/land_plant_7"
+		]
+	},
+	"land_soft": {
+		"sounds": [
+			"foley:generated/land_soft_0",
+			"foley:generated/land_soft_1",
+			"foley:generated/land_soft_2",
+			"foley:generated/land_soft_3",
+			"foley:generated/land_soft_4",
+			"foley:generated/land_soft_5",
+			"foley:generated/land_soft_6",
+			"foley:generated/land_soft_7"
+		]
+	},
+	"break_stone": {
+		"sounds": [
+			"foley:generated/break_stone_0",
+			"foley:generated/break_stone_1",
+			"foley:generated/break_stone_2",
+			"foley:generated/break_stone_3",
+			"foley:generated/break_stone_4",
+			"foley:generated/break_stone_5",
+			"foley:generated/break_stone_6",
+			"foley:generated/break_stone_7"
+		]
+	},
+	"break_wood": {
+		"sounds": [
+			"foley:generated/break_wood_0",
+			"foley:generated/break_wood_1",
+			"foley:generated/break_wood_2",
+			"foley:generated/break_wood_3",
+			"foley:generated/break_wood_4",
+			"foley:generated/break_wood_5",
+			"foley:generated/break_wood_6",
+			"foley:generated/break_wood_7"
+		]
+	},
+	"break_metal": {
+		"sounds": [
+			"foley:generated/break_metal_0",
+			"foley:generated/break_metal_1",
+			"foley:generated/break_metal_2",
+			"foley:generated/break_metal_3",
+			"foley:generated/break_metal_4",
+			"foley:generated/break_metal_5",
+			"foley:generated/break_metal_6",
+			"foley:generated/break_metal_7"
+		]
+	},
+	"break_glass": {
+		"sounds": [
+			"foley:generated/break_glass_0",
+			"foley:generated/break_glass_1",
+			"foley:generated/break_glass_2",
+			"foley:generated/break_glass_3",
+			"foley:generated/break_glass_4",
+			"foley:generated/break_glass_5",
+			"foley:generated/break_glass_6",
+			"foley:generated/break_glass_7"
+		]
+	},
+	"break_ice": {
+		"sounds": [
+			"foley:generated/break_ice_0",
+			"foley:generated/break_ice_1",
+			"foley:generated/break_ice_2",
+			"foley:generated/break_ice_3",
+			"foley:generated/break_ice_4",
+			"foley:generated/break_ice_5",
+			"foley:generated/break_ice_6",
+			"foley:generated/break_ice_7"
+		]
+	},
+	"break_earth": {
+		"sounds": [
+			"foley:generated/break_earth_0",
+			"foley:generated/break_earth_1",
+			"foley:generated/break_earth_2",
+			"foley:generated/break_earth_3",
+			"foley:generated/break_earth_4",
+			"foley:generated/break_earth_5",
+			"foley:generated/break_earth_6",
+			"foley:generated/break_earth_7"
+		]
+	},
+	"break_granular": {
+		"sounds": [
+			"foley:generated/break_granular_0",
+			"foley:generated/break_granular_1",
+			"foley:generated/break_granular_2",
+			"foley:generated/break_granular_3",
+			"foley:generated/break_granular_4",
+			"foley:generated/break_granular_5",
+			"foley:generated/break_granular_6",
+			"foley:generated/break_granular_7"
+		]
+	},
+	"break_plant": {
+		"sounds": [
+			"foley:generated/break_plant_0",
+			"foley:generated/break_plant_1",
+			"foley:generated/break_plant_2",
+			"foley:generated/break_plant_3",
+			"foley:generated/break_plant_4",
+			"foley:generated/break_plant_5",
+			"foley:generated/break_plant_6",
+			"foley:generated/break_plant_7"
+		]
+	},
+	"break_soft": {
+		"sounds": [
+			"foley:generated/break_soft_0",
+			"foley:generated/break_soft_1",
+			"foley:generated/break_soft_2",
+			"foley:generated/break_soft_3",
+			"foley:generated/break_soft_4",
+			"foley:generated/break_soft_5",
+			"foley:generated/break_soft_6",
+			"foley:generated/break_soft_7"
+		]
 	}
 }

@@ -4,8 +4,8 @@
 use std::time::Instant;
 
 use foley_synth::{
-    Fire, FireScene, Lava, LavaScene, Rain, RainScene, SAMPLE_RATE, Surface, Water, WaterScene,
-    Wind, WindScene, strike,
+    Contact, Fire, FireScene, Lava, LavaScene, Material, Rain, RainScene, SAMPLE_RATE, Surface,
+    Water, WaterScene, Wind, WindScene, contact, fracture, strike,
 };
 
 /// Renders a bed's next samples.
@@ -116,6 +116,26 @@ fn main() {
             "| {distance} m away | {:.1} ms | {:.1} s |\n",
             start.elapsed().as_secs_f64() * 1e3,
             sound.len() as f64 / f64::from(SAMPLE_RATE)
+        );
+    }
+    table += "\n### Strikes and breaks\n\nEach variant made once, off-thread, the first time it plays.\n\n| Sound | Time to make it |\n| --- | --- |\n";
+    for (name, material) in [
+        ("stone", Material::Stone),
+        ("metal", Material::Metal),
+        ("glass", Material::Glass),
+        ("gravel", Material::Granular),
+    ] {
+        let start = Instant::now();
+        let _ = contact(Contact::Tap, material, 3.0, 1);
+        table += &format!(
+            "| Tap on {name} | {:.2} ms |\n",
+            start.elapsed().as_secs_f64() * 1e3
+        );
+        let start = Instant::now();
+        let _ = fracture(material, 1);
+        table += &format!(
+            "| {name} breaking | {:.2} ms |\n",
+            start.elapsed().as_secs_f64() * 1e3
         );
     }
     print!("{table}");

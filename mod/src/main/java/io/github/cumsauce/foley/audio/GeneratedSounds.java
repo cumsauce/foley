@@ -29,6 +29,29 @@ public final class GeneratedSounds {
 	}
 
 	/**
+	 * A strike or break ({@code <contact>_<material>}, see {@link Layers}), or null. Taps at 3 m/s (a swung tool),
+	 * blocks set down at 0.8, bodies landing at 5 (a fall of about 1.3 m).
+	 */
+	private static short @org.jspecify.annotations.Nullable [] contact(NativeBridge bridge, String model, int variant) {
+		int split = model.indexOf('_');
+		if (split < 0) return null;
+		int contact = java.util.Arrays.asList(Layers.CONTACTS).indexOf(model.substring(0, split));
+		int material = java.util.Arrays.asList(Materials.NAMES).indexOf(model.substring(split + 1));
+		if (contact < 0 || material < 0) return null;
+		float speed = switch (contact) {
+			case NativeBridge.CONTACT_PLACE -> 0.8f;
+			case NativeBridge.CONTACT_LAND -> 5f;
+			default -> 3f;
+		};
+		return bridge.renderContact(contact, material, speed, 0xC0A7L * (contact + 1) + 97L * material + variant);
+	}
+
+	/** Whether {@code path}, as the buffer library asks for it, is one Foley generates. */
+	public static boolean isGeneratedPath(Identifier path) {
+		return path.getNamespace().equals("foley") && path.getPath().startsWith("sounds/" + PREFIX);
+	}
+
+	/**
 	 * The buffer for {@code path}, as the buffer library asks for it ({@code foley:sounds/generated/drip_3.ogg}), or
 	 * null if it isn't one of Foley's.
 	 */
@@ -48,7 +71,7 @@ public final class GeneratedSounds {
 			case "drip_stone" -> bridge.renderOneShot(NativeBridge.SHOT_DRIP_ON_STONE, 2f + 0.8f * variant / 15f,
 					0xD121 + variant);
 			case "drip_lava" -> bridge.renderOneShot(NativeBridge.SHOT_LAVA_DRIP, 1f, 0x1A7A + variant);
-			default -> null;
+			default -> contact(bridge, model, variant);
 		};
 		if (pcm == null) return null;
 		ByteBuffer data = ByteBuffer.allocateDirect(pcm.length * 2).order(ByteOrder.LITTLE_ENDIAN);

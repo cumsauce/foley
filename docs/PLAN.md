@@ -130,6 +130,28 @@ Fabric mod (Java)                                   foley-ffi (Rust cdylib, FFM)
 - The client gametest summons a bolt 40 blocks off and checks the thunder plays and the game's is replaced.
 - **Cost:** about 4 ms to make each flash's thunder, once, on the stream thread.
 
+## M4 results (2026-10-12)
+
+- **Layered, not replaced:** when the game plays a block's hit (mining), place, fall (landing) or break sound, Foley plays its own with it. The material comes from the block where it's still there (the one hit, placed or landed on), from its tags (ice, plants, dirt, sand, wool and snow), else from its `SoundType`, which the game already picks by material. Sound types are told apart by name, read once by reflection (26.3 is unobfuscated).
+- **Materials** (`Material`, 9 of them) have measured mechanical constants: Young's modulus, density, Poisson's ratio. Their loss factors are raised for blocks held by their neighbours. The vibrating structure is a plate:
+  - a 25 cm stone slab;
+  - a floor of 2.5 cm boards;
+  - 5 cm of steel;
+  - a 1 cm glass pane.
+  For each, the simply supported plate's modes are f = (π/2)·h·√(E/12ρ(1−ν²))·((m/a)²+(n/b)²). Steel's first mode is 240 Hz, ringing for seconds; stone's is about 1 kHz, gone in a tenth of a second.
+- **A strike:** each mode is weighted by:
+  - how the strike point excites it (sin(mπx₀/a)·sin(nπy₀/b));
+  - the radiated acceleration (∝ f);
+  - the spectrum of the Hertz contact pulse;
+  - radiation efficiency √(f/(f + f_c)), with f_c = c²/1.8hc_L the coincidence frequency.
+  The 48 strongest under 16 kHz are kept, slightly mistuned. The contact time is Hertz's τ = 2.87·(m²/(R·E*²·v))^⅕. A steel tool on rock lasts a fraction of a millisecond (bright); on soil, several; a body landing on shoe soles, tens (dull). Gravel adds grain clicks, earth a few dull ones, plants a rustle.
+- **A break:**
+  - **Brittle (glass, ice, stone):** a crack, then 16 to 40 fragments sized by N(>L) ∝ L⁻². Each rings at a free plate's 0.453·c_L·t/L², with overtones at 1.6, 2.3 and 3.1 times that. Each falls 0.2 to 0.8 m and bounces with restitution e: √e as loud and e as long each time, with a click at every landing. Lying on the ground, a shard is damped at least 25 a second.
+  - **Wood:** crackling fibres give way (sizes ∝ E^−1.7).
+  - **Others:** earth and gravel crumble in grains; plants snap and rustle; metal and soft blocks give a dull blow.
+- **Delivery:** 4 contacts × 9 materials × 8 variants are generated one-shots (`foley:<contact>_<material>`). Each is made once, the first time it plays, on the game's background executor, as the game loads files. A glass shatter takes 27 ms to make, a tap well under 1 ms (bed_bench).
+- The client gametest plays the game's glass breaking and a fall on stone, and checks both got Foley's layer.
+
 ## Milestones
 
 0. **M0 Groundwork.** Repo, Rust workspace, FFM bridge, CI and natives packaging, all copied from Earshot. Spike: one procedural `FabricSoundInstance` stream (a sine, then filtered noise), and one generated buffer through the `SoundBufferLibrary` mixin. Measure CPU on the M3. **Exit:** both paths play in game, and Earshot shapes them.

@@ -15,8 +15,9 @@
  * 4: every bed through `foley_bed_*`, by kind, with water, fire and lava;
  *    one-shots through `foley_render_one_shot`.
  * 5: thunder, a bed struck by `foley_bed_strike`.
+ * 6: strikes and breaks on materials, `foley_render_contact`.
  */
-#define FOLEY_ABI_VERSION 5
+#define FOLEY_ABI_VERSION 6
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -60,6 +61,24 @@
 #define FOLEY_SHOT_DRIP_ON_STONE 1
 
 #define FOLEY_SHOT_LAVA_DRIP 2
+
+/**
+ * Materials for `foley_render_contact`: stone, wood, metal, glass, ice,
+ * earth, granular (sand, gravel), plant, soft (wool, snow).
+ */
+#define FOLEY_MATERIALS 9
+
+/**
+ * Contacts for `foley_render_contact`: a tool tapping, a block set down, a
+ * body landing, and the block breaking.
+ */
+#define FOLEY_CONTACT_TAP 0
+
+#define FOLEY_CONTACT_PLACE 1
+
+#define FOLEY_CONTACT_LAND 2
+
+#define FOLEY_CONTACT_BREAK 3
 
 #define FOLEY_OK 0
 
@@ -143,6 +162,23 @@ int32_t foley_render_one_shot(int32_t kind,
                               int16_t *out,
                               size_t cap,
                               size_t *needed);
+
+/**
+ * Renders a `contact` (`FOLEY_CONTACT_*`) with a block of `material` (an
+ * index below [`FOLEY_MATERIALS`]) at `speed` m/s (0.1 to 30; unused for a
+ * break), from `seed`. Writes it to `out` if `cap` samples are enough, and
+ * how many it needs to `*needed` either way.
+ *
+ * # Safety
+ * `out` must be writable for `cap` samples; `needed` must be writable.
+ */
+int32_t foley_render_contact(int32_t kind,
+                             int32_t material,
+                             float speed,
+                             uint64_t seed,
+                             int16_t *out,
+                             size_t cap,
+                             size_t *needed);
 
 /**
  * Copies this thread's last error message into `buf` (truncated to `cap`)

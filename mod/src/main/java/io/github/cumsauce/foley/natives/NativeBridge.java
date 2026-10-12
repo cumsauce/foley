@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class NativeBridge {
 	/** Must equal {@code FOLEY_ABI_VERSION} in {@code foley.h}. */
-	public static final int ABI_VERSION = 5;
+	public static final int ABI_VERSION = 6;
 	/** Surfaces rain lands on, in the order its scene takes them. */
 	public static final int SURFACES = 7;
 	public static final int SAMPLE_RATE = 48_000;
@@ -36,6 +36,11 @@ public final class NativeBridge {
 	public static final int SHOT_DRIP_INTO_WATER = 0;
 	public static final int SHOT_DRIP_ON_STONE = 1;
 	public static final int SHOT_LAVA_DRIP = 2;
+	/** Contacts ({@code FOLEY_CONTACT_*}) with a material ({@code Materials}). */
+	public static final int CONTACT_TAP = 0;
+	public static final int CONTACT_PLACE = 1;
+	public static final int CONTACT_LAND = 2;
+	public static final int CONTACT_BREAK = 3;
 
 	private static final ValueLayout.OfLong SIZE_T = JAVA_LONG;
 
@@ -46,6 +51,7 @@ public final class NativeBridge {
 	private final MethodHandle bedDestroy;
 	private final MethodHandle bedStrike;
 	private final MethodHandle renderOneShot;
+	private final MethodHandle renderContact;
 	private final MethodHandle lastError;
 
 	public NativeBridge(SymbolLookup library) {
@@ -63,6 +69,9 @@ public final class NativeBridge {
 				FunctionDescriptor.of(JAVA_INT, ADDRESS, JAVA_FLOAT, JAVA_FLOAT, JAVA_FLOAT, JAVA_LONG), critical);
 		renderOneShot = linker.downcallHandle(find(library, "foley_render_one_shot"),
 				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_FLOAT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS), critical);
+		renderContact = linker.downcallHandle(find(library, "foley_render_contact"),
+				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_INT, JAVA_FLOAT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS),
+				critical);
 		lastError = linker.downcallHandle(find(library, "foley_last_error"),
 				FunctionDescriptor.of(SIZE_T, ADDRESS, SIZE_T));
 	}
@@ -105,6 +114,20 @@ public final class NativeBridge {
 		short[] out = new short[(int) needed[0]];
 		check((int) invoke(renderOneShot, kind, sizeMm, seed, MemorySegment.ofArray(out), (long) out.length,
 				MemorySegment.ofArray(needed)));
+		return out;
+	}
+
+	/**
+	 * A {@code contact} ({@code CONTACT_*}) with a block of {@code material} ({@code Materials}) at {@code speed} m/s,
+	 * as 16-bit PCM.
+	 */
+	public short[] renderContact(int contact, int material, float speed, long seed) {
+		long[] needed = new long[1];
+		check((int) invoke(renderContact, contact, material, speed, seed, MemorySegment.ofArray(new short[0]), 0L,
+				MemorySegment.ofArray(needed)));
+		short[] out = new short[(int) needed[0]];
+		check((int) invoke(renderContact, contact, material, speed, seed, MemorySegment.ofArray(out),
+				(long) out.length, MemorySegment.ofArray(needed)));
 		return out;
 	}
 

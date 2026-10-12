@@ -33,6 +33,7 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable PlacedBeds placed;
 	private static @Nullable ThunderController thunder;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
+	private static final java.util.concurrent.atomic.AtomicInteger layered = new java.util.concurrent.atomic.AtomicInteger();
 
 	public static Path configDir() {
 		return FabricLoader.getInstance().getConfigDir().resolve("foley");
@@ -65,6 +66,16 @@ public final class FoleyClient implements ClientModInitializer {
 	/** Counts a game sound Foley replaced (skipped). */
 	public static void countReplaced() {
 		replaced.incrementAndGet();
+	}
+
+	/** Counts a strike or break Foley layered under a game sound. */
+	public static void countLayered() {
+		layered.incrementAndGet();
+	}
+
+	/** How many strikes and breaks Foley has layered. For the client gametest. */
+	public static int layered() {
+		return layered.get();
 	}
 
 	/** How many game sounds Foley has replaced. For the client gametest. */

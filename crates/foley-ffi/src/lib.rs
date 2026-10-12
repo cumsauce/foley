@@ -12,8 +12,9 @@
 mod guard;
 
 use foley_synth::{
-    Fire, FireScene, Lava, LavaScene, Rain, RainScene, Surface, Thunder, ThunderScene, Water,
-    WaterScene, Wind, WindScene, drip_into_water, drip_on_stone, lava_drip, to_pcm,
+    Contact, Fire, FireScene, Lava, LavaScene, Material, Rain, RainScene, Surface, Thunder,
+    ThunderScene, Water, WaterScene, Wind, WindScene, contact, drip_into_water, drip_on_stone,
+    fracture, lava_drip, to_pcm,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -25,7 +26,8 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 /// 4: every bed through `foley_bed_*`, by kind, with water, fire and lava;
 ///    one-shots through `foley_render_one_shot`.
 /// 5: thunder, a bed struck by `foley_bed_strike`.
-pub const FOLEY_ABI_VERSION: u32 = 5;
+/// 6: strikes and breaks on materials, `foley_render_contact`.
+pub const FOLEY_ABI_VERSION: u32 = 6;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -56,6 +58,16 @@ pub const FOLEY_BED_THUNDER: i32 = 5;
 pub const FOLEY_SHOT_DRIP_INTO_WATER: i32 = 0;
 pub const FOLEY_SHOT_DRIP_ON_STONE: i32 = 1;
 pub const FOLEY_SHOT_LAVA_DRIP: i32 = 2;
+
+/// Materials for `foley_render_contact`: stone, wood, metal, glass, ice,
+/// earth, granular (sand, gravel), plant, soft (wool, snow).
+pub const FOLEY_MATERIALS: usize = 9;
+/// Contacts for `foley_render_contact`: a tool tapping, a block set down, a
+/// body landing, and the block breaking.
+pub const FOLEY_CONTACT_TAP: i32 = 0;
+pub const FOLEY_CONTACT_PLACE: i32 = 1;
+pub const FOLEY_CONTACT_LAND: i32 = 2;
+pub const FOLEY_CONTACT_BREAK: i32 = 3;
 
 pub const FOLEY_OK: i32 = 0;
 /// A null pointer or out-of-range value.
@@ -332,6 +344,57 @@ pub unsafe extern "C" fn foley_render_one_shot(
     })
 }
 
+/// Renders a `contact` (`FOLEY_CONTACT_*`) with a block of `material` (an
+/// index below [`FOLEY_MATERIALS`]) at `speed` m/s (0.1 to 30; unused for a
+/// break), from `seed`. Writes it to `out` if `cap` samples are enough, and
+/// how many it needs to `*needed` either way.
+///
+/// # Safety
+/// `out` must be writable for `cap` samples; `needed` must be writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foley_render_contact(
+    kind: i32,
+    material: i32,
+    speed: f32,
+    seed: u64,
+    out: *mut i16,
+    cap: usize,
+    needed: *mut usize,
+) -> i32 {
+    guard(|| {
+        // SAFETY: the caller guarantees `needed` is writable.
+        let needed = unsafe { out_arg(needed, "needed") }?;
+        // SAFETY: the caller guarantees `out` is writable for `cap` samples.
+        let out = unsafe { slice_mut_arg(out, cap, "out") }?;
+        let material = usize::try_from(material)
+            .ok()
+            .and_then(Material::from_index)
+            .ok_or_else(|| FfiError::invalid("unknown material"))?;
+        if !(0.1..=30.0).contains(&speed) {
+            return Err(FfiError::invalid("speed out of range"));
+        }
+        let sound = match kind {
+            FOLEY_CONTACT_BREAK => fracture(material, seed),
+            kind => contact(
+                usize::try_from(kind)
+                    .ok()
+                    .and_then(Contact::from_index)
+                    .ok_or_else(|| FfiError::invalid("unknown contact"))?,
+                material,
+                speed,
+                seed,
+            ),
+        };
+        if let Some(dest) = out.get_mut(..sound.len()) {
+            for (out, sample) in dest.iter_mut().zip(&sound) {
+                *out = to_pcm(*sample);
+            }
+        }
+        *needed = sound.len();
+        Ok(())
+    })
+}
+
 /// Copies this thread's last error message into `buf` (truncated to `cap`)
 /// and returns its full length, or 0 if there is none.
 ///
@@ -424,6 +487,64 @@ mod tests {
             foley_bed_destroy(wind);
         }
         assert!(pcm.iter().any(|&s| s.abs() > 5000), "a crack");
+    }
+
+    #[test]
+    fn every_contact_on_every_material_renders() {
+        for kind in [
+            FOLEY_CONTACT_TAP,
+            FOLEY_CONTACT_PLACE,
+            FOLEY_CONTACT_LAND,
+            FOLEY_CONTACT_BREAK,
+        ] {
+            for material in 0..FOLEY_MATERIALS as i32 {
+                let mut needed = 0;
+                // SAFETY: a null buffer with capacity 0 is not written.
+                unsafe {
+                    assert_eq!(
+                        foley_render_contact(
+                            kind,
+                            material,
+                            3.0,
+                            1,
+                            std::ptr::null_mut(),
+                            0,
+                            &mut needed
+                        ),
+                        FOLEY_OK
+                    );
+                }
+                let mut pcm = vec![0i16; needed];
+                // SAFETY: `pcm` is writable for `needed` samples.
+                unsafe {
+                    assert_eq!(
+                        foley_render_contact(
+                            kind,
+                            material,
+                            3.0,
+                            1,
+                            pcm.as_mut_ptr(),
+                            needed,
+                            &mut needed
+                        ),
+                        FOLEY_OK
+                    );
+                }
+                assert!(pcm.iter().any(|&s| s.abs() > 1000), "{kind} on {material}");
+            }
+        }
+        let mut needed = 0;
+        // SAFETY: a null buffer with capacity 0 is not written.
+        unsafe {
+            assert_eq!(
+                foley_render_contact(0, 9, 3.0, 1, std::ptr::null_mut(), 0, &mut needed),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+            assert_eq!(
+                foley_render_contact(7, 0, 3.0, 1, std::ptr::null_mut(), 0, &mut needed),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+        }
     }
 
     #[test]
