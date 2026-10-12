@@ -11,7 +11,7 @@ import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 /**
  * Starts the real client and checks: the native synthesis loaded; when it rains, Foley's rain (a synthesized stream)
  * plays through the game's sound engine, follows what it lands on and any roof, and replaces the game's rain sounds
- * (M1); and a generated one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null backend.
+ * (M1); the wind blows out in the open and drops under a roof (M1); and a generated one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null backend.
  */
 @SuppressWarnings("UnstableApiUsage")
 public class FoleyClientGameTest implements FabricClientGameTest {
@@ -20,6 +20,20 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 		if (FoleyClient.bridge() == null) throw new AssertionError("the native synthesis didn't load");
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			singleplayer.getConnection().waitForChunksRender();
+
+			// The wind: out on a superflat, a breeze in the open.
+			try {
+				context.waitFor(mc -> {
+					var wind = FoleyClient.wind();
+					return wind != null && wind.sound() != null && mc.getSoundManager().isActive(wind.sound())
+							&& wind.sound().rendered() > NativeBridge.SAMPLE_RATE && wind.scene().speed() > 1
+							&& wind.scene().exposure() > 0.9f;
+				}, 20 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				var wind = FoleyClient.wind();
+				throw new AssertionError("Foley's wind isn't blowing: " + (wind == null ? "off" : wind.scene() + ", sound "
+						+ wind.sound()), e);
+			}
 
 			// The rain: when it rains, Foley's starts, follows what it lands on (a superflat's grass is soft), keeps
 			// being rendered, and the game's own rain sounds are skipped.
@@ -47,6 +61,12 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 				context.waitFor(mc -> FoleyClient.rain().scene().roof() == Surfaces.WOOD, 10 * 20);
 			} catch (RuntimeException | AssertionError e) {
 				throw new AssertionError("no roof: " + FoleyClient.rain().scene(), e);
+			}
+			// The wind is sheltered from too.
+			try {
+				context.waitFor(mc -> FoleyClient.wind().scene().exposure() < 0.75f, 10 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("the roof doesn't shelter from the wind: " + FoleyClient.wind().scene(), e);
 			}
 			singleplayer.getServer().runCommand("weather clear");
 

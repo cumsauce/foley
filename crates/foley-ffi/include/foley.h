@@ -11,8 +11,9 @@
  * Version of this C ABI. Java refuses a library whose version differs.
  * 1: rain beds and drips (the M0 spike).
  * 2: rain takes a scene: its rate, what it lands on and any roof.
+ * 3: wind beds.
  */
-#define FOLEY_ABI_VERSION 2
+#define FOLEY_ABI_VERSION 3
 
 /**
  * Surfaces rain lands on, in the order `foley_rain_set_scene` takes their
@@ -37,6 +38,11 @@
  * Opaque handle to a rain bed.
  */
 typedef struct FoleyRain FoleyRain;
+
+/**
+ * Opaque handle to a wind bed.
+ */
+typedef struct FoleyWind FoleyWind;
 
 /**
  * Returns [`FOLEY_ABI_VERSION`]. Safe to call before anything else.
@@ -83,6 +89,41 @@ void foley_rain_destroy(struct FoleyRain *rain);
  * `out` must be writable for `frames` samples.
  */
 int32_t foley_rain_render(struct FoleyRain *rain, int16_t *out, size_t frames);
+
+/**
+ * Starts a wind bed, calm until `foley_wind_set_scene` gives it wind.
+ *
+ * # Safety
+ * `out` must be writable.
+ */
+int32_t foley_wind_create(uint64_t seed, struct FoleyWind **out);
+
+/**
+ * Sets the wind round the listener: its mean `speed` in m/s (0 to 60), how
+ * `exposed` to it the listener is (0 shut in to 1 in the open) and how much
+ * of what's round about is `leaves` (0 to 1).
+ *
+ * # Safety
+ * `wind` must be live and not used on another thread during the call.
+ */
+int32_t foley_wind_set_scene(struct FoleyWind *wind, float speed, float exposure, float leaves);
+
+/**
+ * Renders the next `frames` samples of `wind` into `out`, as 16-bit PCM.
+ *
+ * # Safety
+ * `wind` must be live and not used on another thread during the call;
+ * `out` must be writable for `frames` samples.
+ */
+int32_t foley_wind_render(struct FoleyWind *wind, int16_t *out, size_t frames);
+
+/**
+ * Frees a wind bed. Null is ignored.
+ *
+ * # Safety
+ * `wind` must come from `foley_wind_create` and not be used afterwards.
+ */
+void foley_wind_destroy(struct FoleyWind *wind);
 
 /**
  * A water drip: a drop's tick on landing, then the bubble it traps ringing

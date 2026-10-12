@@ -4,7 +4,12 @@ Procedurally generated, physically based sound effects and ambience for Minecraf
 
 It runs alongside [Earshot](https://github.com/cumsauce/earshot), which shapes every sound Foley makes with its occlusion, reverb and HRTF. It also runs alongside [Yak VC](https://github.com/desocketed/yakvc), which it doesn't touch.
 
-Status: **M0, groundwork.** A synthesized rain-on-water stream and generated drips play in game, as a proof of the two paths (`/foley rain <drops a second>`, `/foley drip`). [docs/PLAN.md](docs/PLAN.md) has the design and results.
+Status: **M1, rain and wind.**
+
+- **Rain** replaces the game's rain sounds. Drops fall at the rate the weather gives (about 10 mm/h in rain, 50 in a thunderstorm), sized by the Marshall–Palmer distribution, onto what's actually round you: water rings with bubbles, stone ticks, leaves patter, wood knocks, glass and metal ping, grass and sand thud softly. Under a roof you hear the drumming on the roof instead.
+- **Wind** layers on top of the game's sounds. It rises with height above the ground round you (the log wind profile), drops in a forest or a valley, gusts, rustles the leaves round you, rises when you fly, and comes in low and muffled indoors. None in the Nether or the End.
+
+Commands: `/foley rain <mm/h>|auto`, `/foley wind <m/s>|auto`, `/foley scene` (what Foley hears round you), `/foley drip`. [docs/PLAN.md](docs/PLAN.md) has the design and results.
 
 ## Development
 
@@ -14,7 +19,7 @@ You need JDK 25 and rustup (which reads `rust-toolchain.toml`). The layout follo
 cargo test --workspace                                  # Rust crates
 cargo xtask header                                      # regenerate crates/foley-ffi/include/foley.h after changing the C ABI
 cargo run --release -p foley-synth --example bed_bench  # what synthesis costs
-cd mod && ./gradlew runClientGameTest                   # the real game, checking both playback paths
+cd mod && ./gradlew runClientGameTest                   # the real game: rain, wind and drips
 ```
 
 In a VM building from a VirtioFS shared folder, set `CARGO_TARGET_DIR` to a local disk and pass `-Pfoley.runDir=<local dir>` to game runs. Foley needs `--enable-native-access=ALL-UNNAMED` in the launcher's JVM arguments, like Earshot and Yak VC.

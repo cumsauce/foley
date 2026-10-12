@@ -8,6 +8,15 @@
 			}
 		]
 	},
+	"wind": {
+		"subtitle": "subtitles.foley.wind",
+		"sounds": [
+			{
+				"name": "fabric-sound-api-v1:empty",
+				"stream": true
+			}
+		]
+	},
 	"drip": {
 		"subtitle": "subtitles.foley.drip",
 		"sounds": [

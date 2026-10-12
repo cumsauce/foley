@@ -3,6 +3,7 @@ package io.github.cumsauce.foley;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
 import io.github.cumsauce.foley.audio.RainController;
+import io.github.cumsauce.foley.audio.WindController;
 import io.github.cumsauce.foley.natives.NativeBridge;
 import io.github.cumsauce.foley.natives.NativeLoader;
 import java.nio.file.Path;
@@ -28,6 +29,7 @@ public final class FoleyClient implements ClientModInitializer {
 
 	private static @Nullable NativeBridge bridge;
 	private static @Nullable RainController rain;
+	private static @Nullable WindController wind;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
 
 	public static Path configDir() {
@@ -41,6 +43,11 @@ public final class FoleyClient implements ClientModInitializer {
 	/** What keeps Foley's rain going, or null if Foley is off. */
 	public static @Nullable RainController rain() {
 		return rain;
+	}
+
+	/** What keeps Foley's wind blowing, or null if Foley is off. */
+	public static @Nullable WindController wind() {
+		return wind;
 	}
 
 	/** Counts a game sound Foley replaced (skipped). */
@@ -73,6 +80,9 @@ public final class FoleyClient implements ClientModInitializer {
 		RainController controller = new RainController(loaded);
 		rain = controller;
 		ClientTickEvents.END_CLIENT_TICK.register(controller::tick);
+		WindController blowing = new WindController(loaded);
+		wind = blowing;
+		ClientTickEvents.END_CLIENT_TICK.register(blowing::tick);
 		registerCommands(loaded);
 	}
 
@@ -100,9 +110,22 @@ public final class FoleyClient implements ClientModInitializer {
 											c.getSource().sendFeedback(Component.literal("Rain: " + rate + " mm/h"));
 											return 1;
 										})))
+						.then(ClientCommands.literal("wind")
+								.then(ClientCommands.literal("auto").executes(c -> {
+									if (wind != null) wind.force(null);
+									c.getSource().sendFeedback(Component.literal("Wind follows the weather"));
+									return 1;
+								}))
+								.then(ClientCommands.argument("m_per_second", FloatArgumentType.floatArg(0, 60))
+										.executes(c -> {
+											float speed = FloatArgumentType.getFloat(c, "m_per_second");
+											if (wind != null) wind.force(speed);
+											c.getSource().sendFeedback(Component.literal("Wind: " + speed + " m/s"));
+											return 1;
+										})))
 						.then(ClientCommands.literal("scene").executes(c -> {
-							c.getSource().sendFeedback(Component.literal(rain == null ? "Foley is off"
-									: rain.scene().toString()));
+							c.getSource().sendFeedback(Component.literal(rain == null || wind == null ? "Foley is off"
+									: rain.scene() + "\n" + wind.scene()));
 							return 1;
 						}))
 						.then(ClientCommands.literal("drip").executes(c -> {

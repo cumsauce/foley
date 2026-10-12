@@ -11,14 +11,15 @@
 
 mod guard;
 
-use foley_synth::{Bubble, Rain, RainScene, Rng, SAMPLE_RATE, Surface, to_pcm};
+use foley_synth::{Bubble, Rain, RainScene, Rng, SAMPLE_RATE, Surface, Wind, WindScene, to_pcm};
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 
 /// Version of this C ABI. Java refuses a library whose version differs.
 /// 1: rain beds and drips (the M0 spike).
 /// 2: rain takes a scene: its rate, what it lands on and any roof.
-pub const FOLEY_ABI_VERSION: u32 = 2;
+/// 3: wind beds.
+pub const FOLEY_ABI_VERSION: u32 = 3;
 
 /// Surfaces rain lands on, in the order `foley_rain_set_scene` takes their
 /// shares: water, stone, leaves, wood, soft (grass, dirt, sand, wool,
@@ -35,6 +36,13 @@ pub const FOLEY_ERR_PANIC: i32 = -3;
 #[derive(Debug)]
 pub struct FoleyRain {
     bed: Rain,
+    scratch: Vec<f32>,
+}
+
+/// Opaque handle to a wind bed.
+#[derive(Debug)]
+pub struct FoleyWind {
+    bed: Wind,
     scratch: Vec<f32>,
 }
 
@@ -146,6 +154,93 @@ pub unsafe extern "C" fn foley_rain_render(
     })
 }
 
+/// Starts a wind bed, calm until `foley_wind_set_scene` gives it wind.
+///
+/// # Safety
+/// `out` must be writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foley_wind_create(seed: u64, out: *mut *mut FoleyWind) -> i32 {
+    guard(|| {
+        // SAFETY: the caller guarantees `out` is writable.
+        let out = unsafe { out_arg(out, "out") }?;
+        *out = Box::into_raw(Box::new(FoleyWind {
+            bed: Wind::new(seed),
+            scratch: Vec::new(),
+        }));
+        Ok(())
+    })
+}
+
+/// Sets the wind round the listener: its mean `speed` in m/s (0 to 60), how
+/// `exposed` to it the listener is (0 shut in to 1 in the open) and how much
+/// of what's round about is `leaves` (0 to 1).
+///
+/// # Safety
+/// `wind` must be live and not used on another thread during the call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foley_wind_set_scene(
+    wind: *mut FoleyWind,
+    speed: f32,
+    exposure: f32,
+    leaves: f32,
+) -> i32 {
+    guard(|| {
+        // SAFETY: the caller guarantees `wind` is live and used by this
+        // thread alone.
+        let wind = unsafe { wind.as_mut() }.ok_or_else(|| FfiError::invalid("wind is null"))?;
+        if !(0.0..=60.0).contains(&speed)
+            || !(0.0..=1.0).contains(&exposure)
+            || !(0.0..=1.0).contains(&leaves)
+        {
+            return Err(FfiError::invalid("speed, exposure or leaves out of range"));
+        }
+        wind.bed.set_scene(WindScene {
+            speed,
+            exposure,
+            leaves,
+        });
+        Ok(())
+    })
+}
+
+/// Renders the next `frames` samples of `wind` into `out`, as 16-bit PCM.
+///
+/// # Safety
+/// `wind` must be live and not used on another thread during the call;
+/// `out` must be writable for `frames` samples.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foley_wind_render(
+    wind: *mut FoleyWind,
+    out: *mut i16,
+    frames: usize,
+) -> i32 {
+    guard(|| {
+        // SAFETY: the caller guarantees `wind` is live and used by this
+        // thread alone.
+        let wind = unsafe { wind.as_mut() }.ok_or_else(|| FfiError::invalid("wind is null"))?;
+        // SAFETY: the caller guarantees `out` is writable for `frames`.
+        let out = unsafe { slice_mut_arg(out, frames, "out") }?;
+        wind.scratch.resize(frames, 0.0);
+        wind.bed.render(&mut wind.scratch);
+        for (out, sample) in out.iter_mut().zip(&wind.scratch) {
+            *out = to_pcm(*sample);
+        }
+        Ok(())
+    })
+}
+
+/// Frees a wind bed. Null is ignored.
+///
+/// # Safety
+/// `wind` must come from `foley_wind_create` and not be used afterwards.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foley_wind_destroy(wind: *mut FoleyWind) {
+    if !wind.is_null() {
+        // SAFETY: `wind` came from `Box::into_raw` and is never used again.
+        drop(unsafe { Box::from_raw(wind) });
+    }
+}
+
 /// A water drip: a drop's tick on landing, then the bubble it traps ringing
 /// at its Minnaert frequency. `radius` is the bubble's, in millimetres (0.1
 /// to 10). Writes it to `out` if `cap` samples are enough, and how many it
@@ -238,6 +333,27 @@ mod tests {
                 FOLEY_OK
             );
             foley_rain_destroy(rain);
+        }
+        assert!(pcm.iter().any(|&s| s != 0));
+    }
+
+    #[test]
+    fn wind_renders_pcm() {
+        let mut wind = std::ptr::null_mut();
+        let mut pcm = vec![0i16; 48_000];
+        // SAFETY: every pointer is valid for its length; `wind` is freed last.
+        unsafe {
+            assert_eq!(foley_wind_create(1, &mut wind), FOLEY_OK);
+            assert_eq!(foley_wind_set_scene(wind, 12.0, 1.0, 0.5), FOLEY_OK);
+            assert_eq!(
+                foley_wind_set_scene(wind, 12.0, 2.0, 0.5),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+            assert_eq!(
+                foley_wind_render(wind, pcm.as_mut_ptr(), pcm.len()),
+                FOLEY_OK
+            );
+            foley_wind_destroy(wind);
         }
         assert!(pcm.iter().any(|&s| s != 0));
     }

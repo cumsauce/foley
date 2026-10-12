@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class NativeBridge {
 	/** Must equal {@code FOLEY_ABI_VERSION} in {@code foley.h}. */
-	public static final int ABI_VERSION = 2;
+	public static final int ABI_VERSION = 3;
 	/** Surfaces rain lands on, in {@code foley_rain_set_scene}'s order. */
 	public static final int SURFACES = 7;
 	public static final int SAMPLE_RATE = 48_000;
@@ -33,6 +33,10 @@ public final class NativeBridge {
 	private final MethodHandle rainDestroy;
 	private final MethodHandle rainSetScene;
 	private final MethodHandle rainRender;
+	private final MethodHandle windCreate;
+	private final MethodHandle windSetScene;
+	private final MethodHandle windRender;
+	private final MethodHandle windDestroy;
 	private final MethodHandle renderDrip;
 	private final MethodHandle lastError;
 
@@ -47,6 +51,13 @@ public final class NativeBridge {
 		rainDestroy = linker.downcallHandle(find(library, "foley_rain_destroy"), FunctionDescriptor.ofVoid(ADDRESS));
 		rainRender = linker.downcallHandle(find(library, "foley_rain_render"),
 				FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, SIZE_T));
+		windCreate = linker.downcallHandle(find(library, "foley_wind_create"),
+				FunctionDescriptor.of(JAVA_INT, JAVA_LONG, ADDRESS), critical);
+		windSetScene = linker.downcallHandle(find(library, "foley_wind_set_scene"),
+				FunctionDescriptor.of(JAVA_INT, ADDRESS, JAVA_FLOAT, JAVA_FLOAT, JAVA_FLOAT), critical);
+		windRender = linker.downcallHandle(find(library, "foley_wind_render"),
+				FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, SIZE_T));
+		windDestroy = linker.downcallHandle(find(library, "foley_wind_destroy"), FunctionDescriptor.ofVoid(ADDRESS));
 		renderDrip = linker.downcallHandle(find(library, "foley_render_drip"),
 				FunctionDescriptor.of(JAVA_INT, JAVA_FLOAT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS), critical);
 		lastError = linker.downcallHandle(find(library, "foley_last_error"),
@@ -84,6 +95,33 @@ public final class NativeBridge {
 	/** Renders the next samples of {@code rain} into {@code out}, which must be native memory, 2 bytes a sample. */
 	public void rainRender(MemorySegment rain, MemorySegment out) {
 		check((int) invoke(rainRender, rain, out, out.byteSize() / 2));
+	}
+
+	/** Starts a wind bed, calm until {@link #windSetScene}. Free it with {@link #windDestroy}. */
+	public MemorySegment windCreate(long seed) {
+		long[] out = new long[1];
+		check((int) invoke(windCreate, seed, MemorySegment.ofArray(out)));
+		return MemorySegment.ofAddress(out[0]);
+	}
+
+	/**
+	 * The wind round the listener.
+	 *
+	 * @param speed    the mean wind at the ear, m/s (0 to 60)
+	 * @param exposure 0 shut in to 1 in the open
+	 * @param leaves   how much of what's round about is leaves, 0 to 1
+	 */
+	public void windSetScene(MemorySegment wind, float speed, float exposure, float leaves) {
+		check((int) invoke(windSetScene, wind, speed, exposure, leaves));
+	}
+
+	/** Renders the next samples of {@code wind} into {@code out}, which must be native memory, 2 bytes a sample. */
+	public void windRender(MemorySegment wind, MemorySegment out) {
+		check((int) invoke(windRender, wind, out, out.byteSize() / 2));
+	}
+
+	public void windDestroy(MemorySegment wind) {
+		invoke(windDestroy, wind);
 	}
 
 	/** A water drip whose bubble is {@code radiusMm} millimetres, as 16-bit PCM. */

@@ -1,9 +1,9 @@
-//! What the rain bed costs: `cargo run --release -p foley-synth --example
+//! What the rain and wind beds cost: `cargo run --release -p foley-synth --example
 //! bed_bench`. Prints a Markdown table, and appends it to the CI summary.
 
 use std::time::Instant;
 
-use foley_synth::{Rain, RainScene, SAMPLE_RATE, Surface};
+use foley_synth::{Rain, RainScene, SAMPLE_RATE, Surface, Wind, WindScene};
 
 fn main() {
     let mut table = format!(
@@ -31,6 +31,26 @@ fn main() {
         let per_second = start.elapsed().as_secs_f64() / 10.0;
         table += &format!(
             "| {rate} | {:.2} ms | {:.1} % |\n",
+            per_second * 1e3,
+            per_second * 100.0
+        );
+    }
+    table += "\n### Wind bed\n\n| Wind speed | Time per second of audio | Share of a core |\n| --- | --- | --- |\n";
+    for speed in [3.0, 10.0, 25.0] {
+        let mut bed = Wind::new(1);
+        bed.set_scene(WindScene {
+            speed,
+            exposure: 1.0,
+            leaves: 0.5,
+        });
+        let mut out = vec![0.0f32; SAMPLE_RATE as usize];
+        let start = Instant::now();
+        for _ in 0..10 {
+            bed.render(&mut out);
+        }
+        let per_second = start.elapsed().as_secs_f64() / 10.0;
+        table += &format!(
+            "| {speed} m/s | {:.2} ms | {:.1} % |\n",
             per_second * 1e3,
             per_second * 100.0
         );

@@ -76,6 +76,25 @@ Fabric mod (Java)                                   foley-ffi (Rust cdylib, FFM)
 - **Cost** (bed_bench, M3 VM, one core): 100 drops/s 0.1 %, 400 drops/s 0.3 %, 1,500 drops/s 1.2 %, 5,000 drops/s (a downpour) 3.7 %.
 - **To check by ear:** that Earshot shapes both. It hooks every game channel, and these play through the game's channels like any sound.
 
+## M1 results (2026-10-12)
+
+- **Rain replaces the game's.** While Foley's rain plays, a `SoundEngine` mixin skips `weather.rain` and `weather.rain.above`. The client gametest checks that it starts with `weather rain`, keeps being rendered, and that the game's rain sounds were skipped.
+- **Rain follows the world.** Every half second the scene is sampled:
+  - the rate: rain level × (10 + 40 × thunder level) mm/h;
+  - what it lands on: the top block of every second column within 8 blocks where it rains (not snows), weighted 1/(1 + d²), classified into water, stone, leaves, wood, soft ground, glass and metal;
+  - the roof: the first solid block above the ear within 16 blocks, which then drums instead of the open-air patter. Deep inside with nothing open to the sky, rain isn't heard.
+  The gametest checks a superflat's grass reads as soft ground, and that a roof of oak planks reads as wood.
+- **Rain physics:** drops by Marshall–Palmer (Λ = 4.1·R^−0.21 /mm, N₀ = 8000 /m³/mm), about 4,500 a second per m² at 10 mm/h, landing at Gunn–Kinzer terminal velocity (9.65 − 10.3·e^−0.6D m/s). Near drops (half a m²) are each synthesized; the rest is a texture whose loudness follows the flux. On water, drops of 0.8–1.1 mm trap the 14 kHz bubbles Medwin and Pumphrey measured; others trap one less often. On solids each impact excites a material's modes (damped, with an impact force from the drop's momentum).
+- **Wind** layers on the game's sounds, as decided:
+  - a 10 m reference speed from the weather (5 m/s clear, 9 in rain, 16 in a thunderstorm), carried to the ear by the log wind profile U(z) = U₁₀·ln(z/z₀)/ln(10/z₀), with z the height above the ground within 24 blocks and z₀ from 0.03 m (open) to 1 m (woods). So it rises on a hill top and drops in a forest;
+  - gusts as an Ornstein–Uhlenbeck process with turbulence intensity 0.25 and a 4 s time scale;
+  - turbulence heard as band-passed noise whose amplitude goes as U³ (aerodynamic noise power ∝ U⁶) and whose pitch rises with speed; leaves rustling as bursts at a rate ∝ U²;
+  - exposure: the sky over the ear counts half, the open columns round it the rest. Shut in, only a low, quiet part gets through;
+  - the listener's own motion adds to it (flying with elytra is loud). No wind in a dimension without a sky.
+  The gametest checks it blows in the open on a superflat, and that a roof lowers the exposure.
+- **Cost** (bed_bench, M3 VM, one core): rain 0.2 % at 2 mm/h, 0.4 % at 10 and 50 mm/h (near drops are capped, the rest is texture). Wind 0.03 % at any speed. Phasor oscillators cut rain about 12× from M0.
+- **To check by ear:** standing under a tree, on stone and by a lake in the rain; the wind on a mountain top against a valley.
+
 ## Milestones
 
 0. **M0 Groundwork.** Repo, Rust workspace, FFM bridge, CI and natives packaging, all copied from Earshot. Spike: one procedural `FabricSoundInstance` stream (a sine, then filtered noise), and one generated buffer through the `SoundBufferLibrary` mixin. Measure CPU on the M3. **Exit:** both paths play in game, and Earshot shapes them.

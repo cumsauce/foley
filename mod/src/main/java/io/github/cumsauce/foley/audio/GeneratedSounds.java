@@ -48,6 +48,6 @@ public final class GeneratedSounds {
 		if (pcm == null) return null;
 		ByteBuffer data = ByteBuffer.allocateDirect(pcm.length * 2).order(ByteOrder.LITTLE_ENDIAN);
 		data.asShortBuffer().put(pcm);
-		return new SoundBuffer(data, RainSound.FORMAT);
+		return new SoundBuffer(data, BedSound.FORMAT);
 	}
 }
