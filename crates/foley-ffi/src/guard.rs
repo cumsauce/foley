@@ -64,6 +64,29 @@ pub(crate) fn guard(f: impl FnOnce() -> Result<(), FfiError>) -> i32 {
     }
 }
 
+/// `len` elements at `ptr`.
+///
+/// # Safety
+/// `ptr` must be null or readable for `len` elements.
+pub(crate) unsafe fn slice_arg<'a, T>(
+    ptr: *const T,
+    len: usize,
+    what: &str,
+) -> Result<&'a [T], FfiError> {
+    if len == 0 {
+        return Ok(&[]);
+    }
+    if ptr.is_null() {
+        return Err(FfiError::invalid(format!("{what} is null")));
+    }
+    if !ptr.is_aligned() {
+        return Err(FfiError::invalid(format!("{what} is misaligned")));
+    }
+    // SAFETY: non-null and aligned (checked above), readable for `len`
+    // elements (caller's contract).
+    Ok(unsafe { std::slice::from_raw_parts(ptr, len) })
+}
+
 /// `len` writable elements at `ptr`.
 ///
 /// # Safety

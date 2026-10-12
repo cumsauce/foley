@@ -3,17 +3,26 @@
 
 use std::time::Instant;
 
-use foley_synth::{RainOnWater, SAMPLE_RATE};
+use foley_synth::{Rain, RainScene, SAMPLE_RATE, Surface};
 
 fn main() {
     let mut table = format!(
-        "### Rain on water bed\n\n10 s of audio at {SAMPLE_RATE} Hz, {} {}.\n\n\
-         | Drops a second | Time per second of audio | Share of a core |\n| --- | --- | --- |\n",
+        "### Rain bed\n\n10 s of audio at {SAMPLE_RATE} Hz, on water, stone and leaves, {} {}.\n\n\
+         | Rain rate | Time per second of audio | Share of a core |\n| --- | --- | --- |\n",
         std::env::consts::OS,
         std::env::consts::ARCH
     );
-    for rate in [100.0, 400.0, 1500.0, 5000.0] {
-        let mut bed = RainOnWater::new(1, rate);
+    for rate in [2.0, 10.0, 50.0] {
+        let mut bed = Rain::new(1);
+        let mut surfaces = [0.0; 7];
+        for surface in [Surface::Water, Surface::Stone, Surface::Leaves] {
+            surfaces[surface as usize] = 1.0 / 3.0;
+        }
+        bed.set_scene(RainScene {
+            rate,
+            surfaces,
+            roof: None,
+        });
         let mut out = vec![0.0f32; SAMPLE_RATE as usize];
         let start = Instant::now();
         for _ in 0..10 {

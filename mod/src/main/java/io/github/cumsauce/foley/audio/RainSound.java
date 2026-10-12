@@ -15,9 +15,9 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 
 /**
- * A bed of rain on water, synthesized as it plays (M0 spike): an endless stream the game reads like any streaming
- * sound, through Fabric's {@code getAudioStream}, so it plays through the game's own OpenAL channels and Earshot shapes
- * it. Around the listener, not from a point.
+ * The rain round the listener, synthesized as it plays (M1): an endless stream the game reads like any streaming sound,
+ * through Fabric's {@code getAudioStream}, so it plays through the game's own OpenAL channels. Around the listener, not
+ * from a point. {@link #setScene} keeps it following the weather and what the rain lands on.
  */
 public final class RainSound extends AbstractSoundInstance {
 	static final AudioFormat FORMAT = new AudioFormat(NativeBridge.SAMPLE_RATE, 16, 1, true, false);
@@ -25,13 +25,14 @@ public final class RainSound extends AbstractSoundInstance {
 			Identifier.fromNamespaceAndPath("foley", "rain"));
 
 	private final NativeBridge bridge;
-	private final float rate;
+	private volatile RainScene scene;
 	private volatile long rendered;
+	private Stream stream;
 
-	public RainSound(NativeBridge bridge, float rate) {
+	public RainSound(NativeBridge bridge, RainScene scene) {
 		super(EVENT, SoundSource.WEATHER, SoundInstance.createUnseededRandom());
 		this.bridge = bridge;
-		this.rate = rate;
+		this.scene = scene;
 		this.relative = true;
 		this.attenuation = SoundInstance.Attenuation.NONE;
 	}
@@ -41,9 +42,22 @@ public final class RainSound extends AbstractSoundInstance {
 		return rendered;
 	}
 
+	/** The rain to make from now on. Called on the client thread. */
+	public synchronized void setScene(RainScene scene) {
+		this.scene = scene;
+		if (stream != null) stream.apply(scene);
+	}
+
+	public RainScene scene() {
+		return scene;
+	}
+
 	@Override
-	public CompletableFuture<AudioStream> getAudioStream(SoundBufferLibrary loader, Identifier id, boolean repeat) {
-		return CompletableFuture.completedFuture(new Stream(bridge.rainCreate(random.nextLong(), rate)));
+	public synchronized CompletableFuture<AudioStream> getAudioStream(SoundBufferLibrary loader, Identifier id,
+			boolean repeat) {
+		stream = new Stream(bridge.rainCreate(random.nextLong()));
+		stream.apply(scene);
+		return CompletableFuture.completedFuture(stream);
 	}
 
 	/** The native bed, read a buffer at a time on the game's stream thread. */
@@ -53,6 +67,10 @@ public final class RainSound extends AbstractSoundInstance {
 
 		Stream(MemorySegment rain) {
 			this.rain = rain;
+		}
+
+		synchronized void apply(RainScene scene) {
+			if (!closed) bridge.rainSetScene(rain, scene.rate(), scene.surfaces(), scene.roof(), scene.height());
 		}
 
 		@Override

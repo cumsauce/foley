@@ -2,13 +2,14 @@ package io.github.cumsauce.foley;
 
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
-import io.github.cumsauce.foley.audio.RainSound;
+import io.github.cumsauce.foley.audio.RainController;
 import io.github.cumsauce.foley.natives.NativeBridge;
 import io.github.cumsauce.foley.natives.NativeLoader;
 import java.nio.file.Path;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -26,7 +27,8 @@ public final class FoleyClient implements ClientModInitializer {
 			Identifier.fromNamespaceAndPath("foley", "drip"));
 
 	private static @Nullable NativeBridge bridge;
-	private static @Nullable RainSound rain;
+	private static @Nullable RainController rain;
+	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
 
 	public static Path configDir() {
 		return FabricLoader.getInstance().getConfigDir().resolve("foley");
@@ -36,9 +38,19 @@ public final class FoleyClient implements ClientModInitializer {
 		return bridge;
 	}
 
-	/** The rain playing, or null. */
-	public static @Nullable RainSound rain() {
+	/** What keeps Foley's rain going, or null if Foley is off. */
+	public static @Nullable RainController rain() {
 		return rain;
+	}
+
+	/** Counts a game sound Foley replaced (skipped). */
+	public static void countReplaced() {
+		replaced.incrementAndGet();
+	}
+
+	/** How many game sounds Foley has replaced. For the client gametest. */
+	public static int replaced() {
+		return replaced.get();
 	}
 
 	@Override
@@ -58,17 +70,10 @@ public final class FoleyClient implements ClientModInitializer {
 		bridge = loaded;
 		GeneratedSounds.use(loaded);
 		LOGGER.info("Started Foley's native synthesis (ABI {})", NativeBridge.ABI_VERSION);
+		RainController controller = new RainController(loaded);
+		rain = controller;
+		ClientTickEvents.END_CLIENT_TICK.register(controller::tick);
 		registerCommands(loaded);
-	}
-
-	/** Starts rain on water at {@code rate} drops a second, or stops it at 0. */
-	public static void setRain(float rate) {
-		Minecraft minecraft = Minecraft.getInstance();
-		if (rain != null) minecraft.getSoundManager().stop(rain);
-		rain = null;
-		if (rate <= 0 || bridge == null) return;
-		rain = new RainSound(bridge, rate);
-		minecraft.getSoundManager().play(rain);
 	}
 
 	/** A generated drip at the player's feet, a different one each time. */
@@ -83,13 +88,23 @@ public final class FoleyClient implements ClientModInitializer {
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(
 				ClientCommands.literal("foley")
 						.then(ClientCommands.literal("rain")
-								.then(ClientCommands.argument("drops", FloatArgumentType.floatArg(0, 5000))
+								.then(ClientCommands.literal("auto").executes(c -> {
+									if (rain != null) rain.force(null);
+									c.getSource().sendFeedback(Component.literal("Rain follows the weather"));
+									return 1;
+								}))
+								.then(ClientCommands.argument("mm_per_hour", FloatArgumentType.floatArg(0, 200))
 										.executes(c -> {
-											setRain(FloatArgumentType.getFloat(c, "drops"));
-											c.getSource().sendFeedback(Component.literal("Rain: "
-													+ FloatArgumentType.getFloat(c, "drops") + " drops a second"));
+											float rate = FloatArgumentType.getFloat(c, "mm_per_hour");
+											if (rain != null) rain.force(rate);
+											c.getSource().sendFeedback(Component.literal("Rain: " + rate + " mm/h"));
 											return 1;
 										})))
+						.then(ClientCommands.literal("scene").executes(c -> {
+							c.getSource().sendFeedback(Component.literal(rain == null ? "Foley is off"
+									: rain.scene().toString()));
+							return 1;
+						}))
 						.then(ClientCommands.literal("drip").executes(c -> {
 							var at = c.getSource().getPosition();
 							drip(at.x, at.y, at.z);

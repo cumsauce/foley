@@ -10,8 +10,16 @@
 /**
  * Version of this C ABI. Java refuses a library whose version differs.
  * 1: rain beds and drips (the M0 spike).
+ * 2: rain takes a scene: its rate, what it lands on and any roof.
  */
-#define FOLEY_ABI_VERSION 1
+#define FOLEY_ABI_VERSION 2
+
+/**
+ * Surfaces rain lands on, in the order `foley_rain_set_scene` takes their
+ * shares: water, stone, leaves, wood, soft (grass, dirt, sand, wool,
+ * snow), glass, metal.
+ */
+#define FOLEY_SURFACES 7
 
 #define FOLEY_OK 0
 
@@ -36,12 +44,28 @@ typedef struct FoleyRain FoleyRain;
 uint32_t foley_abi_version(void);
 
 /**
- * Starts a bed of rain falling on water, at `rate` drops a second.
+ * Starts a rain bed, silent until `foley_rain_set_scene` gives it rain.
  *
  * # Safety
  * `out` must be writable.
  */
-int32_t foley_rain_create(uint64_t seed, float rate, struct FoleyRain **out);
+int32_t foley_rain_create(uint64_t seed, struct FoleyRain **out);
+
+/**
+ * Sets what the rain round the listener is like: `rate` in mm/h (0 for
+ * none, up to 200), the shares of what it lands on ([`FOLEY_SURFACES`]
+ * floats in their order), and the roof the listener shelters under, as a
+ * surface index and its height above the ear in blocks (`roof` -1 for none).
+ *
+ * # Safety
+ * `rain` must be live and not used on another thread during the call;
+ * `surfaces` must point to `FOLEY_SURFACES` floats.
+ */
+int32_t foley_rain_set_scene(struct FoleyRain *rain,
+                             float rate,
+                             const float *surfaces,
+                             int32_t roof,
+                             float roof_height);
 
 /**
  * Frees a rain bed. Null is ignored.

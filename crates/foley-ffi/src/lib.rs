@@ -11,13 +11,19 @@
 
 mod guard;
 
-use foley_synth::{Bubble, RainOnWater, Rng, SAMPLE_RATE, to_pcm};
+use foley_synth::{Bubble, Rain, RainScene, Rng, SAMPLE_RATE, Surface, to_pcm};
 
-use crate::guard::{FfiError, guard, out_arg, slice_mut_arg};
+use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 
 /// Version of this C ABI. Java refuses a library whose version differs.
 /// 1: rain beds and drips (the M0 spike).
-pub const FOLEY_ABI_VERSION: u32 = 1;
+/// 2: rain takes a scene: its rate, what it lands on and any roof.
+pub const FOLEY_ABI_VERSION: u32 = 2;
+
+/// Surfaces rain lands on, in the order `foley_rain_set_scene` takes their
+/// shares: water, stone, leaves, wood, soft (grass, dirt, sand, wool,
+/// snow), glass, metal.
+pub const FOLEY_SURFACES: usize = 7;
 
 pub const FOLEY_OK: i32 = 0;
 /// A null pointer or out-of-range value.
@@ -28,7 +34,7 @@ pub const FOLEY_ERR_PANIC: i32 = -3;
 /// Opaque handle to a rain bed.
 #[derive(Debug)]
 pub struct FoleyRain {
-    bed: RainOnWater,
+    bed: Rain,
     scratch: Vec<f32>,
 }
 
@@ -38,23 +44,66 @@ pub extern "C" fn foley_abi_version() -> u32 {
     FOLEY_ABI_VERSION
 }
 
-/// Starts a bed of rain falling on water, at `rate` drops a second.
+/// Starts a rain bed, silent until `foley_rain_set_scene` gives it rain.
 ///
 /// # Safety
 /// `out` must be writable.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn foley_rain_create(seed: u64, rate: f32, out: *mut *mut FoleyRain) -> i32 {
+pub unsafe extern "C" fn foley_rain_create(seed: u64, out: *mut *mut FoleyRain) -> i32 {
     guard(|| {
         // SAFETY: the caller guarantees `out` is writable.
         let out = unsafe { out_arg(out, "out") }?;
-        *out = std::ptr::null_mut();
-        if !(rate.is_finite() && rate >= 0.0) {
-            return Err(FfiError::invalid("rate out of range"));
-        }
         *out = Box::into_raw(Box::new(FoleyRain {
-            bed: RainOnWater::new(seed, rate),
+            bed: Rain::new(seed),
             scratch: Vec::new(),
         }));
+        Ok(())
+    })
+}
+
+/// Sets what the rain round the listener is like: `rate` in mm/h (0 for
+/// none, up to 200), the shares of what it lands on ([`FOLEY_SURFACES`]
+/// floats in their order), and the roof the listener shelters under, as a
+/// surface index and its height above the ear in blocks (`roof` -1 for none).
+///
+/// # Safety
+/// `rain` must be live and not used on another thread during the call;
+/// `surfaces` must point to `FOLEY_SURFACES` floats.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foley_rain_set_scene(
+    rain: *mut FoleyRain,
+    rate: f32,
+    surfaces: *const f32,
+    roof: i32,
+    roof_height: f32,
+) -> i32 {
+    guard(|| {
+        // SAFETY: the caller guarantees `rain` is live and used by this
+        // thread alone.
+        let rain = unsafe { rain.as_mut() }.ok_or_else(|| FfiError::invalid("rain is null"))?;
+        // SAFETY: the caller guarantees `surfaces` points to
+        // `FOLEY_SURFACES` floats.
+        let shares = unsafe { slice_arg(surfaces, FOLEY_SURFACES, "surfaces") }?;
+        if !(0.0..=200.0).contains(&rate) || !shares.iter().all(|s| s.is_finite() && *s >= 0.0) {
+            return Err(FfiError::invalid("rate or surfaces out of range"));
+        }
+        let roof = match roof {
+            -1 => None,
+            index => Some((
+                usize::try_from(index)
+                    .ok()
+                    .and_then(Surface::from_index)
+                    .ok_or_else(|| FfiError::invalid("unknown roof surface"))?,
+                roof_height.clamp(0.5, 64.0),
+            )),
+        };
+        let mut scene = RainScene {
+            rate,
+            surfaces: [0.0; FOLEY_SURFACES],
+            roof,
+        };
+        scene.surfaces.copy_from_slice(shares);
+        rain.bed.set_scene(scene);
         Ok(())
     })
 }
@@ -173,7 +222,17 @@ mod tests {
         let mut pcm = vec![0i16; 4800];
         // SAFETY: every pointer is valid for its length; `rain` is freed last.
         unsafe {
-            assert_eq!(foley_rain_create(1, 400.0, &mut rain), FOLEY_OK);
+            assert_eq!(foley_rain_create(1, &mut rain), FOLEY_OK);
+            let surfaces = [1.0f32, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+            assert_eq!(
+                foley_rain_set_scene(rain, 10.0, surfaces.as_ptr(), -1, 0.0),
+                FOLEY_OK
+            );
+            assert_eq!(
+                foley_rain_set_scene(rain, 10.0, surfaces.as_ptr(), 9, 2.0),
+                FOLEY_ERR_INVALID_ARGUMENT,
+                "unknown roof"
+            );
             assert_eq!(
                 foley_rain_render(rain, pcm.as_mut_ptr(), pcm.len()),
                 FOLEY_OK

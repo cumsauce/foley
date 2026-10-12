@@ -21,7 +21,9 @@ import java.nio.charset.StandardCharsets;
  */
 public final class NativeBridge {
 	/** Must equal {@code FOLEY_ABI_VERSION} in {@code foley.h}. */
-	public static final int ABI_VERSION = 1;
+	public static final int ABI_VERSION = 2;
+	/** Surfaces rain lands on, in {@code foley_rain_set_scene}'s order. */
+	public static final int SURFACES = 7;
 	public static final int SAMPLE_RATE = 48_000;
 
 	private static final ValueLayout.OfLong SIZE_T = JAVA_LONG;
@@ -29,6 +31,7 @@ public final class NativeBridge {
 	private final MethodHandle abiVersion;
 	private final MethodHandle rainCreate;
 	private final MethodHandle rainDestroy;
+	private final MethodHandle rainSetScene;
 	private final MethodHandle rainRender;
 	private final MethodHandle renderDrip;
 	private final MethodHandle lastError;
@@ -38,7 +41,9 @@ public final class NativeBridge {
 		Linker.Option critical = Linker.Option.critical(true);
 		abiVersion = linker.downcallHandle(find(library, "foley_abi_version"), FunctionDescriptor.of(JAVA_INT));
 		rainCreate = linker.downcallHandle(find(library, "foley_rain_create"),
-				FunctionDescriptor.of(JAVA_INT, JAVA_LONG, JAVA_FLOAT, ADDRESS), critical);
+				FunctionDescriptor.of(JAVA_INT, JAVA_LONG, ADDRESS), critical);
+		rainSetScene = linker.downcallHandle(find(library, "foley_rain_set_scene"),
+				FunctionDescriptor.of(JAVA_INT, ADDRESS, JAVA_FLOAT, ADDRESS, JAVA_INT, JAVA_FLOAT), critical);
 		rainDestroy = linker.downcallHandle(find(library, "foley_rain_destroy"), FunctionDescriptor.ofVoid(ADDRESS));
 		rainRender = linker.downcallHandle(find(library, "foley_rain_render"),
 				FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, SIZE_T));
@@ -52,11 +57,24 @@ public final class NativeBridge {
 		return (int) invoke(abiVersion);
 	}
 
-	/** Starts a bed of rain on water at {@code rate} drops a second. Free it with {@link #rainDestroy}. */
-	public MemorySegment rainCreate(long seed, float rate) {
+	/** Starts a rain bed, silent until {@link #rainSetScene}. Free it with {@link #rainDestroy}. */
+	public MemorySegment rainCreate(long seed) {
 		long[] out = new long[1];
-		check((int) invoke(rainCreate, seed, rate, MemorySegment.ofArray(out)));
+		check((int) invoke(rainCreate, seed, MemorySegment.ofArray(out)));
 		return MemorySegment.ofAddress(out[0]);
+	}
+
+	/**
+	 * What the rain round the listener is like.
+	 *
+	 * @param rate     mm/h, 0 for none
+	 * @param surfaces the shares of what it lands on ({@value #SURFACES}, in order)
+	 * @param roof     the surface the listener shelters under, or -1
+	 * @param height   the roof's height above the ear, in blocks
+	 */
+	public void rainSetScene(MemorySegment rain, float rate, float[] surfaces, int roof, float height) {
+		if (surfaces.length != SURFACES) throw new IllegalArgumentException("surfaces: " + surfaces.length);
+		check((int) invoke(rainSetScene, rain, rate, MemorySegment.ofArray(surfaces), roof, height));
 	}
 
 	public void rainDestroy(MemorySegment rain) {

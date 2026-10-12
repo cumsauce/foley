@@ -25,9 +25,18 @@ pub struct Bubble {
     damping: f32,
     rise: f32,
     amplitude: f32,
-    phase: f32,
+    /// e^(-damping / rate): the envelope's step a sample.
+    step: f32,
+    /// The ring as a phasor (re, im) turned by (cos, sin) of its step a
+    /// sample, refreshed every [`REFRESH`] samples as the pitch rises.
+    phasor: [f32; 2],
+    turn: [f32; 2],
     age: f32,
+    samples: u32,
 }
+
+/// The phasor's turn follows the rising pitch every this many samples.
+const REFRESH: u32 = 32;
 
 impl Bubble {
     pub fn new(radius: f32, loudness: f32) -> Bubble {
@@ -39,8 +48,11 @@ impl Bubble {
             rise: 0.1 * damping,
             // Bigger bubbles radiate more: amplitude grows with r^1.5.
             amplitude: loudness * (radius / 0.001).powf(1.5),
-            phase: 0.0,
+            step: (-damping / SAMPLE_RATE as f32).exp(),
+            phasor: [1.0, 0.0],
+            turn: [1.0, 0.0],
             age: 0.0,
+            samples: 0,
         }
     }
 
@@ -51,10 +63,21 @@ impl Bubble {
     /// The next sample.
     pub fn sample(&mut self) -> f32 {
         let dt = 1.0 / SAMPLE_RATE as f32;
-        let frequency = self.frequency * (1.0 + self.rise * self.age);
-        self.phase = (self.phase + TAU * frequency * dt) % TAU;
+        if self.samples.is_multiple_of(REFRESH) {
+            let frequency = self.frequency * (1.0 + self.rise * self.age);
+            let angle = TAU * frequency * dt;
+            self.turn = [angle.cos(), angle.sin()];
+            // Keep the phasor on the unit circle against rounding.
+            let norm = self.phasor[0].hypot(self.phasor[1]);
+            self.phasor = [self.phasor[0] / norm, self.phasor[1] / norm];
+        }
+        self.samples += 1;
+        let [re, im] = self.phasor;
+        let [c, s] = self.turn;
+        self.phasor = [re * c - im * s, re * s + im * c];
         self.age += dt;
-        self.amplitude * (-self.damping * self.age).exp() * self.phase.sin()
+        self.amplitude *= self.step;
+        self.amplitude * self.phasor[1]
     }
 
     /// Whether it has died away below hearing (-60 dB).
