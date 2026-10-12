@@ -211,6 +211,87 @@ Fabric mod (Java)                                   foley-ffi (Rust cdylib, FFM)
 5. **M5 Ambient life, footsteps, settings, first prerelease.**
 6. **M6 Procedural mob voices (optional, off by default).** Vocal-tract models for the animals and monsters: source-filter synthesis, with formants and pitch from each mob's size and kind (a cow's low moo, a chicken's cluck, a villager's "hmm"). Each mob can be switched between Foley's voice and vanilla's.
 
+7. **M7 Voice engine 2, and the night's four.** A new voice engine (below) and the most-heard mobs on it.
+   - **Remade:** the eight from M6 (cow, pig, sheep, chicken, villager, zombie, wolf, cat).
+   - **The hostiles everyone meets every night, with their variants:**
+     - zombies (husk, drowned, zombie villager);
+     - skeletons (stray, bogged): a dry rasp over rattling bones, which are M4's modal impacts;
+     - spiders (cave spider): stridulation chitter and hiss;
+     - creepers: the fuse hiss, as turbulent flow through a narrow opening.
+   - **Bats:** squeaks and FM chirps, the most common sound underground.
+8. **M8 Everyday animals.**
+   - horse, donkey and mule (whinny; a donkey's bray, alternating inhaled and exhaled voicing);
+   - goat (bleat, and its scream);
+   - llama and trader llama (hum);
+   - rabbit, fox (screech), parrot (its imitations drawn from Foley's voices);
+   - bee (a wingbeat buzz near 230 Hz);
+   - polar bear (growl);
+   - panda, frog, camel, armadillo, turtle, ocelot;
+   - the rest of the villager (yes, no, trade, celebrate), the wandering trader, and iron and snow golems (stone and metal creaks from M4's modes).
+9. **M9 Rarer Overworld hostiles.**
+   - enderman: inhaled, low, babbling pseudo-speech, and its stare cry;
+   - witch: a cackle, from a laughter model of rhythmic bursts with gasps;
+   - slime: wet squelches;
+   - phantom: a screech with deterministic chaos;
+   - the illagers (pillager, vindicator, evoker): muttered pseudo-speech, scoffs, a darker "hmm";
+   - ravager: a roar from a long tract;
+   - vex: chirps;
+   - guardian and elder guardian: underwater moans;
+   - silverfish and endermite: chitter.
+10. **M10 The Nether and the End.**
+    - piglins and brutes: snorting grunts and mutters;
+    - zombified piglin;
+    - hoglin and zoglin: big, rough roars;
+    - ghast: a wail with sobs and inhaled gasps, never a scream;
+    - blaze: fire-breath roar and its rods' clatter;
+    - magma cube, strider (warbles), wither skeleton, shulker;
+    - the ender dragon and the wither.
+11. **M11 Rare and special.**
+    - warden: heartbeat, sniffing, a deep roar;
+    - breeze: aeolian whistles from M1;
+    - creaking: stick-slip wood creaks;
+    - allay: hums;
+    - sniffer, dolphin (whistles and clicks), axolotl, glow squid, tadpole, and fish flopping (M4 impacts).
+
+Each of M7–M11 is one release, ordered by how often players hear the mobs (spawn weights, where they live, how loud they are), so each release covers as much as it can. Every mob stays switchable between Foley's voice and the game's.
+
+## Mob voices, M7 onward: the voice engine and the brief (2026-10-12)
+
+**The brief:**
+- Realistic above all.
+- Hostile mobs unsettling, but not outright horror: no shrieks, jump scares or sudden loud onsets on ambient calls, and never louder than the game's.
+- Human voices where the mob is human-like; animal ones where it isn't. Mobs with no voice (skeletons, creepers, spiders) sound like what they are made of.
+
+**What the research says makes a voice real, and what makes it unsettling:**
+
+- **Nonlinear vocal phenomena** are subharmonics, sidebands, deterministic chaos and pitch jumps. Anikin's soundgen work shows they can be added parametrically to synthetic human and animal calls that listeners take for real. Chaos reads as aversive (fear, pain). Subharmonics read as dominant, and harsh voices as large. The effect is strongest in ambiguous sounds such as moans and gasps (Anikin 2020; Anikin, Pisanski and Reby 2021). Nonlinear phenomena also make synthetic animal calls alarming to human listeners (Massenet et al. 2022; Terrade et al. 2025). This is the main lever: real voices do this when distressed, so used in measure it is unsettling without being fake.
+- **Roughness:** amplitude modulation at 30–150 Hz is what screams and alarms share, and it engages the amygdala (Arnal et al. 2015). For hostiles it is used sparingly and at low depth, so it unsettles without alarming.
+- **Nonlinearity in film:** horror soundtracks are dense with nonlinear elements, while dramas use abrupt frequency changes (Blumstein, Davitian and Kaye 2010). Foley stays at the drama end.
+- **Size from formant spacing:** formants follow vocal-tract length, and listeners read body size from formant spacing and pitch, as M6 already uses (Fitch 1997). A mismatch between a human-like voice and too-long a tract reads as "something off". Used for the enderman.
+- **Quality and speed:** recent lightweight vocoders show that a parameter-free DSP source–filter vocoder (periodic plus noise excitation, F0 and periodicity, a vocal-tract filter) can match neural vocoders at a tiny fraction of the cost (Meta's ultra-lightweight DDSP vocoder, 2024; articulatory DDSP, 2024). Foley needs no neural network: its control comes from the mob's behaviour and anatomy, not a learnt model. That keeps it deterministic and cheap.
+- **Nonverbal vocalizations:** current TTS research (NonverbalTTS 2025, NVBench 2026) treats breaths, sighs, groans, grunts and laughs as the hard, expressive part of a voice. Foley's mobs are almost entirely made of these, so the engine is built around them rather than words.
+
+**The engine:**
+
+- **Source:** the Liljencrants–Fant glottal flow model, set by the single Rd parameter (Fant 1995), which runs from pressed and creaky through modal to breathy. Aspiration noise is modulated by the glottal flow. On top come the nonlinear phenomena above: subharmonics (every *n*th pulse), sidebands (amplitude modulation), chaos (bursts of strong jitter and shimmer) and pitch jumps. Creak (vocal fry) is irregular pulses at 20–70 Hz.
+- **Ingressive phonation:** voicing on the in-breath, as a donkey brays and as a groan catches. Its spectrum differs (noisier, higher), and it is quietly unsettling in a human-like voice.
+- **Tract:** a Kelly–Lochbaum digital waveguide of about 40 sections, with an area function for each target (vowels, closures, a tube for animals). Transitions between targets give coarticulation for free. It has a nasal branch, with frication noise injected where the tract narrows and the flow is high. One waveguide costs a few million operations per second of sound. Calls are rendered off-thread as generated one-shots, as now, so nothing runs per frame.
+- **Expressivity:** each call is made from arousal and valence, which set its pitch, effort (Rd), loudness and how many nonlinear phenomena it has. Ambient calls sit low, hurt calls are high and short, and death calls fall and fade. More variants per call (16 to 24) avoid repetition. Hostiles get more chaos, subharmonics and creak, breath, and ingressive gasps, held below the level where it turns to horror.
+
+**Sources:**
+- Anikin, *Soundgen*, 2019: https://cran.r-universe.dev/soundgen
+- Anikin, *The perceptual effects of manipulating nonlinear phenomena in synthetic nonverbal vocalizations*, Bioacoustics 2020: https://bioacoustics.info/article/perceptual-effects-manipulating-nonlinear-phenomena-synthetic-nonverbal-vocalizations
+- Anikin, Pisanski and Reby, *Harsh is large*, 2021: https://comm.ucla.edu/wp-content/uploads/2026/01/Anikin-et-al.-2021-Harsh-is-large-nonlinear-vocal-phenomena-lower-vo.pdf
+- Massenet et al., *Nonlinear vocal phenomena affect human perceptions*, 2022: https://comm.ucla.edu/wp-content/uploads/2026/01/Massenet-et-al.-2022-Nonlinear-vocal-phenomena-affect-human-perceptions.pdf
+- Terrade et al., *Nonlinear phenomena make animal calls alarming for human listeners*, 2025: https://comm.ucla.edu/wp-content/uploads/2026/01/Terrade-et-al.-2025-Nonlinear-phenomena-make-animal-calls-alarming-for-human-listeners.pdf
+- Arnal et al., *Human screams occupy a privileged niche*, 2015: https://pmc.ncbi.nlm.nih.gov/articles/PMC4562283
+- Blumstein, Davitian and Kaye, film soundtracks and nonlinearity, 2010: https://www.sciencenews.org/article/chaos-makes-scream-seem-real
+- *Ultra-lightweight neural differential DSP vocoder*, 2024: https://www.alphaxiv.org/abs/2401.10460
+- *Articulatory synthesis using differentiable DSP*, 2024: https://www.researchgate.net/publication/383753320_Fast_High-Quality_and_Parameter-Efficient_Articulatory_Synthesis_using_Differentiable_DSP
+- *Four decades of digital waveguides*, 2026: https://arxiv.org/pdf/2604.12878
+- NonverbalTTS, 2025: https://arxiv.org/html/2507.13155
+- NVBench, 2026: https://arxiv.org/html/2604.16211v2
+
 ## Risks
 
 | Risk | Mitigation |
