@@ -255,6 +255,33 @@ Fabric mod (Java)                                   foley-ffi (Rust cdylib, FFM)
 
 Each of M7–M11 is one release, ordered by how often players hear the mobs (spawn weights, where they live, how loud they are), so each release covers as much as it can. Every mob stays switchable between Foley's voice and the game's.
 
+## M7 results: voice engine 2, and the night's four (2026-10-12)
+
+- **The engine is built as planned:**
+  - **LF source with Rd:** Fant's regressions give Ra, Rk and Rg, and α and ε are solved so the net flow is zero. Tables cover Rd 0.3 to 2.7.
+  - **Nonlinear phenomena:** jitter, shimmer, subharmonics, sidebands, chaos with pitch jumps, and creak.
+  - **Ingressive voicing:** each pulse is played time-reversed, breathier.
+  - **Tract:** a Kelly–Lochbaum waveguide in pressure waves, 3.6 mm sections at two steps a sample, with a three-way velum junction to a nasal tube, wall losses, and frication injected at constrictions. The tongue follows Pink Trombone's model.
+- **Measured:**
+  - A uniform 17 cm tube resonates at c/4L (504 Hz), and a 45 cm one at 191 Hz.
+  - The vowels were tuned against Peterson and Barney's men's formants, and a test holds each within 20 % ([i] 300/2310 Hz, [ɛ] 510/1820, [æ] 640/1690, [ʌ] 730/1220, [ɑ] 720/1110). My first shapes (open-mouthed back vowels) gave near-uniform tubes, which a spectrogram showed.
+  - The first breath noise also swamped the harmonics above 2 kHz; it now sits about 10 dB down and is darker.
+- **Mobs:**
+  - The eight from M6 are remade on the new engine.
+  - Zombie kin (husk: dry and rasping; drowned: gurgling in air, muffled with bubbles under water; zombie villager: nasal).
+  - Skeletons are free-bar bone modes (E = 17 GPa, ρ = 1900 kg/m³) as teeth chatter and knocks, with sometimes a faint dry breath. Death is every bone falling and bouncing. Strays add rime ticks; bogged ones are damp and drip.
+  - Spiders are stridulation (a file of teeth at 300–700 a second ringing chitin), mandible ticks and hissing; cave spiders are smaller and higher.
+  - The creeper's fuse is a turbulent hiss that swells over 1.5 s, fluttering, with sparks and a faint rising whistle. Hurt, its leafy body crunches; dying, it deflates.
+  - Bats are social squeaks sweeping down from about 15 kHz, and wing flutter.
+  - Wolves gain growls (rumbling out and in), pants and whines. Cats gain purrs (about 25 pulses a second on both breaths), hisses and begging meows.
+- **Zombies close in** (asked for 2026-10-12):
+  - Within 8 blocks, a zombie's ambient call is its strained one: pressed harder, rougher, louder, breathing hard after.
+  - Further, it's a little quieter.
+  - Within 10 blocks, each of the four nearest breathes, the sound following it. At the edge, steady breaths every 3 s or so; within 4.5 blocks, heavy, ragged and voiced, about every second. It gets louder the closer the zombie is. A drowned under water doesn't breathe.
+- **Settings:** the voice switches are now groups. Zombies cover husks, drowned and zombie villagers; skeletons cover strays and bogged. New groups: spiders, creepers and bats.
+- **Cost:** each call variant is made once, off-thread: a zombie groan in 10 ms, a cow's moo in 25 ms, a creeper's fuse in 1 ms.
+- **Checks:** the gametest switches zombies and creepers on, summons a zombie three blocks away and checks it breathes, and checks a creeper's fuse is Foley's. `voice_samples` and `spectrogram` render the calls for listening and looking.
+
 ## Mob voices, M7 onward: the voice engine and the brief (2026-10-12)
 
 **The brief:**

@@ -24,7 +24,7 @@ import net.minecraft.sounds.SoundSource;
  * Foley's thunder and the game's is skipped (M3); breaking glass and stepping down on stone layer Foley's modal
  * strikes and shatters under the game's sounds (M4), and a footstep too (M5); crickets chirp in the grass at night,
  * the bypass gives the game its sounds back, and the settings open from Music &amp; Sounds (M5); a sheep switched to
- * Foley's voice is voiced by it (M6); and a generated
+ * Foley's voice is voiced by it (M6), a nearby zombie breathes and a creeper's fuse hisses (M7); and a generated
  * one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null
  * backend.
  */
@@ -181,6 +181,26 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 				FoleyClient.apply(settings);
 			});
 			if (FoleyClient.replaced() != beforeVoice + 1) throw new AssertionError("the sheep wasn't voiced by Foley");
+
+			// Voice engine 2 (M7): with zombies and creepers voiced, a zombie three blocks off breathes, and a creeper's
+			// fuse is Foley's.
+			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
+					settings.volume(), settings.rain(), settings.wind(), settings.thunder(), settings.water(),
+					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
+					settings.birds(), settings.crickets(), settings.frogs(), (1 << 5) | (1 << 10))));
+			singleplayer.getServer().runCommand("summon zombie ~3 ~ ~ {NoAI:1b,PersistenceRequired:1b}");
+			try {
+				context.waitFor(mc -> FoleyClient.breathing().breaths() > 0, 10 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("the zombie never breathed", e);
+			}
+			int beforeFuse = FoleyClient.replaced();
+			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CREEPER_PRIMED,
+					SoundSource.HOSTILE, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),
+					mc.player.getZ())));
+			if (FoleyClient.replaced() != beforeFuse + 1) throw new AssertionError("the creeper's fuse wasn't Foley's");
+			singleplayer.getServer().runCommand("kill @e[type=zombie]");
+			context.runOnClient(mc -> FoleyClient.apply(settings));
 
 			// The settings, where players look first: Options → Music & Sounds → Foley.
 			context.setScreen(() -> new SoundOptionsScreen(null, Minecraft.getInstance().options));

@@ -70,8 +70,8 @@ public final class FoleyScreen extends OptionsSubScreen {
 		birds = added("foley.settings.birds", config.birds());
 		crickets = added("foley.settings.crickets", config.crickets());
 		frogs = added("foley.settings.frogs", config.frogs());
-		for (int i = 0; i < io.github.cumsauce.foley.audio.Voices.MOBS.size(); i++) {
-			String mob = io.github.cumsauce.foley.audio.Voices.MOBS.get(i);
+		for (int i = 0; i < io.github.cumsauce.foley.audio.Voices.GROUPS.size(); i++) {
+			String mob = io.github.cumsauce.foley.audio.Voices.GROUPS.get(i);
 			voices.add(new OptionInstance<>("entity.minecraft." + mob,
 					OptionInstance.cachedConstantTooltip(Component.translatable("foley.settings.voice.tooltip")),
 					(caption, value) -> Component.translatable(

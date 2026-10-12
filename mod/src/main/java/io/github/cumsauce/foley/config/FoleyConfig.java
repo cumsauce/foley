@@ -30,7 +30,7 @@ import java.nio.file.Path;
  * @param birds      birdsong (added)
  * @param crickets   crickets (added)
  * @param frogs      frogs (added)
- * @param voices     which mobs Foley voices (M6), a bit each in {@code Voices.MOBS}' order; none by default
+ * @param voices     which mobs Foley voices (M6, M7), a bit each in {@code Voices.GROUPS}' order; none by default
  */
 public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunder, boolean water, boolean fire,
 		boolean lava, boolean drips, boolean strikes, boolean footsteps, boolean birds, boolean crickets,
@@ -38,7 +38,7 @@ public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunde
 	public static final FoleyConfig DEFAULT = new FoleyConfig(100, true, true, true, true, true, true, true, true, true,
 			true, true, true, 0);
 
-	/** Whether Foley voices the mob at {@code index} in {@code Voices.MOBS}. */
+	/** Whether Foley voices the group at {@code index} in {@code Voices.GROUPS}. */
 	public boolean voice(int index) {
 		return index >= 0 && (voices & (1 << index)) != 0;
 	}
@@ -102,9 +102,9 @@ public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunde
 		return json;
 	}
 
-	/** The mobs, as {@code Voices.MOBS} (kept here so this class needs nothing of the game's). */
+	/** The groups, as {@code Voices.GROUPS} (kept here so this class needs nothing of the game's). */
 	static final java.util.List<String> MOBS = java.util.List.of("cow", "pig", "sheep", "chicken", "villager",
-			"zombie", "wolf", "cat");
+			"zombie", "wolf", "cat", "skeleton", "spider", "creeper", "bat");
 
 	private static int voices(JsonObject json) {
 		if (!(json.get("voices") instanceof JsonObject mobs)) return DEFAULT.voices;

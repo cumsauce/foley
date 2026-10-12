@@ -138,6 +138,38 @@ fn main() {
             start.elapsed().as_secs_f64() * 1e3
         );
     }
+    table += "\n### Voices\n\nEach variant made once, off-thread, the first time it plays.\n\n| Call | Time to make it | Length |\n| --- | --- | --- |\n";
+    for (name, mob, call) in [
+        (
+            "Zombie groan",
+            foley_synth::Mob::Zombie,
+            foley_synth::Call::Ambient,
+        ),
+        (
+            "Zombie breathing hard",
+            foley_synth::Mob::Zombie,
+            foley_synth::Call::BreathHeavy,
+        ),
+        ("Cow moo", foley_synth::Mob::Cow, foley_synth::Call::Ambient),
+        (
+            "Creeper fuse",
+            foley_synth::Mob::Creeper,
+            foley_synth::Call::Primed,
+        ),
+        (
+            "Skeleton coming apart",
+            foley_synth::Mob::Skeleton,
+            foley_synth::Call::Death,
+        ),
+    ] {
+        let start = Instant::now();
+        let sound = foley_synth::voice(mob, call, 1);
+        table += &format!(
+            "| {name} | {:.1} ms | {:.1} s |\n",
+            start.elapsed().as_secs_f64() * 1e3,
+            sound.len() as f64 / f64::from(SAMPLE_RATE)
+        );
+    }
     print!("{table}");
     if let Ok(summary) = std::env::var("GITHUB_STEP_SUMMARY") {
         use std::io::Write;

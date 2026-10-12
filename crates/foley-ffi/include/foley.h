@@ -19,8 +19,10 @@
  * 7: ambient life one-shots: crickets, birdsong, frogs.
  * 8: footsteps, and snow as a material.
  * 9: mob voices, `foley_render_voice`.
+ * 10: voice engine 2: more mobs (zombies' kin, skeletons, spiders, creepers,
+ *     bats) and calls (growls, purrs, the fuse, breathing, …).
  */
-#define FOLEY_ABI_VERSION 9
+#define FOLEY_ABI_VERSION 10
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -95,15 +97,17 @@
 
 /**
  * Mobs for `foley_render_voice`: cow, pig, sheep, chicken, villager,
- * zombie, wolf, cat; and their calls: ambient, hurt, death.
+ * zombie, wolf, cat, husk, drowned, zombie villager, skeleton, stray, bogged,
+ * spider, cave spider, creeper, bat.
  */
-#define FOLEY_MOBS 8
+#define FOLEY_MOBS 18
 
-#define FOLEY_CALL_AMBIENT 0
-
-#define FOLEY_CALL_HURT 1
-
-#define FOLEY_CALL_DEATH 2
+/**
+ * Calls: ambient, hurt, death, growl, pant, whine, hiss, purr, beg, primed
+ * (a creeper's fuse), ambient, hurt and death under water, breath, heavy
+ * breath, and ambient close by. A call a mob doesn't have is its ambient one.
+ */
+#define FOLEY_CALLS 16
 
 #define FOLEY_OK 0
 

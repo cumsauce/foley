@@ -30,7 +30,9 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 /// 7: ambient life one-shots: crickets, birdsong, frogs.
 /// 8: footsteps, and snow as a material.
 /// 9: mob voices, `foley_render_voice`.
-pub const FOLEY_ABI_VERSION: u32 = 9;
+/// 10: voice engine 2: more mobs (zombies' kin, skeletons, spiders, creepers,
+///     bats) and calls (growls, purrs, the fuse, breathing, …).
+pub const FOLEY_ABI_VERSION: u32 = 10;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -79,11 +81,13 @@ pub const FOLEY_CONTACT_BREAK: i32 = 3;
 pub const FOLEY_CONTACT_STEP: i32 = 4;
 
 /// Mobs for `foley_render_voice`: cow, pig, sheep, chicken, villager,
-/// zombie, wolf, cat; and their calls: ambient, hurt, death.
-pub const FOLEY_MOBS: usize = 8;
-pub const FOLEY_CALL_AMBIENT: i32 = 0;
-pub const FOLEY_CALL_HURT: i32 = 1;
-pub const FOLEY_CALL_DEATH: i32 = 2;
+/// zombie, wolf, cat, husk, drowned, zombie villager, skeleton, stray, bogged,
+/// spider, cave spider, creeper, bat.
+pub const FOLEY_MOBS: usize = 18;
+/// Calls: ambient, hurt, death, growl, pant, whine, hiss, purr, beg, primed
+/// (a creeper's fuse), ambient, hurt and death under water, breath, heavy
+/// breath, and ambient close by. A call a mob doesn't have is its ambient one.
+pub const FOLEY_CALLS: usize = 16;
 
 pub const FOLEY_OK: i32 = 0;
 /// A null pointer or out-of-range value.
@@ -608,7 +612,7 @@ mod tests {
     #[test]
     fn every_mob_speaks() {
         for mob in 0..FOLEY_MOBS as i32 {
-            for call in [FOLEY_CALL_AMBIENT, FOLEY_CALL_HURT, FOLEY_CALL_DEATH] {
+            for call in 0..FOLEY_CALLS as i32 {
                 let mut needed = 0;
                 // SAFETY: a null buffer with capacity 0 is not written.
                 unsafe {
@@ -632,7 +636,7 @@ mod tests {
         // SAFETY: a null buffer with capacity 0 is not written.
         unsafe {
             assert_eq!(
-                foley_render_voice(8, 0, 1, std::ptr::null_mut(), 0, &mut needed),
+                foley_render_voice(18, 0, 1, std::ptr::null_mut(), 0, &mut needed),
                 FOLEY_ERR_INVALID_ARGUMENT
             );
         }

@@ -32,11 +32,15 @@ public final class GeneratedSounds {
 	private static short @org.jspecify.annotations.Nullable [] life(NativeBridge bridge, String model, int variant,
 			short @org.jspecify.annotations.Nullable [] otherwise) {
 		if (model.startsWith("voice_")) {
-			String[] parts = model.split("_");
-			int mob = Voices.MOBS.indexOf(parts[1]);
-			int call = parts.length > 2 ? Voices.CALLS.indexOf(parts[2]) : -1;
-			if (mob < 0 || call < 0) return otherwise;
-			return bridge.renderVoice(mob, call, 0x701CEL * (mob + 1) + 31L * call + variant);
+			// voice_<mob>_<call>, where both may have underscores: the longest mob that fits.
+			String rest = model.substring("voice_".length());
+			String mob = Voices.MOBS.stream().filter(m -> rest.startsWith(m + "_"))
+					.max(java.util.Comparator.comparingInt(String::length)).orElse(null);
+			if (mob == null) return otherwise;
+			int call = Voices.CALLS.indexOf(rest.substring(mob.length() + 1));
+			if (call < 0) return otherwise;
+			int m = Voices.MOBS.indexOf(mob);
+			return bridge.renderVoice(m, call, 0x701CEL * (m + 1) + 31L * call + variant);
 		}
 		int split = model.lastIndexOf('_');
 		if (split < 0) return otherwise;

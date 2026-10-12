@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class NativeBridge {
 	/** Must equal {@code FOLEY_ABI_VERSION} in {@code foley.h}. */
-	public static final int ABI_VERSION = 9;
+	public static final int ABI_VERSION = 10;
 	/** Surfaces rain lands on, in the order its scene takes them. */
 	public static final int SURFACES = 7;
 	public static final int SAMPLE_RATE = 48_000;
@@ -141,7 +141,7 @@ public final class NativeBridge {
 		return out;
 	}
 
-	/** A {@code call} (0 ambient, 1 hurt, 2 death) of {@code mob} ({@code Voices.MOBS}), as 16-bit PCM. */
+	/** A {@code call} ({@code Voices.CALLS}) of {@code mob} ({@code Voices.MOBS}), as 16-bit PCM. */
 	public short[] renderVoice(int mob, int call, long seed) {
 		long[] needed = new long[1];
 		check((int) invoke(renderVoice, mob, call, seed, MemorySegment.ofArray(new short[0]), 0L,

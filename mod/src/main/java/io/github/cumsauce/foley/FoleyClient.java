@@ -1,6 +1,7 @@
 package io.github.cumsauce.foley;
 
 import com.mojang.brigadier.arguments.FloatArgumentType;
+import io.github.cumsauce.foley.audio.Breathing;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
 import io.github.cumsauce.foley.config.FoleyConfig;
 import io.github.cumsauce.foley.ui.BypassKey;
@@ -37,6 +38,7 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable PlacedBeds placed;
 	private static @Nullable ThunderController thunder;
 	private static @Nullable Life life;
+	private static @Nullable Breathing breathing;
 	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
 	private static volatile boolean bypassed;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
@@ -106,6 +108,11 @@ public final class FoleyClient implements ClientModInitializer {
 		return life;
 	}
 
+	/** The zombies' breathing, or null if Foley is off. */
+	public static @Nullable Breathing breathing() {
+		return breathing;
+	}
+
 	/** Counts a game sound Foley replaced (skipped). */
 	public static void countReplaced() {
 		replaced.incrementAndGet();
@@ -162,6 +169,9 @@ public final class FoleyClient implements ClientModInitializer {
 		Life living = new Life();
 		life = living;
 		ClientTickEvents.END_CLIENT_TICK.register(living::tick);
+		Breathing breaths = new Breathing();
+		breathing = breaths;
+		ClientTickEvents.END_CLIENT_TICK.register(breaths::tick);
 		registerCommands(loaded);
 	}
 
