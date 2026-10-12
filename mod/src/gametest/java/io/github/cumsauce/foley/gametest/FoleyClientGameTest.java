@@ -19,7 +19,7 @@ import net.minecraft.sounds.SoundSource;
  * (M1); the wind blows out in the open and drops under a roof (M1); a waterfall, a fire and a pool of lava each start
  * a bed placed where they are, and a dripstone drip is swapped for a generated one (M2); a lightning bolt strikes
  * Foley's thunder and the game's is skipped (M3); breaking glass and stepping down on stone layer Foley's modal
- * strikes and shatters under the game's sounds (M4); and a generated one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null backend.
+ * strikes and shatters under the game's sounds (M4); crickets chirp in the grass at night (M5); and a generated one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null backend.
  */
 @SuppressWarnings("UnstableApiUsage")
 public class FoleyClientGameTest implements FabricClientGameTest {
@@ -133,6 +133,14 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			});
 			if (FoleyClient.layered() < layeredBefore + 2) {
 				throw new AssertionError("strikes weren't layered: " + (FoleyClient.layered() - layeredBefore));
+			}
+
+			// Life: at midnight on a superflat's grass, crickets chirp.
+			singleplayer.getServer().runCommand("time set midnight");
+			try {
+				context.waitFor(mc -> FoleyClient.life().calls() > 0, 15 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("no crickets at night", e);
 			}
 
 			// The one-shot: a generated buffer, played like any sound.

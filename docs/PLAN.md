@@ -33,7 +33,7 @@ Checked against the 26.3 game and Fabric API (2026-10-12):
 | **Lava** | Viscous bubble bursts: slow, low Minnaert-like bubbles with heavy damping, occasional pops | Lava blocks nearby |
 | **Impacts and breaking** | Modal synthesis: each material's modes (frequencies, damping, gains) from its density, stiffness and the block's size; fracture as a burst of small modal fragments (glass shatter, stone crack) | Block breaks, hits, landings |
 | **Footsteps** (optional layer) | Modal contact on the block's material, plus granular crunch for snow, gravel and sand (the grain count follows weight and speed) | Player and mob movement |
-| **Ambient life** | Insects as FM chirps with temperature-dependent rate (Dolbear's law for crickets: chirps/min ≈ 7·T + 30, T in °C); birdsong from a syrinx-inspired FM model | Biome, time of day, temperature, weather |
+| **Ambient life** | Crickets with temperature-dependent rate (Dolbear's law: chirps/min ≈ 7.2·T − 32, T in °C); birdsong from a syrinx model (a self-sustained labial oscillator); frogs as glottal pulses through a vocal-sac resonance | Biome, time of day, temperature, weather |
 
 ## With or instead of vanilla (decided 2026-10-12)
 
@@ -151,6 +151,18 @@ Fabric mod (Java)                                   foley-ffi (Rust cdylib, FFM)
   - **Others:** earth and gravel crumble in grains; plants snap and rustle; metal and soft blocks give a dull blow.
 - **Delivery:** 4 contacts × 9 materials × 8 variants are generated one-shots (`foley:<contact>_<material>`). Each is made once, the first time it plays, on the game's background executor, as the game loads files. A glass shatter takes 27 ms to make, a tap well under 1 ms (bed_bench).
 - The client gametest plays the game's glass breaking and a fall on stone, and checks both got Foley's layer.
+
+## M5 results, part 1: ambient life (2026-10-12)
+
+- **Crickets:** a field cricket's chirp is 3 or 4 syllables, one for each closing stroke of the wings, 15 ms long and 35 ms apart. Each is a nearly pure tone near 4.5 kHz from the harp, rising 40 Hz per °C and gliding down 3 % as the stroke slows. Chirps come at Dolbear's rate: T°F = 50 + (N − 40)/4, so N ≈ 7.2·T°C − 32, or 112 a minute at 20 °C. Below about 8 °C there are none. (The plan's first draft had the formula wrong.)
+- **Birdsong:** the syrinx's labia are a self-sustained van der Pol oscillator, x″ = μω(p − x²)x′ − ω²x, after Mindlin and Laje. The air sac's pressure p sets them going, and below threshold they fall silent. The syringeal muscles' tension sets ω, following each syllable's pitch contour. The integrator is semi-implicit Euler with ω pre-warped so it rings at the intended pitch. A tracking band-pass stands in for the trachea and beak, which songbirds tune to the note. Each of 12 species is made up from its number: 2 to 4 kinds of syllable (whistles, sweeps, trills) between 1.5 and 8 kHz, sung in a motif with repeats. Each rendition varies a little, and some are cut short.
+- **Frogs:** glottal pulses, 60 to 150 a second, ring the vocal sac as a resonance. A 3 cm tree frog's is about 2.5 kHz and a 15 cm bullfrog's 500 Hz, with a weaker one at 2.3 times that. Calls come in 1 to 3 notes.
+- **In the game** (`Life`), only in the Overworld, and only outside enough (the wind's exposure over 0.2):
+  - **Birds:** sing from a random leafy treetop within 24 blocks, about one song every 4 s by day, three times as many at dawn, none in the rain. Each biome draws from its own three species.
+  - **Crickets:** up to 4, each settled on a grass block within 14 blocks, chirp on and on at night from 10 °C (the biome's temperature, 5 °C cooler at night).
+  - **Frogs:** call from still water at night or in the rain, often in swamps, where they're bigger.
+  Each call is a generated one-shot played where the animal is, so it pans and Earshot shapes it. Variants: 12 species × 4 songs, crickets at 5 temperatures × 4, frogs at 3 sizes × 4.
+- The client gametest sets midnight on a superflat and checks crickets chirp.
 
 ## Milestones
 

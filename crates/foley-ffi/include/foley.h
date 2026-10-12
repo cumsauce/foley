@@ -16,8 +16,9 @@
  *    one-shots through `foley_render_one_shot`.
  * 5: thunder, a bed struck by `foley_bed_strike`.
  * 6: strikes and breaks on materials, `foley_render_contact`.
+ * 7: ambient life one-shots: crickets, birdsong, frogs.
  */
-#define FOLEY_ABI_VERSION 6
+#define FOLEY_ABI_VERSION 7
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -54,13 +55,21 @@
 
 /**
  * One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
- * water drips, and unused for lava.
+ * water drips (0.1 to 10), and unused for lava; the air's temperature in °C
+ * for crickets (-30 to 50); the species (0 to 1000) for birdsong; the body
+ * length in cm for a frog (2 to 20).
  */
 #define FOLEY_SHOT_DRIP_INTO_WATER 0
 
 #define FOLEY_SHOT_DRIP_ON_STONE 1
 
 #define FOLEY_SHOT_LAVA_DRIP 2
+
+#define FOLEY_SHOT_CRICKETS 3
+
+#define FOLEY_SHOT_BIRDSONG 4
+
+#define FOLEY_SHOT_FROG 5
 
 /**
  * Materials for `foley_render_contact`: stone, wood, metal, glass, ice,

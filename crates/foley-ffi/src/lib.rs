@@ -13,8 +13,8 @@ mod guard;
 
 use foley_synth::{
     Contact, Fire, FireScene, Lava, LavaScene, Material, Rain, RainScene, Surface, Thunder,
-    ThunderScene, Water, WaterScene, Wind, WindScene, contact, drip_into_water, drip_on_stone,
-    fracture, lava_drip, to_pcm,
+    ThunderScene, Water, WaterScene, Wind, WindScene, birdsong, contact, crickets, drip_into_water,
+    drip_on_stone, fracture, frog, lava_drip, to_pcm,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -27,7 +27,8 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 ///    one-shots through `foley_render_one_shot`.
 /// 5: thunder, a bed struck by `foley_bed_strike`.
 /// 6: strikes and breaks on materials, `foley_render_contact`.
-pub const FOLEY_ABI_VERSION: u32 = 6;
+/// 7: ambient life one-shots: crickets, birdsong, frogs.
+pub const FOLEY_ABI_VERSION: u32 = 7;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -54,10 +55,15 @@ pub const FOLEY_BED_LAVA: i32 = 4;
 pub const FOLEY_BED_THUNDER: i32 = 5;
 
 /// One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
-/// water drips, and unused for lava.
+/// water drips (0.1 to 10), and unused for lava; the air's temperature in °C
+/// for crickets (-30 to 50); the species (0 to 1000) for birdsong; the body
+/// length in cm for a frog (2 to 20).
 pub const FOLEY_SHOT_DRIP_INTO_WATER: i32 = 0;
 pub const FOLEY_SHOT_DRIP_ON_STONE: i32 = 1;
 pub const FOLEY_SHOT_LAVA_DRIP: i32 = 2;
+pub const FOLEY_SHOT_CRICKETS: i32 = 3;
+pub const FOLEY_SHOT_BIRDSONG: i32 = 4;
+pub const FOLEY_SHOT_FROG: i32 = 5;
 
 /// Materials for `foley_render_contact`: stone, wood, metal, glass, ice,
 /// earth, granular (sand, gravel), plant, soft (wool, snow).
@@ -332,6 +338,12 @@ pub unsafe extern "C" fn foley_render_one_shot(
             FOLEY_SHOT_DRIP_INTO_WATER => drip_into_water(drop_size()?, seed),
             FOLEY_SHOT_DRIP_ON_STONE => drip_on_stone(drop_size()?, seed),
             FOLEY_SHOT_LAVA_DRIP => lava_drip(seed),
+            FOLEY_SHOT_CRICKETS if (-30.0..=50.0).contains(&size) => crickets(size, seed),
+            FOLEY_SHOT_BIRDSONG if (0.0..=1000.0).contains(&size) => birdsong(size as u32, seed),
+            FOLEY_SHOT_FROG if (2.0..=20.0).contains(&size) => frog(size, seed),
+            FOLEY_SHOT_CRICKETS | FOLEY_SHOT_BIRDSONG | FOLEY_SHOT_FROG => {
+                return Err(FfiError::invalid("size out of range"));
+            }
             _ => return Err(FfiError::invalid("unknown one-shot kind")),
         };
         if let Some(dest) = out.get_mut(..sound.len()) {
@@ -549,16 +561,19 @@ mod tests {
 
     #[test]
     fn a_one_shot_says_how_long_it_is_then_fills_the_buffer() {
-        for kind in [
-            FOLEY_SHOT_DRIP_INTO_WATER,
-            FOLEY_SHOT_DRIP_ON_STONE,
-            FOLEY_SHOT_LAVA_DRIP,
+        for (kind, size) in [
+            (FOLEY_SHOT_DRIP_INTO_WATER, 1.0),
+            (FOLEY_SHOT_DRIP_ON_STONE, 1.0),
+            (FOLEY_SHOT_LAVA_DRIP, 1.0),
+            (FOLEY_SHOT_CRICKETS, 22.0),
+            (FOLEY_SHOT_BIRDSONG, 5.0),
+            (FOLEY_SHOT_FROG, 8.0),
         ] {
             let mut needed = 0;
             // SAFETY: a null buffer with capacity 0 is not written.
             unsafe {
                 assert_eq!(
-                    foley_render_one_shot(kind, 1.0, 7, std::ptr::null_mut(), 0, &mut needed),
+                    foley_render_one_shot(kind, size, 7, std::ptr::null_mut(), 0, &mut needed),
                     FOLEY_OK
                 );
             }
@@ -567,7 +582,7 @@ mod tests {
             // SAFETY: `pcm` is writable for `needed` samples.
             unsafe {
                 assert_eq!(
-                    foley_render_one_shot(kind, 1.0, 7, pcm.as_mut_ptr(), needed, &mut needed),
+                    foley_render_one_shot(kind, size, 7, pcm.as_mut_ptr(), needed, &mut needed),
                     FOLEY_OK
                 );
             }

@@ -28,6 +28,26 @@ public final class GeneratedSounds {
 		return sound.getNamespace().equals("foley") && sound.getPath().startsWith(PREFIX);
 	}
 
+	/** A bird's song, a cricket's chirping or a frog's call ({@link Life}), or {@code otherwise}. */
+	private static short @org.jspecify.annotations.Nullable [] life(NativeBridge bridge, String model, int variant,
+			short @org.jspecify.annotations.Nullable [] otherwise) {
+		int split = model.lastIndexOf('_');
+		if (split < 0) return otherwise;
+		int n;
+		try {
+			n = Integer.parseInt(model.substring(split + 1));
+		} catch (NumberFormatException e) {
+			return otherwise;
+		}
+		long seed = 0x11FEL * (n + 1) + variant;
+		return switch (model.substring(0, split)) {
+			case "bird" -> bridge.renderOneShot(NativeBridge.SHOT_BIRDSONG, n, seed);
+			case "crickets" -> bridge.renderOneShot(NativeBridge.SHOT_CRICKETS, Life.CRICKET_CELSIUS[n], seed);
+			case "frog" -> bridge.renderOneShot(NativeBridge.SHOT_FROG, Life.FROG_CM[n], seed);
+			default -> otherwise;
+		};
+	}
+
 	/**
 	 * A strike or break ({@code <contact>_<material>}, see {@link Layers}), or null. Taps at 3 m/s (a swung tool),
 	 * blocks set down at 0.8, bodies landing at 5 (a fall of about 1.3 m).
@@ -71,7 +91,7 @@ public final class GeneratedSounds {
 			case "drip_stone" -> bridge.renderOneShot(NativeBridge.SHOT_DRIP_ON_STONE, 2f + 0.8f * variant / 15f,
 					0xD121 + variant);
 			case "drip_lava" -> bridge.renderOneShot(NativeBridge.SHOT_LAVA_DRIP, 1f, 0x1A7A + variant);
-			default -> contact(bridge, model, variant);
+			default -> life(bridge, model, variant, contact(bridge, model, variant));
 		};
 		if (pcm == null) return null;
 		ByteBuffer data = ByteBuffer.allocateDirect(pcm.length * 2).order(ByteOrder.LITTLE_ENDIAN);

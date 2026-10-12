@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class NativeBridge {
 	/** Must equal {@code FOLEY_ABI_VERSION} in {@code foley.h}. */
-	public static final int ABI_VERSION = 6;
+	public static final int ABI_VERSION = 7;
 	/** Surfaces rain lands on, in the order its scene takes them. */
 	public static final int SURFACES = 7;
 	public static final int SAMPLE_RATE = 48_000;
@@ -36,6 +36,9 @@ public final class NativeBridge {
 	public static final int SHOT_DRIP_INTO_WATER = 0;
 	public static final int SHOT_DRIP_ON_STONE = 1;
 	public static final int SHOT_LAVA_DRIP = 2;
+	public static final int SHOT_CRICKETS = 3;
+	public static final int SHOT_BIRDSONG = 4;
+	public static final int SHOT_FROG = 5;
 	/** Contacts ({@code FOLEY_CONTACT_*}) with a material ({@code Materials}). */
 	public static final int CONTACT_TAP = 0;
 	public static final int CONTACT_PLACE = 1;
@@ -106,13 +109,16 @@ public final class NativeBridge {
 		check((int) invoke(bedStrike, bed, x, y, z, seed));
 	}
 
-	/** A one-shot of {@code kind} ({@code SHOT_*}), as 16-bit PCM; {@code sizeMm} is a drip's radius. */
-	public short[] renderOneShot(int kind, float sizeMm, long seed) {
+	/**
+	 * A one-shot of {@code kind} ({@code SHOT_*}), as 16-bit PCM. {@code size} is a drip's radius (mm), the air's
+	 * temperature for crickets (°C), a bird's species, or a frog's length (cm).
+	 */
+	public short[] renderOneShot(int kind, float size, long seed) {
 		long[] needed = new long[1];
-		check((int) invoke(renderOneShot, kind, sizeMm, seed, MemorySegment.ofArray(new short[0]), 0L,
+		check((int) invoke(renderOneShot, kind, size, seed, MemorySegment.ofArray(new short[0]), 0L,
 				MemorySegment.ofArray(needed)));
 		short[] out = new short[(int) needed[0]];
-		check((int) invoke(renderOneShot, kind, sizeMm, seed, MemorySegment.ofArray(out), (long) out.length,
+		check((int) invoke(renderOneShot, kind, size, seed, MemorySegment.ofArray(out), (long) out.length,
 				MemorySegment.ofArray(needed)));
 		return out;
 	}

@@ -2,6 +2,7 @@ package io.github.cumsauce.foley;
 
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
+import io.github.cumsauce.foley.audio.Life;
 import io.github.cumsauce.foley.audio.PlacedBeds;
 import io.github.cumsauce.foley.audio.Replacements;
 import io.github.cumsauce.foley.audio.ThunderController;
@@ -32,6 +33,7 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable WindController wind;
 	private static @Nullable PlacedBeds placed;
 	private static @Nullable ThunderController thunder;
+	private static @Nullable Life life;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
 	private static final java.util.concurrent.atomic.AtomicInteger layered = new java.util.concurrent.atomic.AtomicInteger();
 
@@ -61,6 +63,11 @@ public final class FoleyClient implements ClientModInitializer {
 	/** What makes the thunder, or null if Foley is off. */
 	public static @Nullable ThunderController thunder() {
 		return thunder;
+	}
+
+	/** The birds, crickets and frogs, or null if Foley is off. */
+	public static @Nullable Life life() {
+		return life;
 	}
 
 	/** Counts a game sound Foley replaced (skipped). */
@@ -113,6 +120,9 @@ public final class FoleyClient implements ClientModInitializer {
 		thunder = rumbling;
 		ClientTickEvents.END_CLIENT_TICK.register(rumbling::tick);
 		ClientEntityEvents.ENTITY_LOAD.register((entity, level) -> rumbling.entityLoaded(entity));
+		Life living = new Life();
+		life = living;
+		ClientTickEvents.END_CLIENT_TICK.register(living::tick);
 		registerCommands(loaded);
 	}
 
