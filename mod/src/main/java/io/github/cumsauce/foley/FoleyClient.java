@@ -2,6 +2,9 @@ package io.github.cumsauce.foley;
 
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
+import io.github.cumsauce.foley.config.FoleyConfig;
+import io.github.cumsauce.foley.ui.BypassKey;
+import io.github.cumsauce.foley.ui.SoundOptionsButton;
 import io.github.cumsauce.foley.audio.Life;
 import io.github.cumsauce.foley.audio.PlacedBeds;
 import io.github.cumsauce.foley.audio.Replacements;
@@ -34,6 +37,8 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable PlacedBeds placed;
 	private static @Nullable ThunderController thunder;
 	private static @Nullable Life life;
+	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
+	private static volatile boolean bypassed;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
 	private static final java.util.concurrent.atomic.AtomicInteger layered = new java.util.concurrent.atomic.AtomicInteger();
 
@@ -58,6 +63,37 @@ public final class FoleyClient implements ClientModInitializer {
 	/** What keeps the water, fire and lava going, or null if Foley is off. */
 	public static @Nullable PlacedBeds placed() {
 		return placed;
+	}
+
+	/** The settings in use. */
+	public static FoleyConfig config() {
+		return config;
+	}
+
+	/** Uses {@code next} from now on, and saves it. */
+	public static void apply(FoleyConfig next) {
+		config = next;
+		next.save(configDir().resolve("foley.json"));
+	}
+
+	/** Whether the A/B key has switched Foley off for now. */
+	public static boolean bypassed() {
+		return bypassed;
+	}
+
+	public static void setBypassed(boolean bypassed) {
+		FoleyClient.bypassed = bypassed;
+	}
+
+	/** Whether Foley should make the sound {@code setting} picks: not bypassed, audible, and switched on. */
+	public static boolean wants(java.util.function.Predicate<FoleyConfig> setting) {
+		FoleyConfig now = config;
+		return !bypassed && now.volume() > 0 && setting.test(now);
+	}
+
+	/** Foley's volume as a gain, 0 to 1. */
+	public static float gain() {
+		return config.gain();
 	}
 
 	/** What makes the thunder, or null if Foley is off. */
@@ -105,6 +141,9 @@ public final class FoleyClient implements ClientModInitializer {
 			return;
 		}
 		bridge = loaded;
+		config = FoleyConfig.load(configDir().resolve("foley.json"));
+		SoundOptionsButton.register();
+		BypassKey.register();
 		GeneratedSounds.use(loaded);
 		LOGGER.info("Started Foley's native synthesis (ABI {})", NativeBridge.ABI_VERSION);
 		RainController controller = new RainController(loaded);

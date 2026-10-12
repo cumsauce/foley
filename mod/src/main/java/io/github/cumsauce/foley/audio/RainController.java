@@ -28,7 +28,7 @@ public final class RainController {
 
 	/** Whether Foley is making the rain, so the game's own rain sounds are skipped. */
 	public boolean replacing() {
-		return true;
+		return io.github.cumsauce.foley.FoleyClient.wants(io.github.cumsauce.foley.config.FoleyConfig::rain);
 	}
 
 	public RainScene scene() {
@@ -47,6 +47,10 @@ public final class RainController {
 
 	public void tick(Minecraft minecraft) {
 		if (minecraft.level == null) {
+			stop(minecraft);
+			return;
+		}
+		if (!replacing()) {
 			stop(minecraft);
 			return;
 		}

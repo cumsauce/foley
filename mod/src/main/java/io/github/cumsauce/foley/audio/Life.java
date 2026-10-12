@@ -1,6 +1,7 @@
 package io.github.cumsauce.foley.audio;
 
 import io.github.cumsauce.foley.FoleyClient;
+import io.github.cumsauce.foley.config.FoleyConfig;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -81,7 +82,7 @@ public final class Life {
 
 		if (ticks % 20 == 0) {
 			// Birds: about one song every 4 s, three times as many at dawn.
-			if (!night && !raining && random.nextFloat() < (dawn ? 0.75f : 0.25f) * exposure) {
+			if (FoleyClient.wants(FoleyConfig::birds) && !night && !raining && random.nextFloat() < (dawn ? 0.75f : 0.25f) * exposure) {
 				BlockPos tree = find(level, eye, 24, state -> state.is(BlockTags.LEAVES));
 				if (tree != null) {
 					int species = Math.floorMod(biome.unwrapKey().map(k -> k.identifier().hashCode()).orElse(0)
@@ -91,7 +92,7 @@ public final class Life {
 			}
 			// Frogs: at night or in the rain, from still water.
 			boolean swamp = biome.is(Biomes.SWAMP) || biome.is(Biomes.MANGROVE_SWAMP);
-			if ((night || raining) && celsius >= 8 && random.nextFloat() < (swamp ? 0.6f : 0.15f)) {
+			if (FoleyClient.wants(FoleyConfig::frogs) && (night || raining) && celsius >= 8 && random.nextFloat() < (swamp ? 0.6f : 0.15f)) {
 				BlockPos water = find(level, eye, 20, state -> state.getFluidState().isSourceOfType(Fluids.WATER));
 				if (water != null) {
 					int size = swamp ? 1 + random.nextInt(2) : random.nextInt(2);
@@ -100,7 +101,7 @@ public final class Life {
 			}
 		}
 		// Crickets: a few, each in its place, chirping on and on.
-		if (!night || raining || celsius < 10) {
+		if (!FoleyClient.wants(FoleyConfig::crickets) || !night || raining || celsius < 10) {
 			crickets.clear();
 			return;
 		}
@@ -125,7 +126,7 @@ public final class Life {
 
 	private void call(Minecraft minecraft, String name, BlockPos at, float volume) {
 		SoundEvent event = SoundEvent.createVariableRangeEvent(Identifier.fromNamespaceAndPath("foley", name));
-		minecraft.getSoundManager().play(new SimpleSoundInstance(event, SoundSource.AMBIENT, volume, 1f,
+		minecraft.getSoundManager().play(new SimpleSoundInstance(event, SoundSource.AMBIENT, volume * FoleyClient.gain(), 1f,
 				SoundInstance.createUnseededRandom(), at.getX() + 0.5, at.getY() + 0.2, at.getZ() + 0.5));
 		calls++;
 	}

@@ -30,7 +30,7 @@ public final class ThunderController {
 
 	/** Whether Foley makes the thunder, so the game's own thunder is skipped. */
 	public boolean replacing() {
-		return true;
+		return io.github.cumsauce.foley.FoleyClient.wants(io.github.cumsauce.foley.config.FoleyConfig::thunder);
 	}
 
 	public @Nullable BedSound<ThunderScene> sound() {
@@ -49,7 +49,7 @@ public final class ThunderController {
 	}
 
 	public void strike(Minecraft minecraft, Vec3 at, long seed) {
-		if (minecraft.level == null || minecraft.player == null) return;
+		if (minecraft.level == null || minecraft.player == null || !replacing()) return;
 		Vec3 eye = minecraft.player.getEyePosition();
 		if (sound == null || !minecraft.getSoundManager().isActive(sound)) {
 			sound = new BedSound<>("thunder", SoundSource.WEATHER, bridge, NativeBridge.BED_THUNDER, scene(minecraft));

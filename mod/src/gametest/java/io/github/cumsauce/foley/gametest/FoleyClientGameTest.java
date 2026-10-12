@@ -7,6 +7,9 @@ import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import io.github.cumsauce.foley.audio.BedSound;
+import io.github.cumsauce.foley.ui.FoleyScreen;
+import io.github.cumsauce.foley.ui.SoundOptionsButton;
+import net.minecraft.client.gui.screens.options.SoundOptionsScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
@@ -19,7 +22,10 @@ import net.minecraft.sounds.SoundSource;
  * (M1); the wind blows out in the open and drops under a roof (M1); a waterfall, a fire and a pool of lava each start
  * a bed placed where they are, and a dripstone drip is swapped for a generated one (M2); a lightning bolt strikes
  * Foley's thunder and the game's is skipped (M3); breaking glass and stepping down on stone layer Foley's modal
- * strikes and shatters under the game's sounds (M4), and a footstep too (M5); crickets chirp in the grass at night (M5); and a generated one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null backend.
+ * strikes and shatters under the game's sounds (M4), and a footstep too (M5); crickets chirp in the grass at night,
+ * the bypass gives the game its sounds back, and the settings open from Music &amp; Sounds (M5); and a generated
+ * one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null
+ * backend.
  */
 @SuppressWarnings("UnstableApiUsage")
 public class FoleyClientGameTest implements FabricClientGameTest {
@@ -144,6 +150,28 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			} catch (RuntimeException | AssertionError e) {
 				throw new AssertionError("no crickets at night", e);
 			}
+
+			// Bypassed, Foley leaves the game's thunder alone.
+			int beforeBypass = FoleyClient.replaced();
+			context.runOnClient(mc -> {
+				FoleyClient.setBypassed(true);
+				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.WEATHER,
+						1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),
+						mc.player.getZ()));
+				FoleyClient.setBypassed(false);
+			});
+			if (FoleyClient.replaced() != beforeBypass) throw new AssertionError("bypassed, Foley still replaced thunder");
+
+			// The settings, where players look first: Options → Music & Sounds → Foley.
+			context.setScreen(() -> new SoundOptionsScreen(null, Minecraft.getInstance().options));
+			// The button is inside the screen's options list, where clickScreenButton doesn't look.
+			context.runOnClient(mc -> SoundOptionsButton.find(mc.gui.screen())
+					.orElseThrow(() -> new AssertionError("no Foley button in Music & Sounds"))
+					.onPress(new net.minecraft.client.input.KeyEvent(
+							com.mojang.blaze3d.platform.InputConstants.KEY_RETURN, 0, 0)));
+			context.waitForScreen(FoleyScreen.class);
+			context.takeScreenshot("foley-settings");
+			context.setScreen(() -> null);
 
 			// The one-shot: a generated buffer, played like any sound.
 			SimpleSoundInstance drip = context.computeOnClient(mc -> FoleyClient.drip(

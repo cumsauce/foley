@@ -170,6 +170,17 @@ Fabric mod (Java)                                   foley-ffi (Rust cdylib, FFM)
 - **Snow** is now its own material: settled snow, a few MPa and a third the density of water. It crunches and squeaks as the bonds between its grains break: crackling bursts between 1.5 and 4 kHz with sizes ∝ E^−1.7, over the 0.1 s the foot takes to sink in. In snow, that is most of what's heard. A thud's low-pass now applies to the click alone, not the grains.
 - Variants: 5 contacts × 10 materials × 8. The client gametest also plays the game's snow step and checks it got Foley's layer.
 
+## M5 results, part 3: settings, and the first beta (2026-10-12)
+
+- **Settings** (`config/foley/foley.json`, in Options → Music & Sounds → Foley…, and Mod Menu):
+  - Foley's volume (0 to 100 %, under the game's own sliders; 0 is off);
+  - for each sound it replaces (rain, thunder, water, drips, fire, lava), "Foley" or "The Game's";
+  - for each it adds (wind, strikes and breaks, footsteps, birds, crickets, frogs), on or off.
+  A missing or bad value falls back to its default.
+- **Bypass key** (unbound until set): switches Foley off and on at once for A/B listening. Off, every replaced sound is the game's again and everything Foley adds stops.
+- The client gametest opens the settings from Music & Sounds (and screenshots them) and checks that, bypassed, Foley leaves the game's thunder alone. A unit test covers the settings file.
+- Released as **0.1.0-beta.1**.
+
 ## Milestones
 
 0. **M0 Groundwork.** Repo, Rust workspace, FFM bridge, CI and natives packaging, all copied from Earshot. Spike: one procedural `FabricSoundInstance` stream (a sine, then filtered noise), and one generated buffer through the `SoundBufferLibrary` mixin. Measure CPU on the M3. **Exit:** both paths play in game, and Earshot shapes them.

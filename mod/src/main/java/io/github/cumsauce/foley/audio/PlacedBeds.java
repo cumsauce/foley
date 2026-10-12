@@ -1,5 +1,7 @@
 package io.github.cumsauce.foley.audio;
 
+import io.github.cumsauce.foley.FoleyClient;
+import io.github.cumsauce.foley.config.FoleyConfig;
 import io.github.cumsauce.foley.natives.NativeBridge;
 import net.minecraft.client.Minecraft;
 import net.minecraft.sounds.SoundSource;
@@ -51,9 +53,12 @@ public final class PlacedBeds {
 		}
 		if (ticks++ % SAMPLE_EVERY != 0) return;
 		around = Surroundings.sample(minecraft.level, minecraft.player.getEyePosition());
-		water.keep(minecraft, around.water(), around.water().heard(), around.water().at());
-		fire.keep(minecraft, around.fire(), around.fire().heard(), around.fire().at());
-		lava.keep(minecraft, around.lava(), around.lava().heard(), around.lava().at());
+		water.keep(minecraft, around.water(), around.water().heard() && FoleyClient.wants(FoleyConfig::water),
+				around.water().at());
+		fire.keep(minecraft, around.fire(), around.fire().heard() && FoleyClient.wants(FoleyConfig::fire),
+				around.fire().at());
+		lava.keep(minecraft, around.lava(), around.lava().heard() && FoleyClient.wants(FoleyConfig::lava),
+				around.lava().at());
 	}
 
 	/** One placed bed, started when there's something to hear, moved as that moves, stopped when it's gone. */

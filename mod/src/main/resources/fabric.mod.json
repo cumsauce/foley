@@ -14,6 +14,9 @@
 	"entrypoints": {
 		"client": [
 			"io.github.cumsauce.foley.FoleyClient"
+		],
+		"modmenu": [
+			"io.github.cumsauce.foley.ui.ModMenuEntry"
 		]
 	},
 	"mixins": [

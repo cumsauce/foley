@@ -48,6 +48,7 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 		this.scene = scene;
 		this.relative = true;
 		this.attenuation = SoundInstance.Attenuation.NONE;
+		this.volume = io.github.cumsauce.foley.FoleyClient.gain();
 	}
 
 	/** Places it at {@code at} in the world, from now on. Called on the client thread. */
@@ -88,8 +89,11 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 		return false;
 	}
 
+	/** Follows Foley's volume setting. */
 	@Override
-	public void tick() {}
+	public void tick() {
+		volume = io.github.cumsauce.foley.FoleyClient.gain();
+	}
 
 	@Override
 	public synchronized CompletableFuture<AudioStream> getAudioStream(SoundBufferLibrary loader, Identifier id,

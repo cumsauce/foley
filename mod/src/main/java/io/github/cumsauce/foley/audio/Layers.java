@@ -1,6 +1,7 @@
 package io.github.cumsauce.foley.audio;
 
 import io.github.cumsauce.foley.FoleyClient;
+import io.github.cumsauce.foley.config.FoleyConfig;
 import io.github.cumsauce.foley.natives.NativeBridge;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -45,6 +46,9 @@ public final class Layers {
 		} else {
 			return;
 		}
+		if (!FoleyClient.wants(contact == NativeBridge.CONTACT_STEP ? FoleyConfig::footsteps : FoleyConfig::strikes)) {
+			return;
+		}
 		Minecraft minecraft = Minecraft.getInstance();
 		if (minecraft.level == null) return;
 		int material = Materials.of(type);
@@ -57,7 +61,7 @@ public final class Layers {
 		}
 		SoundEvent event = SoundEvent.createVariableRangeEvent(Identifier.fromNamespaceAndPath("foley",
 				CONTACTS[contact] + "_" + Materials.NAMES[material]));
-		minecraft.getSoundManager().play(new SimpleSoundInstance(event, SoundSource.BLOCKS, VOLUME[contact], 1f,
+		minecraft.getSoundManager().play(new SimpleSoundInstance(event, SoundSource.BLOCKS, VOLUME[contact] * FoleyClient.gain(), 1f,
 				SoundInstance.createUnseededRandom(), sound.getX(), sound.getY(), sound.getZ()));
 		FoleyClient.countLayered();
 	}

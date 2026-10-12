@@ -1,6 +1,7 @@
 package io.github.cumsauce.foley.audio;
 
 import io.github.cumsauce.foley.FoleyClient;
+import io.github.cumsauce.foley.config.FoleyConfig;
 import java.util.Set;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -29,8 +30,10 @@ public final class Replacements {
 			SoundEvents.WEATHER_RAIN_ABOVE.location());
 	private static final Set<Identifier> THUNDER = Set.of(SoundEvents.LIGHTNING_BOLT_THUNDER.location(),
 			SoundEvents.LIGHTNING_BOLT_IMPACT.location());
-	private static final Set<Identifier> AMBIENCE = Set.of(SoundEvents.WATER_AMBIENT.location(),
-			SoundEvents.LAVA_AMBIENT.location(), SoundEvents.LAVA_POP.location(), SoundEvents.FIRE_AMBIENT.location(),
+	private static final Set<Identifier> WATER = Set.of(SoundEvents.WATER_AMBIENT.location());
+	private static final Set<Identifier> LAVA = Set.of(SoundEvents.LAVA_AMBIENT.location(),
+			SoundEvents.LAVA_POP.location());
+	private static final Set<Identifier> FIRE = Set.of(SoundEvents.FIRE_AMBIENT.location(),
 			SoundEvents.CAMPFIRE_CRACKLE.location());
 	private static final Identifier DRIP_WATER = SoundEvents.POINTED_DRIPSTONE_DRIP_WATER.location();
 	private static final Identifier DRIP_WATER_INTO_CAULDRON =
@@ -56,12 +59,17 @@ public final class Replacements {
 		}
 		Minecraft minecraft = Minecraft.getInstance();
 		if (FoleyClient.placed() == null || minecraft.level == null || minecraft.player == null) return false;
-		if (AMBIENCE.contains(id)) {
-			return Surroundings.within(minecraft.player.getEyePosition(), sound.getX(), sound.getY(), sound.getZ())
+		boolean ambience = WATER.contains(id) || LAVA.contains(id) || FIRE.contains(id);
+		if (ambience) {
+			boolean wanted = WATER.contains(id) ? FoleyClient.wants(FoleyConfig::water)
+					: LAVA.contains(id) ? FoleyClient.wants(FoleyConfig::lava) : FoleyClient.wants(FoleyConfig::fire);
+			return wanted && Surroundings.within(minecraft.player.getEyePosition(), sound.getX(), sound.getY(), sound.getZ())
 					&& counted();
 		}
 		SoundEvent drip;
-		if (DRIP_LAVA.contains(id)) {
+		if (!FoleyClient.wants(FoleyConfig::drips)) {
+			return false;
+		} else if (DRIP_LAVA.contains(id)) {
 			drip = DRIP_LAVA_EVENT;
 		} else if (id.equals(DRIP_WATER_INTO_CAULDRON)) {
 			drip = DRIP;
@@ -72,7 +80,7 @@ public final class Replacements {
 			return false;
 		}
 		// The game's drips play at 0.3 to 1 of full volume.
-		float volume = 0.3f + 0.7f * minecraft.level.getRandom().nextFloat();
+		float volume = (0.3f + 0.7f * minecraft.level.getRandom().nextFloat()) * FoleyClient.gain();
 		minecraft.getSoundManager().play(new SimpleSoundInstance(drip, SoundSource.BLOCKS, volume, 1f,
 				SoundInstance.createUnseededRandom(), sound.getX(), sound.getY(), sound.getZ()));
 		return counted();

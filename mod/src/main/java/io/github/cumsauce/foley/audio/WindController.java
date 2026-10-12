@@ -46,7 +46,8 @@ public final class WindController {
 		WindScene sampled = WindScene.sample(minecraft);
 		if (forced != null) sampled = new WindScene(forced, sampled.exposure(), sampled.leaves());
 		scene = sampled;
-		if (scene.speed() < STILL || scene.exposure() < SHUT_IN) {
+		if (!io.github.cumsauce.foley.FoleyClient.wants(io.github.cumsauce.foley.config.FoleyConfig::wind)
+				|| scene.speed() < STILL || scene.exposure() < SHUT_IN) {
 			stop(minecraft);
 			return;
 		}
