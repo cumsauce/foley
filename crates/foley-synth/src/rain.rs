@@ -1,6 +1,6 @@
 use std::f32::consts::TAU;
 
-use crate::{Bubble, Rng, SAMPLE_RATE};
+use crate::{BandPass, Bubble, Rng, SAMPLE_RATE};
 
 /// What rain falls on, as sound sees it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,7 +44,7 @@ impl Surface {
             Surface::Stone | Surface::Glass | Surface::Metal => 0.7,
             Surface::Wood => 0.45,
             Surface::Leaves => 0.35,
-            Surface::Soft => 0.1,
+            Surface::Soft => 0.25,
         }
     }
 
@@ -133,7 +133,7 @@ impl Struck {
             Surface::Wood => (280.0, 900.0, 260.0, 0.35),
             Surface::Glass => (2000.0, 6000.0, 90.0, 0.4),
             Surface::Metal => (700.0, 3200.0, 35.0, 0.3),
-            Surface::Soft | Surface::Water => (120.0, 400.0, 400.0, 0.15),
+            Surface::Soft | Surface::Water => (250.0, 1200.0, 700.0, 0.35),
         };
         let rate = SAMPLE_RATE as f32;
         let mut mode = |gain: f32| {
@@ -195,6 +195,8 @@ pub struct Rain {
     voices: Vec<Voice>,
     hiss: f32,
     hiss_low: f32,
+    /// The sizzle of the whole surface of water round about, near 14 kHz.
+    sizzle: BandPass,
     samples: u64,
 }
 
@@ -207,6 +209,7 @@ impl Rain {
             voices: Vec::new(),
             hiss: 0.0,
             hiss_low: 0.0,
+            sizzle: BandPass::new(13_500.0, 1.2),
             samples: 0,
         }
     }
@@ -273,20 +276,26 @@ impl Rain {
         };
         amplitude *= surface.loudness();
         if surface == Surface::Water {
+            // Rain on water is heard mostly as the small bubbles' sizzle, its
+            // spectrum peaking near 14 kHz some 10 dB over the rest (Medwin
+            // et al.); the big bubbles of heavy drops are the odd plink in it,
+            // barely rising, not a run of bloops like a cup filling.
             if (0.8..=1.1).contains(&d) {
                 let radius = 0.00020 + 0.00005 * self.rng.unit();
-                self.voices
-                    .push(Voice::Bubble(Bubble::new(radius, amplitude * 0.6)));
-            } else if d > 2.2 && self.rng.unit() < 0.5 {
+                self.voices.push(Voice::Bubble(
+                    Bubble::new(radius, amplitude * 6.0).with_rise(0.02),
+                ));
+            } else if d > 2.2 && self.rng.unit() < 0.15 {
                 let radius = 0.0006 + 0.0009 * self.rng.unit();
-                self.voices
-                    .push(Voice::Bubble(Bubble::new(radius, amplitude * 0.3)));
+                self.voices.push(Voice::Bubble(
+                    Bubble::new(radius, amplitude * 0.1).with_rise(0.02),
+                ));
             }
             // The splash itself, softly.
             self.voices.push(Voice::Struck(Struck::new(
                 &mut self.rng,
                 Surface::Soft,
-                amplitude * 0.5,
+                amplitude * 0.25,
             )));
             return;
         }
@@ -316,6 +325,15 @@ impl Rain {
         };
         let smoothing = 1.0 - (-TAU * cutoff / SAMPLE_RATE as f32).exp();
         let level = 0.012 * (self.scene.rate / 10.0).sqrt() * (0.3 + brightness);
+        // The far drops on water: a lake or the sea round about sizzles as a
+        // whole, not just where the near drops fall. Not through a roof.
+        let water = self.scene.surfaces[Surface::Water as usize]
+            / self.scene.surfaces.iter().sum::<f32>().max(1e-6);
+        let sizzle = if self.scene.roof.is_some() {
+            0.0
+        } else {
+            0.07 * (self.scene.rate / 10.0).sqrt() * water
+        };
         for sample in out {
             if rate > 0.0 {
                 self.until_next -= dt;
@@ -343,7 +361,12 @@ impl Rain {
             }
             self.hiss += smoothing * (self.rng.signed() - self.hiss);
             self.hiss_low += smoothing * (self.hiss - self.hiss_low);
-            *sample = mix + level * self.hiss_low * 3.0;
+            let far = if sizzle > 0.0 {
+                sizzle * self.sizzle.process(self.rng.signed())
+            } else {
+                0.0
+            };
+            *sample = mix + level * self.hiss_low * 3.0 + far;
         }
     }
 }

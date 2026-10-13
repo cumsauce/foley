@@ -56,6 +56,13 @@ impl Bubble {
         }
     }
 
+    /// The same bubble rising in pitch by `xi` times its decay rate over a
+    /// second instead: less for one born at a free surface by a raindrop.
+    pub fn with_rise(mut self, xi: f32) -> Bubble {
+        self.rise = xi * self.damping;
+        self
+    }
+
     pub fn frequency(&self) -> f32 {
         self.frequency
     }
