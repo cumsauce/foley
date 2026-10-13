@@ -640,6 +640,50 @@ pub(super) fn slime(rng: &mut Rng, call: Slime, size: f32) -> Vec<f32> {
         })
         .collect();
     add_at(&mut out, 0, &film);
+    // Peeling off the ground to jump: the seal breaks with a suction "thwop",
+    // a low pulse rising as the gap opens, and the film tearing.
+    if call == Slime::Jump {
+        let n = (0.07 * rate) as usize;
+        let (low, high) = (70.0 * scale, 220.0 * scale);
+        let mut phase = 0.0f32;
+        let mut tear = BandPass::new(900.0 * scale.sqrt(), 1.5);
+        let thwop: Vec<f32> = (0..n)
+            .map(|i| {
+                let t = i as f32 / n as f32;
+                phase += TAU * (low + (high - low) * t) / rate;
+                let envelope = (t * 12.0).min(1.0) * (1.0 - t).powi(2);
+                envelope * (0.6 * phase.sin() + 0.4 * tear.process(rng.signed()))
+            })
+            .collect();
+        add_at(&mut out, (0.03 * rate) as usize, &thwop);
+    }
+    // Landing or striking: the splat of it hitting, and bits flung off
+    // landing round it a moment later.
+    if matches!(call, Slime::Squish | Slime::Attack | Slime::Death) {
+        let n = (0.025 * rate) as usize;
+        let mut dull = LowPass::new(1500.0 * scale.sqrt());
+        let splat: Vec<f32> = (0..n)
+            .map(|i| {
+                let t = i as f32 / n as f32;
+                0.5 * impact * (t * 25.0).min(1.0) * (1.0 - t).powi(3) * dull.process(rng.signed())
+            })
+            .collect();
+        add_at(&mut out, (0.003 * rate) as usize, &splat);
+        let flung = if call == Slime::Death {
+            8
+        } else {
+            2 + (rng.unit() * 4.0) as usize
+        };
+        for _ in 0..flung {
+            let at = ((0.03 + 0.17 * rng.unit()) * rate) as usize;
+            let mut drop = Bubble::new((0.0008 + 0.0012 * rng.unit()) * size.sqrt(), 0.04);
+            let mut plip = Vec::new();
+            while !drop.done() {
+                plip.push(drop.sample());
+            }
+            add_at(&mut out, at, &plip);
+        }
+    }
     let bubbles = if call == Slime::Death { 8 } else { 3 };
     for _ in 0..bubbles {
         let mut bubble = Bubble::new((0.001 + 0.002 * rng.unit()) * size.sqrt(), 0.03);

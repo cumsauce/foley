@@ -352,8 +352,10 @@ pub fn contact(contact: Contact, material: Material, speed: f32, seed: u64) -> V
         Contact::Step => 0.4,
     };
     let mut out = strike(&mut rng, contact, material, &props, speed);
-    if contact == Contact::Step {
-        step_through(&mut rng, &mut out, material, &props, speed);
+    match contact {
+        Contact::Step => step_through(&mut rng, &mut out, material, &props, speed),
+        Contact::Place => settle_in(&mut rng, &mut out, material, &props, speed),
+        _ => {}
     }
     normalize(&mut out, peak * loudness(&props));
     out
@@ -429,6 +431,38 @@ fn step_through(rng: &mut Rng, out: &mut Vec<f32>, material: Material, props: &P
             }
         }
         _ => {}
+    }
+}
+
+/// The rest of setting a block down: it scoots a little into place, rubbing
+/// on what's under it (gritty on stone and gravel, a brush of leaves), then
+/// rocks and settles with a second, softer knock 15 to 40 ms after; sand and
+/// gravel trickle after it.
+fn settle_in(rng: &mut Rng, out: &mut Vec<f32>, material: Material, props: &Props, speed: f32) {
+    let rate = SAMPLE_RATE as f32;
+    let (rub, centre, seconds) = match material {
+        Material::Stone | Material::Granular => (0.08, 3000.0, 0.04),
+        Material::Wood => (0.06, 1800.0, 0.04),
+        Material::Metal | Material::Glass | Material::Ice => (0.04, 4500.0, 0.03),
+        Material::Earth => (0.05, 1200.0, 0.04),
+        Material::Plant => (0.1, 3500.0, 0.1),
+        Material::Soft | Material::Snow => (0.03, 900.0, 0.05),
+    };
+    let start = (0.004 * rate) as usize;
+    let centre = centre * (0.8 + 0.4 * rng.unit());
+    noise_burst(rng, out, start, seconds, centre, rub);
+    let mut bump = strike(rng, Contact::Place, material, props, 0.3 * speed);
+    let gain = 0.25 + 0.2 * rng.unit();
+    bump.iter_mut().for_each(|x| *x *= gain);
+    let at = ((0.015 + 0.025 * rng.unit()) * rate) as usize;
+    if out.len() < at + bump.len() {
+        out.resize(at + bump.len(), 0.0);
+    }
+    for (o, b) in out[at..].iter_mut().zip(&bump) {
+        *o += b;
+    }
+    if material == Material::Granular {
+        grains(rng, out, 15, 0.2, 0.08, 0.6);
     }
 }
 
