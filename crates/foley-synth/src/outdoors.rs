@@ -167,7 +167,8 @@ pub fn woodpecker(seed: u64) -> Vec<f32> {
 pub fn owl(seed: u64) -> Vec<f32> {
     let mut rng = Rng::new(seed ^ 0x0071);
     let rate = SAMPLE_RATE as f32;
-    let f0 = 330.0 + 80.0 * rng.unit();
+    // A great horned owl hoots low: about 280 to 360 Hz.
+    let f0 = 280.0 + 80.0 * rng.unit();
     // (start, length, pitch, loudness).
     let pattern: &[(f32, f32, f32, f32)] = if rng.unit() < 0.5 {
         &[
