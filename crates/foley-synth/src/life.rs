@@ -13,7 +13,26 @@ pub fn dolbear_chirps_per_minute(celsius: f32) -> f32 {
 /// 35 ms apart; the file and scraper drive the harp, which rings a nearly
 /// pure tone near 4.5 kHz (a little higher when warm). Chirps come at
 /// Dolbear's rate.
+/// A few field crickets chirping together for 3 s at `celsius`, each at its
+/// own pitch, pace and distance: the chorus of a warm night.
 pub fn crickets(celsius: f32, seed: u64) -> Vec<f32> {
+    let mut rng = Rng::new(seed ^ 0xC0C0);
+    let count = 3 + (rng.unit() * 4.0) as usize;
+    let mut out = vec![0.0; (3.0 * SAMPLE_RATE as f32) as usize];
+    for k in 0..count {
+        let one = cricket(
+            celsius + 2.0 * rng.signed(),
+            seed.wrapping_add(k as u64 * 7919),
+        );
+        let distance = 0.3 + 0.7 * rng.unit();
+        for (o, s) in out.iter_mut().zip(&one) {
+            *o += distance * s / (count as f32).sqrt();
+        }
+    }
+    out
+}
+
+fn cricket(celsius: f32, seed: u64) -> Vec<f32> {
     let mut rng = Rng::new(seed);
     let rate = SAMPLE_RATE as f32;
     let length = (3.0 * rate) as usize;
@@ -233,7 +252,7 @@ mod tests {
             }
             count
         };
-        let (cool, warm) = (chirps(&crickets(14.0, 1)), chirps(&crickets(28.0, 1)));
+        let (cool, warm) = (chirps(&cricket(14.0, 1)), chirps(&cricket(28.0, 1)));
         assert!(warm > cool, "{cool} then {warm}");
         assert!(crickets(4.0, 1).iter().all(|x| *x == 0.0));
         assert!(peak(&crickets(25.0, 2)) > 0.1);

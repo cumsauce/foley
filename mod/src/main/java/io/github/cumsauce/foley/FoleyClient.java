@@ -67,6 +67,18 @@ public final class FoleyClient implements ClientModInitializer {
 		return placed;
 	}
 
+	/** One-shots Foley may start in a tick; past it, the game's own sound plays alone. */
+	private static final int ONE_SHOTS_PER_TICK = 6;
+	private static int oneShots;
+
+	/**
+	 * Whether Foley may start one more one-shot this tick. A cap, so that many sounds at once (a crowd of mobs, a
+	 * battle) never fill the game's pool of sound sources with Foley's layers and starve new sounds.
+	 */
+	public static boolean oneShot() {
+		return oneShots++ < ONE_SHOTS_PER_TICK;
+	}
+
 	/** The settings in use. */
 	public static FoleyConfig config() {
 		return config;
@@ -172,6 +184,7 @@ public final class FoleyClient implements ClientModInitializer {
 		Breathing breaths = new Breathing();
 		breathing = breaths;
 		ClientTickEvents.END_CLIENT_TICK.register(breaths::tick);
+		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
 		registerCommands(loaded);
 	}
 

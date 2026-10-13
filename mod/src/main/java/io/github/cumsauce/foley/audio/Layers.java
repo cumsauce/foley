@@ -50,7 +50,11 @@ public final class Layers {
 			return;
 		}
 		Minecraft minecraft = Minecraft.getInstance();
-		if (minecraft.level == null) return;
+		if (minecraft.level == null || minecraft.player == null) return;
+		// Far layers aren't heard under the game's sound anyway; near ones within the cap.
+		if (minecraft.player.distanceToSqr(sound.getX(), sound.getY(), sound.getZ()) > 16 * 16 || !FoleyClient.oneShot()) {
+			return;
+		}
 		int material = Materials.of(type);
 		if (contact != NativeBridge.CONTACT_BREAK) {
 			// Landing and stepping: the block under the feet the sound plays at; else the block itself.

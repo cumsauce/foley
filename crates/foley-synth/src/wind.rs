@@ -97,7 +97,9 @@ impl Wind {
             self.samples += 1;
             let u = self.speed;
             // Amplitude ∝ U³, against a 10 m/s wind; muffled to a tenth indoors.
-            let level = 0.06 * (u / 10.0).powi(3).min(8.0) * (0.1 + 0.9 * exposure);
+            // Amplitude ∝ U³, capped for gales and flight; never quite silent outside.
+            let level = (0.06 * (u / 10.0).powi(3).min(2.5) + if u > 0.3 { 0.004 } else { 0.0 })
+                * (0.1 + 0.9 * exposure);
             let roar = self.roar.process(self.rng.signed());
             let whoosh = self.whoosh.process(self.rng.signed());
             let mut out = level * (roar * 1.5 + whoosh * 0.6 * exposure);
@@ -119,6 +121,9 @@ impl Wind {
                     * (u / 10.0).min(2.0)
                     * exposure;
             }
+            // Leaves always whisper a little where there are any, as trees do.
+            let hush = self.rustle.process(self.rng.signed());
+            out += 0.012 * self.scene.leaves * exposure * (0.3 + (u / 8.0).min(1.0)) * hush;
             *sample = out;
         }
     }
@@ -145,7 +150,8 @@ mod tests {
         };
         let (breeze, gale) = (listen(open(4.0)), listen(open(15.0)));
         // Energy ∝ U⁶: nearly 3 000 times from 4 to 15 m/s; at least 100 here.
-        assert!(gale > 100.0 * breeze, "{breeze} vs {gale}");
+        // Less than U⁶'s 3 000 times: a soft floor keeps even a breeze audible.
+        assert!(gale > 20.0 * breeze, "{breeze} vs {gale}");
         let inside = listen(WindScene {
             exposure: 0.0,
             ..open(15.0)

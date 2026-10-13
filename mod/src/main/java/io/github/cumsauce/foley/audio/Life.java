@@ -82,12 +82,12 @@ public final class Life {
 
 		if (ticks % 20 == 0) {
 			// Birds: about one song every 4 s, three times as many at dawn.
-			if (FoleyClient.wants(FoleyConfig::birds) && !night && !raining && random.nextFloat() < (dawn ? 0.75f : 0.25f) * exposure) {
+			if (FoleyClient.wants(FoleyConfig::birds) && !night && !raining && random.nextFloat() < (dawn ? 0.2f : 0.06f) * exposure) {
 				BlockPos tree = find(level, eye, 24, state -> state.is(BlockTags.LEAVES));
 				if (tree != null) {
 					int species = Math.floorMod(biome.unwrapKey().map(k -> k.identifier().hashCode()).orElse(0)
 							+ 5 * random.nextInt(3), SPECIES);
-					call(minecraft, "bird_" + species, tree.above(), 0.8f);
+					call(minecraft, "bird_" + species, tree.above(), 0.35f);
 				}
 			}
 			// Frogs: at night or in the rain, from still water.
@@ -125,6 +125,7 @@ public final class Life {
 	}
 
 	private void call(Minecraft minecraft, String name, BlockPos at, float volume) {
+		if (!FoleyClient.oneShot()) return;
 		SoundEvent event = SoundEvent.createVariableRangeEvent(Identifier.fromNamespaceAndPath("foley", name));
 		minecraft.getSoundManager().play(new SimpleSoundInstance(event, SoundSource.AMBIENT, volume * FoleyClient.gain(), 1f,
 				SoundInstance.createUnseededRandom(), at.getX() + 0.5, at.getY() + 0.2, at.getZ() + 0.5));

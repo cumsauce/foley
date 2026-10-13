@@ -97,13 +97,13 @@ impl Water {
         let wanted = flow + falls;
         let rate = wanted.min(MAX_BUBBLES);
         let boost = if rate > 0.0 {
-            (wanted / rate).sqrt()
+            (wanted / rate).sqrt().min(2.0)
         } else {
             1.0
         };
         let plunging = if wanted > 0.0 { falls / wanted } else { 0.0 };
         let gain = self.scene.gain.clamp(0.0, 1.0);
-        let roar_level = 0.2 * self.scene.falls.clamp(0.0, 200.0).sqrt();
+        let roar_level = 0.2 * self.scene.falls.clamp(0.0, 20.0).sqrt();
         for sample in out {
             if rate > 0.0 {
                 self.until_next -= dt;

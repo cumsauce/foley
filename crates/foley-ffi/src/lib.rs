@@ -109,7 +109,14 @@ enum Synth {
 pub struct FoleyBed {
     synth: Synth,
     scratch: Vec<f32>,
+    /// The level guard's envelope and gain.
+    envelope: f32,
+    guard: f32,
 }
+
+/// Beds never go past this peak: a scene that jumps (a waterfall appearing,
+/// a gust) is caught before it reaches the speakers.
+const BED_CEILING: f32 = 0.4;
 
 /// Returns [`FOLEY_ABI_VERSION`]. Safe to call before anything else.
 #[unsafe(no_mangle)]
@@ -139,6 +146,8 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
         *out = Box::into_raw(Box::new(FoleyBed {
             synth,
             scratch: Vec::new(),
+            envelope: 0.0,
+            guard: 1.0,
         }));
         Ok(())
     })
@@ -270,8 +279,14 @@ pub unsafe extern "C" fn foley_bed_render(bed: *mut FoleyBed, out: *mut i16, fra
             Synth::Lava(synth) => synth.render(&mut bed.scratch),
             Synth::Thunder(synth) => synth.render(&mut bed.scratch),
         }
+        // The level guard: the envelope rises at once and falls over about
+        // half a second; the gain follows it down quickly and back up slowly.
         for (out, sample) in out.iter_mut().zip(&bed.scratch) {
-            *out = to_pcm(*sample);
+            bed.envelope = sample.abs().max(bed.envelope * 0.99996);
+            let wanted = (BED_CEILING / bed.envelope.max(1e-6)).min(1.0);
+            let rate = if wanted < bed.guard { 0.01 } else { 0.0001 };
+            bed.guard += (wanted - bed.guard) * rate;
+            *out = to_pcm(sample * bed.guard);
         }
         Ok(())
     })

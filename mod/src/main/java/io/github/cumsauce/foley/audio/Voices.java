@@ -107,6 +107,8 @@ public final class Voices {
 		if (id.getPath().startsWith("entity.parrot.imitate.")) return imitate(sound, id);
 		Parsed parsed = parse(id);
 		if (parsed == null || parsed.call.startsWith("loop") || !voiced(parsed.mob)) return false;
+		// Past the cap, the game's own call plays.
+		if (!FoleyClient.oneShot()) return false;
 		float volume = 1f;
 		float pitch = 1f;
 		if (sound instanceof AbstractSoundInstanceAccessor own) {
