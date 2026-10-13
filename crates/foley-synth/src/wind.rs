@@ -69,7 +69,7 @@ impl Wind {
             rustle: BandPass::new(4000.0, 1.5),
             rustle_envelope: 0.0,
             until_rustle: 0.0,
-            leaf: [BandPass::new(2800.0, 0.8), BandPass::new(7000.0, 1.0)],
+            leaf: [BandPass::new(2500.0, 0.8), BandPass::new(4800.0, 1.2)],
             leaf_envelope: 0.0,
             until_leaf: 0.0,
             flutter: LowPass::new(6.0),
@@ -127,7 +127,8 @@ impl Wind {
         self.leaf_envelope *= 0.985;
         let flutter = (1.0 + 4.0 * self.flutter.process(self.rng.signed())).clamp(0.3, 1.5);
         let noise = self.rng.signed();
-        let leaf = self.leaf[0].process(noise) + 0.6 * self.leaf[1].process(noise);
+        // Leaves in a breeze are loudest at 2 to 5 kHz, not up in the hiss.
+        let leaf = self.leaf[0].process(noise) + 0.4 * self.leaf[1].process(noise);
         let loud = LEAVES * leaves * reach * (0.6 + canopy / 40.0);
         out += loud * flutter * self.leaf_envelope.min(1.5) * leaf;
         // Gusts sweeping through the crowns.

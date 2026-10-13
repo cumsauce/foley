@@ -5,7 +5,11 @@ import io.github.cumsauce.foley.config.FoleyConfig;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Not a test: a busy scene to listen to, for finding what a mix is made of. Runs only with {@code FOLEY_SCENE=1} in
@@ -23,6 +27,10 @@ public class SceneRecording implements FabricClientGameTest {
 	public void runTest(ClientGameTestContext context) {
 		String mode = System.getenv("FOLEY_SCENE");
 		if (mode == null) return;
+		if (mode.equals("walk")) {
+			walk(context);
+			return;
+		}
 		FoleyConfig all = new FoleyConfig(100, true, true, true, true, true, true, true, true, true, true, true, true,
 				~0L);
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
@@ -88,6 +96,90 @@ public class SceneRecording implements FabricClientGameTest {
 			FoleyClient.apply(none);
 			FoleyClient.apply(all);
 			earshot(false);
+		}
+	}
+
+	/**
+	 * A walk in a generated world, as a player goes: sprinting and jumping up a wooded hillside past a waterfall,
+	 * turning, then breaking and placing blocks; the same route on EAX and then on convolution, each in two phases
+	 * ("walk-*" and "hit-*").
+	 */
+	private static void walk(ClientGameTestContext context) {
+		try (TestSingleplayerContext singleplayer = context.worldBuilder().setUseConsistentSettings(false)
+				.adjustSettings(settings -> settings.setSeed("foley")).create()) {
+			var server = singleplayer.getServer();
+			BlockPos forest = server.computeOnServer(game -> {
+				ServerLevel level = game.overworld();
+				var found = level.findClosestBiome3d(biome -> biome.is(Biomes.FOREST), BlockPos.ZERO.atY(64), 3200, 32,
+						64);
+				return found == null ? BlockPos.ZERO : found.getFirst();
+			});
+			server.runCommand("gamemode creative @a");
+			server.runCommand("time set noon");
+			server.runCommand("weather clear");
+			server.runCommand("gamerule doDaylightCycle false");
+			server.runCommand("gamerule doWeatherCycle false");
+			server.runCommand("spreadplayers " + forest.getX() + " " + forest.getZ() + " 0 1 false @a");
+			singleplayer.getConnection().waitForChunksRender();
+			Vec3 start = context.computeOnClient(mc -> mc.player.position());
+			FoleyClient.LOGGER.info("SCENE walking from {}", start);
+			// Rushing water: falls off the hillside ahead.
+			server.runCommand("execute as @p at @p run setblock ~3 ~6 ~8 water");
+			server.runCommand("execute as @p at @p run setblock ~-4 ~5 ~14 water");
+			server.runCommand("item replace entity @p weapon.mainhand with stone 64");
+			context.runOnClient(mc -> earshotHigh());
+			context.waitTicks(100);
+			FoleyConfig every = new FoleyConfig(100, true, true, true, true, true, true, true, true, true, true, true,
+					true, ~0L);
+			// (name, reverb, Foley's settings or null for none): the last three take the mix apart.
+			Object[][] runs = {{"eax", "EAX", every}, {"convolution", "CONVOLUTION", every},
+					{"nowind", "EAX", new FoleyConfig(100, true, false, true, true, true, true, true, true, true, true,
+							true, true, ~0L)},
+					{"nowater", "EAX", new FoleyConfig(100, true, true, true, false, true, true, true, true, true, true,
+							true, true, ~0L)},
+					{"nofoley", "EAX", null}};
+			for (Object[] run : runs) {
+				String reverb = (String) run[1];
+				FoleyConfig foley = (FoleyConfig) run[2];
+				context.runOnClient(mc -> mc.options.getSoundSourceOptionInstance(SoundSource.MASTER).set(0.0));
+				server.runCommand(String.format(java.util.Locale.ROOT, "tp @a %.2f %.2f %.2f 0 0", start.x, start.y,
+						start.z));
+				context.runOnClient(mc -> {
+					earshotSet("withReverb", reverb, true);
+					FoleyClient.setBypassed(foley == null);
+					FoleyClient.apply(foley == null ? every : foley);
+				});
+				context.waitTicks(40);
+				context.runOnClient(mc -> mc.options.getSoundSourceOptionInstance(SoundSource.MASTER).set(1.0));
+				String name = (String) run[0];
+				FoleyClient.LOGGER.info("SCENE phase walk-{} at {} ms", name, System.currentTimeMillis());
+				var input = context.getInput();
+				input.holdKey(options -> options.keyUp);
+				input.holdKey(options -> options.keySprint);
+				for (int tick = 0; tick < PHASE_TICKS; tick++) {
+					if (tick % 12 == 0) input.pressKey(options -> options.keyJump);
+					input.lookAt(40f * (float) Math.sin(tick / 25.0), 10f * (float) Math.sin(tick / 9.0));
+					context.waitTick();
+					if (tick % 40 == 20) {
+						context.runOnClient(mc -> FoleyClient.LOGGER.info("SCENE at {} {} water {}",
+								mc.player.position(), FoleyClient.wind() == null ? "" : FoleyClient.wind().scene(),
+								FoleyClient.placed() == null || FoleyClient.placed().water() == null ? "none"
+										: FoleyClient.placed().water().scene()));
+					}
+				}
+				input.releaseKey(options -> options.keySprint);
+				input.releaseKey(options -> options.keyUp);
+				FoleyClient.LOGGER.info("SCENE end walk-{} at {} ms", name, System.currentTimeMillis());
+				if (!name.equals("eax") && !name.equals("convolution")) continue;
+				context.waitTicks(20);
+				FoleyClient.LOGGER.info("SCENE phase hit-{} at {} ms", name, System.currentTimeMillis());
+				input.lookAt(0f, 70f);
+				for (int hit = 0; hit < 8; hit++) {
+					input.pressMouse(hit % 2 == 0 ? 0 : 1);
+					context.waitTicks(10);
+				}
+				FoleyClient.LOGGER.info("SCENE end hit-{} at {} ms", name, System.currentTimeMillis());
+			}
 		}
 	}
 
