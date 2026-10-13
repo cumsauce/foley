@@ -10,8 +10,6 @@ import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
-import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.tags.BlockTags;
@@ -365,11 +363,10 @@ public final class Life {
 	}
 
 	private void call(Minecraft minecraft, String name, BlockPos at, float volume) {
-		if (!FoleyClient.oneShot()) return;
-		SoundEvent event = SoundEvent.createVariableRangeEvent(Identifier.fromNamespaceAndPath("foley", name));
-		minecraft.getSoundManager().play(new SimpleSoundInstance(event, SoundSource.AMBIENT, volume * FoleyClient.gain(), 1f,
-				SoundInstance.createUnseededRandom(), at.getX() + 0.5, at.getY() + 0.2, at.getZ() + 0.5));
-		calls++;
+		if (Sounds.play(minecraft, name, SoundSource.AMBIENT, at.getX() + 0.5, at.getY() + 0.2, at.getZ() + 0.5, volume,
+				1f)) {
+			calls++;
+		}
 	}
 
 	/** A drop falling from the leaves onto what's under them. */

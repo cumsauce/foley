@@ -1,4 +1,5 @@
-use crate::{BandPass, LowPass, Rng, SAMPLE_RATE};
+use crate::dsp::Wobble;
+use crate::{BandPass, Rng, SAMPLE_RATE};
 
 /// What the wind round the listener is like.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -56,7 +57,7 @@ pub struct Wind {
     leaf: [BandPass; 2],
     leaf_envelope: f32,
     until_leaf: f32,
-    flutter: LowPass,
+    flutter: Wobble,
     /// A bough creaking in a strong wind: stick-slip at a wandering rate.
     creak: BandPass,
     creak_left: f32,
@@ -81,7 +82,7 @@ impl Wind {
             leaf: [BandPass::new(2500.0, 0.8), BandPass::new(4800.0, 1.2)],
             leaf_envelope: 0.0,
             until_leaf: 0.0,
-            flutter: LowPass::new(6.0),
+            flutter: Wobble::new(6.0, 4.0, 0.3, 1.5),
             creak: BandPass::new(900.0, 3.0),
             creak_left: 0.0,
             creak_phase: 0.0,
@@ -144,7 +145,7 @@ impl Wind {
             self.until_leaf = self.rng.exponential(rate.min(1500.0));
         }
         self.leaf_envelope *= 0.985;
-        let flutter = (1.0 + 4.0 * self.flutter.process(self.rng.signed())).clamp(0.3, 1.5);
+        let flutter = self.flutter.next(self.rng.signed());
         let noise = self.rng.signed();
         // Leaves in a breeze are loudest at 2 to 5 kHz, not up in the hiss.
         let leaf = self.leaf[0].process(noise) + 0.4 * self.leaf[1].process(noise);

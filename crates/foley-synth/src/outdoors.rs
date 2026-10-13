@@ -3,26 +3,9 @@
 
 use std::f32::consts::TAU;
 
+use crate::dsp::{Wobble, add_at, normalize};
 use crate::water::plunge_radius;
 use crate::{BandPass, Bubble, Contact, LowPass, Material, Rng, SAMPLE_RATE, contact};
-
-pub(crate) fn add_at(out: &mut Vec<f32>, at: usize, sound: &[f32], gain: f32) {
-    if out.len() < at + sound.len() {
-        out.resize(at + sound.len(), 0.0);
-    }
-    for (o, s) in out[at..].iter_mut().zip(sound) {
-        *o += gain * s;
-    }
-}
-
-/// Peaks at `peak`, so every call comes out at a known level.
-pub(crate) fn normalize(mut out: Vec<f32>, peak: f32) -> Vec<f32> {
-    let loudest = out.iter().fold(0f32, |m, x| m.max(x.abs()));
-    if loudest > 0.0 {
-        out.iter_mut().for_each(|x| *x *= peak / loudest);
-    }
-    out
-}
 
 /// One wave breaking on a shore, `height` metres high (0.2 to 3), about
 /// 7 s from its rise to the end of its backwash. As it steepens, a low roar
@@ -41,7 +24,7 @@ pub fn surf(height: f32, seed: u64) -> Vec<f32> {
     let mut rumble = [LowPass::new(250.0), LowPass::new(250.0)];
     let mut crash = BandPass::new(900.0, 0.5);
     let mut foam = BandPass::new(5000.0, 0.7);
-    let mut swell = LowPass::new(2.0);
+    let mut swell = Wobble::new(2.0, 3.0, 0.4, 1.6);
     let mut bubbles: Vec<Bubble> = Vec::with_capacity(256);
     let mut until_bubble = 0.0f32;
     let mut until_pop = 0.0f32;
@@ -67,7 +50,7 @@ pub fn surf(height: f32, seed: u64) -> Vec<f32> {
             // The foam's hiss: bursting bubbles, brighter as the sheet runs
             // thin up the beach, gone as it soaks in.
             let sheet = (after / 0.4).min(1.0) * (-after / 2.2).exp();
-            let wobble = (1.0 + 3.0 * swell.process(rng.signed())).clamp(0.4, 1.6);
+            let wobble = swell.next(rng.signed());
             s += 0.25 * sheet * wobble * foam.process(rng.signed());
             // Tiny bubbles popping in the foam.
             until_pop -= dt;

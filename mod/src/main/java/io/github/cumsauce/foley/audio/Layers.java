@@ -63,8 +63,7 @@ public final class Layers {
 					BlockPos.containing(sound.getX(), sound.getY() - below, sound.getZ()));
 			if (!state.isAir()) material = Materials.of(state);
 		}
-		SoundEvent event = SoundEvent.createVariableRangeEvent(Identifier.fromNamespaceAndPath("foley",
-				CONTACTS[contact] + "_" + Materials.NAMES[material]));
+		SoundEvent event = Sounds.event(CONTACTS[contact] + "_" + Materials.NAMES[material]);
 		minecraft.getSoundManager().play(new SimpleSoundInstance(event, SoundSource.BLOCKS, VOLUME[contact] * FoleyClient.gain(), 1f,
 				SoundInstance.createUnseededRandom(), sound.getX(), sound.getY(), sound.getZ()));
 		FoleyClient.countLayered();

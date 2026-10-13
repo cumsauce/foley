@@ -1,5 +1,6 @@
 use std::f32::consts::{PI, TAU};
 
+use crate::dsp::Wobble;
 use crate::{BandPass, LowPass, Rng, SAMPLE_RATE};
 
 /// The fire near the listener.
@@ -22,6 +23,8 @@ impl FireScene {
 const CRACKLES: f32 = 7.0;
 const MAX_CRACKLES: f32 = 400.0;
 const MAX_VOICES: usize = 64;
+/// At most this many snaps, hisses and settles play at once.
+const MAX_EVENTS: usize = 16;
 
 /// One crackle: a burst of noise as a pocket of resin or steam bursts.
 #[derive(Debug)]
@@ -71,7 +74,8 @@ pub struct Fire {
     crackles: Vec<Crackle>,
     last: f32,
     events: Vec<Event>,
-    flicker: LowPass,
+    samples: usize,
+    flicker: Wobble,
     flame: BandPass,
     until_hiss: f32,
     until_settle: f32,
@@ -87,8 +91,9 @@ impl Fire {
             until_crackle: 0.0,
             crackles: Vec::with_capacity(MAX_VOICES),
             last: 0.0,
-            events: Vec::new(),
-            flicker: LowPass::new(10.0),
+            events: Vec::with_capacity(MAX_EVENTS),
+            samples: 0,
+            flicker: Wobble::new(10.0, 4.0, 0.2, 2.0),
             flame: BandPass::new(1500.0, 0.8),
             until_hiss: 0.0,
             until_settle: 0.0,
@@ -135,7 +140,7 @@ impl Fire {
                             amplitude: 0.05 * energy.sqrt(),
                             step: (-dt / time).exp(),
                         });
-                        if energy >= SNAP_ENERGY && self.events.len() < 16 {
+                        if energy >= SNAP_ENERGY && self.events.len() < MAX_EVENTS {
                             let sound = snap(&mut self.rng, 0.012 * energy.sqrt());
                             self.events.push(Event { sound, at: 0 });
                         }
@@ -147,19 +152,23 @@ impl Fire {
                 voice.amplitude *= voice.step;
                 crackle += voice.amplitude * self.rng.signed();
             }
-            self.crackles.retain(|voice| voice.amplitude > 1e-4);
+            self.samples += 1;
+            // Spent crackles go every so often, not every sample.
+            if self.crackles.len() == MAX_VOICES || self.samples.is_multiple_of(64) {
+                self.crackles.retain(|voice| voice.amplitude > 1e-4);
+            }
             // A first difference: bursts are bright, without the roar's lows.
             let bright = crackle - self.last;
             self.last = crackle;
             // The flames' flicker: brighter noise, its level wandering about
             // ten times a second.
-            let flicker = (1.0 + 4.0 * self.flicker.process(self.rng.signed())).clamp(0.2, 2.0);
+            let flicker = self.flicker.next(self.rng.signed());
             let flame = 0.06 * size.sqrt().min(6.0) * flicker * self.flame.process(noise);
             if size > 0.0 {
                 self.until_hiss -= dt;
                 if self.until_hiss <= 0.0 {
                     self.until_hiss = self.rng.exponential(HISSES * size.sqrt());
-                    if self.events.len() < 16 {
+                    if self.events.len() < MAX_EVENTS {
                         let sound = hiss(&mut self.rng);
                         self.events.push(Event { sound, at: 0 });
                     }
@@ -167,7 +176,7 @@ impl Fire {
                 self.until_settle -= dt;
                 if self.until_settle <= 0.0 {
                     self.until_settle = self.rng.exponential(SETTLES * size.sqrt());
-                    if self.events.len() < 16 {
+                    if self.events.len() < MAX_EVENTS {
                         let sound = settle(&mut self.rng);
                         self.events.push(Event { sound, at: 0 });
                     }

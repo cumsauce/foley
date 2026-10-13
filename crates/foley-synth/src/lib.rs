@@ -4,6 +4,7 @@
 mod air;
 mod birds;
 mod bubble;
+mod dsp;
 mod filter;
 mod fire;
 mod lava;

@@ -1,4 +1,5 @@
 use crate::{LowPass, Rng, SAMPLE_RATE, absorption_cutoff};
+use std::sync::mpsc::{Receiver, Sender, channel as channel_of};
 
 const SPEED_OF_SOUND: f32 = 343.0;
 const ATMOSPHERE: f32 = 101_325.0;
@@ -219,10 +220,17 @@ fn n_wave(period: f32, smear: f32, amplitude: f32, cutoff: Option<f32>) -> Vec<f
 
 /// Thunder (M3): every flash's thunder as it arrives, mixed, all round the
 /// listener. Shut in, only the low rumble comes through the walls.
+///
+/// A flash's thunder takes a few milliseconds and megabytes to make, so it is
+/// made on a thread of its own and handed over when ready: rendering, on the
+/// audio stream's thread, only ever mixes.
 #[derive(Debug)]
 pub struct Thunder {
     scene: ThunderScene,
-    pending: Vec<([f32; 3], u64)>,
+    made: Sender<Vec<f32>>,
+    ready: Receiver<Vec<f32>>,
+    /// Flashes whose thunder is still being made.
+    making: usize,
     playing: Vec<(Vec<f32>, usize)>,
     muffle: [LowPass; 2],
 }
@@ -235,10 +243,13 @@ impl Default for Thunder {
 
 impl Thunder {
     pub fn new() -> Thunder {
+        let (made, ready) = channel_of();
         Thunder {
             scene: ThunderScene::DEFAULT,
-            pending: Vec::new(),
-            playing: Vec::new(),
+            made,
+            ready,
+            making: 0,
+            playing: Vec::with_capacity(MAX_STRIKES),
             muffle: [LowPass::new(20_000.0), LowPass::new(20_000.0)],
         }
     }
@@ -253,21 +264,42 @@ impl Thunder {
     }
 
     /// A flash at `base`, metres from the listener (y up), now. Its thunder
-    /// is made on the next render.
+    /// is made on a thread of its own and joins the mix when it's ready.
     pub fn strike(&mut self, base: [f32; 3], seed: u64) {
-        if self.pending.len() + self.playing.len() < MAX_STRIKES {
-            self.pending.push((base, seed));
+        if self.making + self.playing.len() >= MAX_STRIKES {
+            return;
+        }
+        let (made, celsius, humidity) =
+            (self.made.clone(), self.scene.celsius, self.scene.humidity);
+        let spawned = std::thread::Builder::new()
+            .name("foley-thunder".into())
+            .spawn(move || {
+                // Gone if the bed was let go meanwhile.
+                let _ = made.send(strike(base, seed, celsius, humidity));
+            });
+        if spawned.is_ok() {
+            self.making += 1;
         }
     }
 
     /// Whether nothing is left to hear.
     pub fn quiet(&self) -> bool {
-        self.pending.is_empty() && self.playing.is_empty()
+        self.making == 0 && self.playing.is_empty()
+    }
+
+    /// Waits for every flash's thunder to be made. For tests.
+    #[cfg(test)]
+    fn finish_making(&mut self) {
+        while self.making > 0 {
+            let sound = self.ready.recv().expect("a thunder thread");
+            self.making -= 1;
+            self.playing.push((sound, 0));
+        }
     }
 
     pub fn render(&mut self, out: &mut [f32]) {
-        for (base, seed) in self.pending.drain(..) {
-            let sound = strike(base, seed, self.scene.celsius, self.scene.humidity);
+        while let Ok(sound) = self.ready.try_recv() {
+            self.making -= 1;
             self.playing.push((sound, 0));
         }
         out.fill(0.0);
@@ -366,6 +398,7 @@ mod tests {
         });
         for thunder in [&mut open, &mut shut] {
             thunder.strike([300.0, 0.0, 0.0], 2);
+            thunder.finish_making();
         }
         let mut a = vec![0.0; 3 * SAMPLE_RATE as usize];
         let mut b = a.clone();

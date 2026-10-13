@@ -3,7 +3,7 @@
 
 use std::f32::consts::TAU;
 
-use crate::outdoors::{add_at, normalize};
+use crate::dsp::{Wobble, add_at, normalize};
 use crate::{BandPass, Contact, LowPass, Material, Rng, SAMPLE_RATE, contact};
 
 /// What a body brushes through: for [`brush`].
@@ -45,7 +45,7 @@ pub fn brush(plant: Plant, seed: u64) -> Vec<f32> {
     let n = (seconds * rate) as usize;
     let mut sweep = BandPass::new(band, q);
     let mut tick = BandPass::new(tick_band, 1.5);
-    let mut flutter = LowPass::new(20.0);
+    let mut flutter = Wobble::new(20.0, 3.0, 0.4, 1.6);
     let mut envelope = 0.0f32;
     let mut until = 0.0f32;
     let mut out = Vec::with_capacity(n);
@@ -64,7 +64,7 @@ pub fn brush(plant: Plant, seed: u64) -> Vec<f32> {
             until = rng.exponential(ticks * shape.max(0.05));
         }
         envelope *= decay;
-        let wobble = (1.0 + 3.0 * flutter.process(rng.signed())).clamp(0.4, 1.6);
+        let wobble = flutter.next(rng.signed());
         let noise = rng.signed();
         out.push(
             shape * (swish * wobble * sweep.process(noise))

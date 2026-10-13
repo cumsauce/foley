@@ -1,14 +1,6 @@
+use crate::dsp::add_at;
 use crate::rain::Struck;
 use crate::{Bubble, LowPass, Rng, SAMPLE_RATE, Surface};
-
-fn add_at(out: &mut Vec<f32>, at: usize, sound: &[f32]) {
-    if out.len() < at + sound.len() {
-        out.resize(at + sound.len(), 0.0);
-    }
-    for (o, s) in out[at..].iter_mut().zip(sound) {
-        *o += s;
-    }
-}
 
 /// A short click: `seconds` of noise through a low-pass at `cutoff`,
 /// decaying.
@@ -41,20 +33,20 @@ pub fn drip_into_water(radius: f32, seed: u64) -> Vec<f32> {
     if rng.unit() < 0.15 {
         // No bubble: a little splash.
         let splash = click(0.03, 3000.0, 0.5, &mut rng);
-        add_at(&mut out, (0.002 * rate) as usize, &splash);
+        add_at(&mut out, (0.002 * rate) as usize, &splash, 1.0);
     } else {
         // The bubble, a few milliseconds later, once the cavity pinches off.
         let mut bubble = Bubble::new(radius, 0.5);
         let sound = ring(&mut bubble);
-        add_at(&mut out, (0.006 * rate) as usize, &sound);
+        add_at(&mut out, (0.006 * rate) as usize, &sound, 1.0);
     }
     if rng.unit() < 0.45 {
         let at = ((0.06 + 0.08 * rng.unit()) * rate) as usize;
         let tick = click(0.001, 8000.0, 0.4, &mut rng);
-        add_at(&mut out, at, &tick);
+        add_at(&mut out, at, &tick, 1.0);
         let mut droplet = Bubble::new(radius * (0.4 + 0.2 * rng.unit()), 0.2);
         let sound = ring(&mut droplet);
-        add_at(&mut out, at + (0.003 * rate) as usize, &sound);
+        add_at(&mut out, at + (0.003 * rate) as usize, &sound, 1.0);
     }
     out
 }
@@ -86,7 +78,7 @@ pub fn drip_on_stone(radius: f32, seed: u64) -> Vec<f32> {
             amplitude * (0.05 + 0.15 * rng.unit()),
             &mut rng,
         );
-        add_at(&mut out, at, &tick);
+        add_at(&mut out, at, &tick, 1.0);
     }
     if rng.unit() < 0.25 {
         let mut bubble = Bubble::new(0.0006 + 0.0006 * rng.unit(), 0.1 * amplitude);
@@ -95,6 +87,7 @@ pub fn drip_on_stone(radius: f32, seed: u64) -> Vec<f32> {
             &mut out,
             ((0.01 + 0.03 * rng.unit()) * rate) as usize,
             &sound,
+            1.0,
         );
     }
     out
@@ -130,7 +123,7 @@ pub fn lava_drip(seed: u64) -> Vec<f32> {
     for _ in 0..20 + (rng.unit() * 20.0) as usize {
         let at = (0.6 * rng.unit().powi(2) * rate) as usize;
         let tick = click(0.0006, 7000.0, 0.04 + 0.08 * rng.unit(), &mut rng);
-        add_at(&mut out, at, &tick);
+        add_at(&mut out, at, &tick, 1.0);
     }
     // Gas bubbles popping through the blob: low, quick "blups".
     for _ in 0..2 + (rng.unit() * 4.0) as usize {
@@ -145,7 +138,7 @@ pub fn lava_drip(seed: u64) -> Vec<f32> {
                 0.25 * (t * 20.0).min(1.0) * (1.0 - t).powi(3) * p.sin()
             })
             .collect();
-        add_at(&mut out, at, &blup);
+        add_at(&mut out, at, &blup, 1.0);
     }
     out.truncate(length);
     let fade = (0.05 * rate) as usize;

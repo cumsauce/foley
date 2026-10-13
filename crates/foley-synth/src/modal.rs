@@ -316,12 +316,7 @@ fn noise_burst(
 }
 
 fn normalize(out: &mut [f32], peak: f32) {
-    let loudest = out.iter().fold(0f32, |p, x| p.max(x.abs()));
-    if loudest > 0.0 {
-        for sample in out.iter_mut() {
-            *sample *= peak / loudest;
-        }
-    }
+    crate::dsp::normalize_in_place(out, peak);
     // A short fade so nothing ends on a click.
     let fade = out.len().min(240);
     let len = out.len();

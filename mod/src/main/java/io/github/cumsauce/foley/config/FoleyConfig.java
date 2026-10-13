@@ -37,6 +37,29 @@ public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunde
 		boolean frogs, long voices) {
 	public static final FoleyConfig DEFAULT = new FoleyConfig(100, true, true, true, true, true, true, true, true, true,
 			true, true, true, 0);
+	/** Everything on, every mob's voice too. */
+	public static final FoleyConfig ALL = DEFAULT.withVoices(~0L);
+	/** Everything off. */
+	public static final FoleyConfig NONE = new FoleyConfig(100, false, false, false, false, false, false, false, false,
+			false, false, false, false, 0);
+
+	/** These settings with the mob voices in {@code mask} ({@code Voices.GROUPS} bits). */
+	public FoleyConfig withVoices(long mask) {
+		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
+				frogs, mask);
+	}
+
+	/** These settings with the wind on or off. */
+	public FoleyConfig withWind(boolean on) {
+		return new FoleyConfig(volume, rain, on, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
+				frogs, voices);
+	}
+
+	/** These settings with flowing water on or off. */
+	public FoleyConfig withWater(boolean on) {
+		return new FoleyConfig(volume, rain, wind, thunder, on, fire, lava, drips, strikes, footsteps, birds, crickets,
+				frogs, voices);
+	}
 
 	/** Whether Foley voices the group at {@code index} in {@code Voices.GROUPS}. */
 	public boolean voice(int index) {

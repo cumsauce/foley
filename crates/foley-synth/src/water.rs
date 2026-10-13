@@ -1,3 +1,4 @@
+use crate::dsp::Wobble;
 use crate::{BandPass, Bubble, LowPass, Rng, SAMPLE_RATE};
 
 /// The moving water near the listener.
@@ -78,11 +79,11 @@ pub struct Water {
     spray: LowPass,
     /// Sheets of falling water breaking up: the spray surges a few times a
     /// second.
-    surge: LowPass,
+    surge: Wobble,
     /// A stream's ripples slapping and splashing, 2 to 6 kHz.
     ripple: BandPass,
     rush: [BandPass; 2],
-    lapping: LowPass,
+    lapping: Wobble,
     distance: [LowPass; 2],
     samples: usize,
 }
@@ -103,10 +104,10 @@ impl Water {
             voices: Vec::with_capacity(MAX_VOICES),
             roar: [LowPass::new(500.0), LowPass::new(500.0)],
             spray: LowPass::new(9000.0),
-            surge: LowPass::new(3.0),
+            surge: Wobble::new(3.0, 5.0, 0.3, 1.8),
             ripple: BandPass::new(3200.0, 0.7),
             rush: [BandPass::new(900.0, 0.6), BandPass::new(350.0, 0.9)],
-            lapping: LowPass::new(1.2),
+            lapping: Wobble::new(1.2, 6.0, 0.4, 1.8),
             distance: [LowPass::new(16000.0), LowPass::new(16000.0)],
             samples: 0,
         }
@@ -181,16 +182,16 @@ impl Water {
                     self.roar[1].process(first)
                 };
                 let spray = self.spray.process(noise) - low;
-                let surge = (1.0 + 5.0 * self.surge.process(self.rng.signed())).clamp(0.3, 1.8);
+                let surge = self.surge.next(self.rng.signed());
                 mix += roar_level * (2.0 * low + 0.22 * surge * spray);
             }
             if rush_level > 0.0 {
                 // Lapping: the rush swells and ebbs a little, about once a second.
-                let lap = 1.0 + 6.0 * self.lapping.process(self.rng.signed());
+                let lap = self.lapping.next(self.rng.signed());
                 let rush = self.rush[0].process(noise)
                     + 0.7 * self.rush[1].process(noise)
                     + 0.35 * self.ripple.process(noise);
-                mix += rush_level * lap.clamp(0.4, 1.8) * rush;
+                mix += rush_level * lap * rush;
             }
             let first = self.distance[0].process(mix);
             let near = self.distance[1].process(first);

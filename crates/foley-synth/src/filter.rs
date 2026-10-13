@@ -29,9 +29,11 @@ impl BandPass {
     }
 
     pub fn process(&mut self, x: f32) -> f32 {
-        let y = self.b[0] * x + self.b[1] * self.x[0] + self.b[2] * self.x[1]
-            - self.a[0] * self.y[0]
-            - self.a[1] * self.y[1];
+        let y = flush(
+            self.b[0] * x + self.b[1] * self.x[0] + self.b[2] * self.x[1]
+                - self.a[0] * self.y[0]
+                - self.a[1] * self.y[1],
+        );
         self.x = [x, self.x[0]];
         self.y = [y, self.y[0]];
         y
@@ -57,9 +59,16 @@ impl LowPass {
     }
 
     pub fn process(&mut self, x: f32) -> f32 {
-        self.y += self.a * (x - self.y);
+        self.y = flush(self.y + self.a * (x - self.y));
         self.y
     }
+}
+
+/// Zero for anything below audibility: a filter ringing down in silence would
+/// otherwise reach subnormal floats, which many CPUs work on many times slower.
+#[inline]
+fn flush(y: f32) -> f32 {
+    if y.abs() < 1e-20 { 0.0 } else { y }
 }
 
 #[cfg(test)]

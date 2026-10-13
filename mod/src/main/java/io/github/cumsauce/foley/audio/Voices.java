@@ -165,7 +165,7 @@ public final class Voices {
 	}
 
 	static SoundEvent event(String mob, String call) {
-		return SoundEvent.createVariableRangeEvent(Identifier.fromNamespaceAndPath("foley", "voice_" + mob + "_" + call));
+		return Sounds.event("voice_" + mob + "_" + call);
 	}
 
 	private static void play(Minecraft minecraft, String mob, String call, SoundSource source, float volume,

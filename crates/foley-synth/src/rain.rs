@@ -206,7 +206,7 @@ impl Rain {
             rng: Rng::new(seed),
             scene: RainScene::DRY,
             until_next: 0.0,
-            voices: Vec::new(),
+            voices: Vec::with_capacity(MAX_VOICES),
             hiss: 0.0,
             hiss_low: 0.0,
             sizzle: BandPass::new(13_500.0, 1.2),

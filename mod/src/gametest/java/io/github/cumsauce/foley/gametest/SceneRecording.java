@@ -31,8 +31,7 @@ public class SceneRecording implements FabricClientGameTest {
 			walk(context);
 			return;
 		}
-		FoleyConfig all = new FoleyConfig(100, true, true, true, true, true, true, true, true, true, true, true, true,
-				~0L);
+		FoleyConfig all = FoleyConfig.ALL;
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			singleplayer.getConnection().waitForChunksRender();
 			var server = singleplayer.getServer();
@@ -75,8 +74,7 @@ public class SceneRecording implements FabricClientGameTest {
 				FoleyClient.setBypassed(false);
 				return;
 			}
-			FoleyConfig none = new FoleyConfig(100, false, false, false, false, false, false, false, false, false,
-					false, false, false, 0);
+			FoleyConfig none = FoleyConfig.NONE;
 			phase(context, "vanilla", () -> {
 				FoleyClient.setBypassed(true);
 				earshot(true);
@@ -129,14 +127,10 @@ public class SceneRecording implements FabricClientGameTest {
 			server.runCommand("item replace entity @p weapon.mainhand with stone 64");
 			context.runOnClient(mc -> earshotHigh());
 			context.waitTicks(100);
-			FoleyConfig every = new FoleyConfig(100, true, true, true, true, true, true, true, true, true, true, true,
-					true, ~0L);
+			FoleyConfig every = FoleyConfig.ALL;
 			// (name, reverb, Foley's settings or null for none): the last three take the mix apart.
 			Object[][] runs = {{"eax", "EAX", every}, {"convolution", "CONVOLUTION", every},
-					{"nowind", "EAX", new FoleyConfig(100, true, false, true, true, true, true, true, true, true, true,
-							true, true, ~0L)},
-					{"nowater", "EAX", new FoleyConfig(100, true, true, true, false, true, true, true, true, true, true,
-							true, true, ~0L)},
+					{"nowind", "EAX", every.withWind(false)}, {"nowater", "EAX", every.withWater(false)},
 					{"nofoley", "EAX", null}};
 			for (Object[] run : runs) {
 				String reverb = (String) run[1];

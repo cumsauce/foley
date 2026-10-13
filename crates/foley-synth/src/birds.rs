@@ -8,7 +8,7 @@
 
 use std::f32::consts::TAU;
 
-use crate::outdoors::{add_at, normalize};
+use crate::dsp::{add_at, normalize, smooth};
 use crate::{BandPass, LowPass, Rng, SAMPLE_RATE};
 
 /// The birds Foley knows.
@@ -120,11 +120,6 @@ fn whistle(
             rise * fall * (phase.sin() + harmonic * (2.0 * phase).sin())
         })
         .collect()
-}
-
-/// A raised-cosine step from 0 to 1, for envelopes that never click.
-fn smooth(x: f32) -> f32 {
-    0.5 - 0.5 * (std::f32::consts::PI * x).cos()
 }
 
 /// An American crow: two to five caws a third of a second long, a little

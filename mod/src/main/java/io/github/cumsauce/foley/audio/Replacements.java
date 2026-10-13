@@ -93,6 +93,6 @@ public final class Replacements {
 	}
 
 	private static SoundEvent event(String name) {
-		return SoundEvent.createVariableRangeEvent(Identifier.fromNamespaceAndPath("foley", name));
+		return Sounds.event(name);
 	}
 }

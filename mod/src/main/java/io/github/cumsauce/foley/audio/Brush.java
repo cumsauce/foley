@@ -3,11 +3,7 @@ package io.github.cumsauce.foley.audio;
 import io.github.cumsauce.foley.FoleyClient;
 import io.github.cumsauce.foley.config.FoleyConfig;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.Identifier;
-import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Blocks;
@@ -46,14 +42,11 @@ public final class Brush {
 			return;
 		}
 		travelled += moved;
-		if (travelled < STRIDE || !FoleyClient.oneShot()) return;
+		if (travelled < STRIDE) return;
 		travelled = 0;
 		float speed = (float) (moved * 20);
-		float volume = Math.clamp(0.15f + 0.1f * speed, 0.15f, 0.7f) * FoleyClient.gain();
-		SoundEvent event = SoundEvent.createVariableRangeEvent(Identifier.fromNamespaceAndPath("foley", "brush_" + plant));
-		minecraft.getSoundManager().play(new SimpleSoundInstance(event, SoundSource.PLAYERS, volume,
-				0.9f + 0.2f * minecraft.player.getRandom().nextFloat(), SoundInstance.createUnseededRandom(), now.x,
-				now.y + 0.5, now.z));
+		Sounds.play(minecraft, "brush_" + plant, SoundSource.PLAYERS, now.x, now.y + 0.5, now.z,
+				Math.clamp(0.15f + 0.1f * speed, 0.15f, 0.7f), 0.9f + 0.2f * minecraft.player.getRandom().nextFloat());
 	}
 
 	/** 0 grass, 1 leaves, 2 dry stalks, or -1 for nothing to brush through. */

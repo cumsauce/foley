@@ -12,7 +12,6 @@ import net.minecraft.client.resources.sounds.TickableSoundInstance;
 import net.minecraft.client.sounds.AudioStream;
 import net.minecraft.client.sounds.SoundBufferLibrary;
 import net.minecraft.resources.Identifier;
-import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.phys.Vec3;
 
@@ -41,7 +40,7 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 	 * @param kind its native kind, {@code NativeBridge.BED_*}
 	 */
 	public BedSound(String name, SoundSource source, NativeBridge bridge, int kind, S scene) {
-		super(SoundEvent.createVariableRangeEvent(Identifier.fromNamespaceAndPath("foley", name)), source,
+		super(Sounds.event(name), source,
 				SoundInstance.createUnseededRandom());
 		this.bridge = bridge;
 		this.kind = kind;

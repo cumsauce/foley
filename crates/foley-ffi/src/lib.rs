@@ -616,14 +616,31 @@ mod tests {
     #[test]
     fn thunder_is_struck() {
         let mut bed = std::ptr::null_mut();
-        let mut pcm = vec![0i16; 2 * 48_000];
+        // The thunder is made off the stream's thread, so render a block at a
+        // time as the game does until it has come in and been heard.
+        let mut pcm = vec![0i16; 4800];
+        let mut loudest = 0i16;
         let scene = [15.0f32, 90.0, 1.0];
         // SAFETY: every pointer is valid for its length; `bed` is freed last.
         unsafe {
             assert_eq!(foley_bed_create(FOLEY_BED_THUNDER, 1, &mut bed), FOLEY_OK);
             assert_eq!(foley_bed_set_scene(bed, scene.as_ptr(), 3), FOLEY_OK);
             assert_eq!(foley_bed_strike(bed, 200.0, 0.0, 0.0, 3), FOLEY_OK);
-            assert_eq!(foley_bed_render(bed, pcm.as_mut_ptr(), pcm.len()), FOLEY_OK);
+            for _ in 0..200 {
+                for _ in 0..200 {
+                    assert_eq!(foley_bed_render(bed, pcm.as_mut_ptr(), pcm.len()), FOLEY_OK);
+                    loudest = pcm.iter().fold(loudest, |m, s| m.max(s.saturating_abs()));
+                    if loudest > 5000 {
+                        break;
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(5));
+                }
+                loudest = pcm.iter().fold(loudest, |m, s| m.max(s.saturating_abs()));
+                if loudest > 5000 {
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
             foley_bed_destroy(bed);
             let mut wind = std::ptr::null_mut();
             assert_eq!(foley_bed_create(FOLEY_BED_WIND, 1, &mut wind), FOLEY_OK);
@@ -633,7 +650,7 @@ mod tests {
             );
             foley_bed_destroy(wind);
         }
-        assert!(pcm.iter().any(|&s| s.abs() > 5000), "a crack");
+        assert!(loudest > 5000, "a crack");
     }
 
     #[test]
