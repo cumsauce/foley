@@ -12,8 +12,8 @@
 mod guard;
 
 use foley_synth::{
-    Call, Contact, Fire, FireScene, Lava, LavaScene, Material, Mob, Rain, RainScene, Surface,
-    Thunder, ThunderScene, Water, WaterScene, Wind, WindScene, birdsong, cicadas, contact,
+    Call, Contact, Fire, FireScene, Lava, LavaScene, Material, Mob, Rain, RainScene, SAMPLE_RATE,
+    Surface, Thunder, ThunderScene, Water, WaterScene, Wind, WindScene, birdsong, cicadas, contact,
     crickets, drip_into_water, drip_on_stone, fracture, frog, howl, lava_drip, owl, surf, to_pcm,
     voice, woodpecker,
 };
@@ -121,7 +121,15 @@ pub struct FoleyBed {
     /// The level guard's envelope and gain.
     envelope: f32,
     guard: f32,
+    /// The scene last set, and the one heard now, gliding towards it so a
+    /// change (the game samples the world a few times a second) never steps.
+    target: Vec<f32>,
+    heard: Vec<f32>,
 }
+
+/// Scenes glide this often, samples, and over about this long, seconds.
+const GLIDE_BLOCK: usize = 128;
+const GLIDE_TIME: f32 = 0.3;
 
 /// Beds never go past this peak: a scene that jumps (a waterfall appearing,
 /// a gust) is caught before it reaches the speakers.
@@ -157,6 +165,8 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
             scratch: Vec::new(),
             envelope: 0.0,
             guard: 1.0,
+            target: Vec::new(),
+            heard: Vec::new(),
         }));
         Ok(())
     })
@@ -183,87 +193,105 @@ pub unsafe extern "C" fn foley_bed_set_scene(
         if !p.iter().all(|x| x.is_finite()) {
             return Err(FfiError::invalid("params must be finite"));
         }
-        let wanted = match bed.synth {
-            Synth::Rain(_) => 3 + FOLEY_SURFACES,
-            Synth::Wind(_) | Synth::Water(_) | Synth::Thunder(_) => 3,
-            Synth::Fire(_) | Synth::Lava(_) => 2,
-        };
-        if p.len() != wanted {
-            return Err(FfiError::invalid("wrong number of params for this bed"));
+        // Checked (and applied) now; from the next render on, it glides there
+        // from what's heard.
+        apply(&mut bed.synth, p)?;
+        if bed.heard.is_empty() {
+            bed.heard = p.to_vec();
         }
-        let gain = |x: f32| {
-            (0.0..=1.0)
-                .contains(&x)
-                .then_some(x)
-                .ok_or_else(|| FfiError::invalid("gain out of range"))
-        };
-        let amount = |x: f32| {
-            (0.0..=10_000.0)
-                .contains(&x)
-                .then_some(x)
-                .ok_or_else(|| FfiError::invalid("amount out of range"))
-        };
-        match &mut bed.synth {
-            Synth::Rain(rain) => {
-                let rate = p[0];
-                let shares = &p[1..=FOLEY_SURFACES];
-                if !(0.0..=200.0).contains(&rate) || !shares.iter().all(|s| *s >= 0.0) {
-                    return Err(FfiError::invalid("rate or surfaces out of range"));
-                }
-                let roof = match p[FOLEY_SURFACES + 1] as i32 {
-                    -1 => None,
-                    index => Some((
-                        usize::try_from(index)
-                            .ok()
-                            .and_then(Surface::from_index)
-                            .ok_or_else(|| FfiError::invalid("unknown roof surface"))?,
-                        p[FOLEY_SURFACES + 2].clamp(0.5, 64.0),
-                    )),
-                };
-                let mut surfaces = [0.0; FOLEY_SURFACES];
-                surfaces.copy_from_slice(shares);
-                rain.set_scene(RainScene {
-                    rate,
-                    surfaces,
-                    roof,
-                });
-            }
-            Synth::Wind(wind) => {
-                if !(0.0..=60.0).contains(&p[0]) {
-                    return Err(FfiError::invalid("wind speed out of range"));
-                }
-                wind.set_scene(WindScene {
-                    speed: p[0],
-                    exposure: gain(p[1])?,
-                    leaves: gain(p[2])?,
-                });
-            }
-            Synth::Water(water) => water.set_scene(WaterScene {
-                flow: amount(p[0])?,
-                falls: amount(p[1])?,
-                gain: gain(p[2])?,
-            }),
-            Synth::Fire(fire) => fire.set_scene(FireScene {
-                size: amount(p[0])?,
-                gain: gain(p[1])?,
-            }),
-            Synth::Lava(lava) => lava.set_scene(LavaScene {
-                area: amount(p[0])?,
-                gain: gain(p[1])?,
-            }),
-            Synth::Thunder(thunder) => {
-                if !(-50.0..=60.0).contains(&p[0]) || !(0.0..=100.0).contains(&p[1]) {
-                    return Err(FfiError::invalid("temperature or humidity out of range"));
-                }
-                thunder.set_scene(ThunderScene {
-                    celsius: p[0],
-                    humidity: p[1],
-                    exposure: gain(p[2])?,
-                });
-            }
-        }
+        bed.target = p.to_vec();
         Ok(())
     })
+}
+
+/// Checks `p` for this kind of bed and gives it to the synth.
+fn apply(synth: &mut Synth, p: &[f32]) -> Result<(), FfiError> {
+    let wanted = match synth {
+        Synth::Rain(_) => 3 + FOLEY_SURFACES,
+        Synth::Wind(_) | Synth::Water(_) | Synth::Thunder(_) => 3,
+        Synth::Fire(_) | Synth::Lava(_) => 2,
+    };
+    if p.len() != wanted {
+        return Err(FfiError::invalid("wrong number of params for this bed"));
+    }
+    let gain = |x: f32| {
+        (0.0..=1.0)
+            .contains(&x)
+            .then_some(x)
+            .ok_or_else(|| FfiError::invalid("gain out of range"))
+    };
+    let amount = |x: f32| {
+        (0.0..=10_000.0)
+            .contains(&x)
+            .then_some(x)
+            .ok_or_else(|| FfiError::invalid("amount out of range"))
+    };
+    match synth {
+        Synth::Rain(rain) => {
+            let rate = p[0];
+            let shares = &p[1..=FOLEY_SURFACES];
+            if !(0.0..=200.0).contains(&rate) || !shares.iter().all(|s| *s >= 0.0) {
+                return Err(FfiError::invalid("rate or surfaces out of range"));
+            }
+            let roof = match p[FOLEY_SURFACES + 1] as i32 {
+                -1 => None,
+                index => Some((
+                    usize::try_from(index)
+                        .ok()
+                        .and_then(Surface::from_index)
+                        .ok_or_else(|| FfiError::invalid("unknown roof surface"))?,
+                    p[FOLEY_SURFACES + 2].clamp(0.5, 64.0),
+                )),
+            };
+            let mut surfaces = [0.0; FOLEY_SURFACES];
+            surfaces.copy_from_slice(shares);
+            rain.set_scene(RainScene {
+                rate,
+                surfaces,
+                roof,
+            });
+        }
+        Synth::Wind(wind) => {
+            if !(0.0..=60.0).contains(&p[0]) {
+                return Err(FfiError::invalid("wind speed out of range"));
+            }
+            wind.set_scene(WindScene {
+                speed: p[0],
+                exposure: gain(p[1])?,
+                leaves: gain(p[2])?,
+            });
+        }
+        Synth::Water(water) => water.set_scene(WaterScene {
+            flow: amount(p[0])?,
+            falls: amount(p[1])?,
+            gain: gain(p[2])?,
+        }),
+        Synth::Fire(fire) => fire.set_scene(FireScene {
+            size: amount(p[0])?,
+            gain: gain(p[1])?,
+        }),
+        Synth::Lava(lava) => lava.set_scene(LavaScene {
+            area: amount(p[0])?,
+            gain: gain(p[1])?,
+        }),
+        Synth::Thunder(thunder) => {
+            if !(-50.0..=60.0).contains(&p[0]) || !(0.0..=100.0).contains(&p[1]) {
+                return Err(FfiError::invalid("temperature or humidity out of range"));
+            }
+            thunder.set_scene(ThunderScene {
+                celsius: p[0],
+                humidity: p[1],
+                exposure: gain(p[2])?,
+            });
+        }
+    }
+    Ok(())
+}
+
+/// Whether the param at `index` is a choice, not an amount, so it's taken at
+/// once rather than glided: a rain bed's roof surface and room size.
+fn is_choice(synth: &Synth, index: usize) -> bool {
+    matches!(synth, Synth::Rain(_)) && index > FOLEY_SURFACES
 }
 
 /// Renders the next `frames` samples of `bed` into `out`, as 16-bit PCM.
@@ -280,13 +308,27 @@ pub unsafe extern "C" fn foley_bed_render(bed: *mut FoleyBed, out: *mut i16, fra
         // SAFETY: the caller guarantees `out` is writable for `frames`.
         let out = unsafe { slice_mut_arg(out, frames, "out") }?;
         bed.scratch.resize(frames, 0.0);
-        match &mut bed.synth {
-            Synth::Rain(synth) => synth.render(&mut bed.scratch),
-            Synth::Wind(synth) => synth.render(&mut bed.scratch),
-            Synth::Water(synth) => synth.render(&mut bed.scratch),
-            Synth::Fire(synth) => synth.render(&mut bed.scratch),
-            Synth::Lava(synth) => synth.render(&mut bed.scratch),
-            Synth::Thunder(synth) => synth.render(&mut bed.scratch),
+        let step = 1.0 - (-(GLIDE_BLOCK as f32) / (GLIDE_TIME * SAMPLE_RATE as f32)).exp();
+        for block in bed.scratch.chunks_mut(GLIDE_BLOCK) {
+            if bed.heard != bed.target {
+                for (i, (heard, target)) in bed.heard.iter_mut().zip(&bed.target).enumerate() {
+                    *heard = if is_choice(&bed.synth, i) || (*target - *heard).abs() < 1e-4 {
+                        *target
+                    } else {
+                        *heard + (*target - *heard) * step
+                    };
+                }
+                // In range: between two scenes that were.
+                apply(&mut bed.synth, &bed.heard)?;
+            }
+            match &mut bed.synth {
+                Synth::Rain(synth) => synth.render(block),
+                Synth::Wind(synth) => synth.render(block),
+                Synth::Water(synth) => synth.render(block),
+                Synth::Fire(synth) => synth.render(block),
+                Synth::Lava(synth) => synth.render(block),
+                Synth::Thunder(synth) => synth.render(block),
+            }
         }
         // The level guard: the envelope rises at once and falls over about
         // half a second; the gain follows it down quickly and back up slowly.

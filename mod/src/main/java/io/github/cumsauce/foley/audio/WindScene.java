@@ -13,8 +13,8 @@ import net.minecraft.world.phys.Vec3;
  *   <li><b>Speed:</b> a 10 m reference wind from the weather ({@value #CLEAR} m/s clear, {@value #RAIN} in rain,
  *       {@value #STORM} in a thunderstorm), carried to the listener's height above the ground round about by the log
  *       wind profile, U(z) = U₁₀·ln(z/z₀)/ln(10/z₀), with the roughness z₀ of what's round about (open ground or
- *       woods). So it rises on a hill top and drops in a valley or a forest. The listener's own speed (flying, a
- *       boat) adds to it.</li>
+ *       woods). So it rises on a hill top and drops in a valley or a forest. Going faster than a sprint (flying,
+ *       gliding) adds to it.</li>
  *   <li><b>Exposure:</b> how much of the sky the listener and the columns round them are open to; 0 deep inside.</li>
  *   <li><b>Leaves:</b> how much of the top of what's round about is leaves, to rustle.</li>
  * </ul>
@@ -36,6 +36,8 @@ public record WindScene(float speed, float exposure, float leaves) implements Sc
 	/** Roughness lengths, m: open grassland, and woods. */
 	private static final double OPEN = 0.03;
 	private static final double WOODS = 1.0;
+	/** Below this speed of their own, m/s, the listener doesn't hear the air going by. */
+	private static final double FAST = 8;
 
 	public static WindScene sample(Minecraft minecraft) {
 		ClientLevel level = minecraft.level;
@@ -70,8 +72,9 @@ public record WindScene(float speed, float exposure, float leaves) implements Sc
 		double roughness = OPEN + (WOODS - OPEN) * Math.min(1, 2 * leaves);
 		double profile = Math.log(Math.max(height, roughness * 1.5) / roughness) / Math.log(10 / roughness);
 		double speed = reference * Math.clamp(profile, 0.1, 2.5);
-		// The listener's own motion through the air, blocks a tick to m/s.
-		double moving = minecraft.player.getDeltaMovement().length() * 20;
+		// The listener's own motion through the air, blocks a tick to m/s: only past a sprint (flying, gliding,
+		// falling) does the air rushing by the ears beat the wind. Walking, and gravity's pull on the ground, don't.
+		double moving = Math.max(0, minecraft.player.getDeltaMovement().length() * 20 - FAST);
 		speed = Math.hypot(speed, moving);
 		// Exposure: the ear itself under the sky counts half, the columns round it the rest.
 		float sky = level.canSeeSky(BlockPos.containing(eye)) ? 1 : 0;

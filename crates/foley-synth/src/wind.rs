@@ -24,6 +24,8 @@ impl WindScene {
 const TURBULENCE: f32 = 0.25;
 /// ...and this time scale, seconds.
 const GUST_TIME: f32 = 4.0;
+/// How loud the leaves' patter is.
+const LEAVES: f32 = 0.18;
 /// The speed is updated this often, samples.
 const BLOCK: usize = 64;
 
@@ -112,21 +114,22 @@ impl Wind {
     fn leaves(&mut self, u: f32, exposure: f32, dt: f32) -> f32 {
         let leaves = self.scene.leaves.clamp(0.0, 1.0);
         let reach = 0.4 + 0.6 * exposure;
-        let canopy = (2.5 * u).max(2.5);
+        let canopy = (2.5 * u).clamp(2.5, 20.0);
         let mut out = 0.0;
-        // Collisions: a dense patter that smears into a hush.
+        // Collisions: a patter, each a tick of a millisecond or two, that
+        // thickens into a hush as it blows harder but never into a hiss.
         self.until_leaf -= dt;
         if self.until_leaf <= 0.0 {
             self.leaf_envelope += 0.3 + 0.7 * self.rng.unit();
-            let rate = 60.0 + 25.0 * canopy * canopy * leaves;
-            self.until_leaf = self.rng.exponential(rate.min(4000.0));
+            let rate = 30.0 + 5.0 * canopy * canopy * leaves;
+            self.until_leaf = self.rng.exponential(rate.min(1500.0));
         }
-        self.leaf_envelope *= 0.995;
-        let flutter = (1.0 + 4.0 * self.flutter.process(self.rng.signed())).clamp(0.3, 1.8);
+        self.leaf_envelope *= 0.985;
+        let flutter = (1.0 + 4.0 * self.flutter.process(self.rng.signed())).clamp(0.3, 1.5);
         let noise = self.rng.signed();
         let leaf = self.leaf[0].process(noise) + 0.6 * self.leaf[1].process(noise);
-        let loud = 0.07 * leaves * reach * (0.4 + (canopy / 25.0).min(1.2));
-        out += loud * flutter * self.leaf_envelope.min(2.0) * leaf;
+        let loud = LEAVES * leaves * reach * (0.6 + canopy / 40.0);
+        out += loud * flutter * self.leaf_envelope.min(1.5) * leaf;
         // Gusts sweeping through the crowns.
         if u > 0.5 {
             self.until_rustle -= dt;
