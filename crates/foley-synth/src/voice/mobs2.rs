@@ -62,22 +62,27 @@ pub(super) fn script(rng: &mut Rng, mob: Mob, call: Call) -> Option<Vec<Seg>> {
         }
         // Goats: a nasal, trembling bleat; screaming goats, a loud, rough
         // one.
+        // A goat's "meh-eh-eh" is more nasal than a sheep's "baa" and quavers
+        // deeper and a little slower, its loudness pulsing some 14 times a
+        // second; screaming, it's loud, high and rough.
         (Mob::Goat, Call::Ambient | Call::Scream) => {
             let scream = call == Call::Scream;
+            let quaver = vary(rng, if scream { 16.0 } else { 14.0 }, 0.15);
             vec![
                 Seg::new(vary(rng, if scream { 0.9 } else { 0.7 }, 0.2))
-                    .vowels(&[(0.0, EH), (0.2, AE), (1.0, AA)])
-                    .lips(&[(0.0, 0.0), (0.06, 1.0)])
-                    .velum(&[(0.0, 0.5)])
+                    .vowels(&[(0.0, EH), (0.2, AE), (1.0, EH)])
+                    .lips(&[(0.0, 0.0), (0.05, 1.0)])
+                    .velum(&[(0.0, 0.9), (0.15, 0.5)])
                     .f0(if scream {
                         &[(0.0, 1.6), (0.3, 2.0), (1.0, 1.4)]
                     } else {
-                        &[(0.0, 1.0), (0.3, 1.1), (1.0, 0.85)]
+                        &[(0.0, 0.9), (0.15, 1.1), (0.7, 1.0), (1.0, 0.85)]
                     })
-                    .tremolo(if scream { 6.0 } else { 9.0 }, 1.0)
-                    .chaos(if scream { 0.6 } else { 0.15 })
-                    .sub(if scream { 0.3 } else { 0.1 })
-                    .rd(if scream { 0.6 } else { 1.1 }),
+                    .tremolo(quaver, if scream { 0.5 } else { 0.4 })
+                    .sidebands(if scream { 0.4 } else { 0.6 }, quaver)
+                    .chaos(if scream { 0.6 } else { 0.2 })
+                    .sub(if scream { 0.3 } else { 0.2 })
+                    .rd(if scream { 0.6 } else { 0.8 }),
             ]
         }
         // Llamas hum, mouth shut; angry, an alarm call, high and staccato.

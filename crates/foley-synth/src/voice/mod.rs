@@ -803,16 +803,24 @@ fn script(rng: &mut Rng, mob: Mob, call: Call) -> Vec<Seg> {
             })
             .collect(),
         (Mob::Sheep, _) => {
-            // "Baa", lips parting, its pitch and loudness trembling.
-            let mut b = Seg::new(vary(rng, 0.85, 0.2)).vowels(&[(0.0, EH), (0.2, AE), (1.0, AA)]);
-            b.lips = k(&[(0.0, 0.0), (0.06, 1.0)]);
-            b.f0 = k(&[(0.0, 0.95), (0.2, 1.1), (1.0, 0.85)]);
-            b.tremolo = (vary(rng, 7.5, 0.15), 0.9);
-            b.sidebands = c(0.35);
-            b.sideband_hz = b.tremolo.0;
-            b.rd = c(1.2);
-            b.breath = c(0.15);
-            b.sub = c(0.1);
+            // "Mbaa": lips and nose open into it; a pressed, buzzy voice whose
+            // loudness quavers fast (about 20 times a second, the grain of a
+            // bleat) with only a slight quaver of pitch, rough with period
+            // doubling; up into it and falling away.
+            let mut b = Seg::new(vary(rng, 0.75, 0.2)).vowels(&[(0.0, EH), (0.15, AE), (1.0, AA)]);
+            b.lips = k(&[(0.0, 0.0), (0.05, 1.0)]);
+            b.velum = k(&[(0.0, 0.8), (0.1, 0.25)]);
+            b.f0 = k(&[(0.0, 0.88), (0.12, 1.08), (0.6, 1.0), (1.0, 0.82)]);
+            let quaver = vary(rng, 21.0, 0.15);
+            b.tremolo = (quaver, 0.3);
+            b.sidebands = k(&[(0.0, 0.15), (0.25, 0.45), (1.0, 0.35)]);
+            b.sideband_hz = quaver;
+            b.rd = c(0.8);
+            b.sub = c(0.25);
+            b.chaos = c(0.15);
+            b.jitter = 0.03;
+            b.breath = c(0.12);
+            b.loud = k(&[(0.0, 0.0), (0.06, 1.0), (0.75, 0.85), (1.0, 0.0)]);
             vec![b]
         }
         (Mob::Chicken, _) => {
