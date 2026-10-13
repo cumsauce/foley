@@ -5,6 +5,7 @@
 	"client": [
 		"AbstractSoundInstanceAccessor",
 		"AbstractSoundInstanceMixin",
+		"LibraryMixin",
 		"SoundBufferLibraryMixin",
 		"SoundEngineMixin",
 		"SoundManagerMixin"

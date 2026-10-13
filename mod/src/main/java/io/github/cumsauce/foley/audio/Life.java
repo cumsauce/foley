@@ -87,6 +87,8 @@ public final class Life {
 			return;
 		}
 		ticks++;
+		// Rain counts wherever the listener sat it out, indoors too.
+		if (level.isRaining()) rainedAt = ticks;
 		var wind = FoleyClient.wind();
 		// Under trees the sky is hidden, but the woods are all around: they count as outside.
 		float exposure = wind == null ? 1
@@ -172,10 +174,11 @@ public final class Life {
 				call(minecraft, "cicadas_" + band, tree, 0.45f);
 			}
 		}
-		// After rain, the leaves drip for a while: often at first, then now and then.
-		if (raining) rainedAt = ticks;
+		// After rain, the leaves drip for a while: often at first, then now and then. Not where it never rains, or
+		// where it snowed.
 		int since = ticks - rainedAt;
-		if (FoleyClient.wants(FoleyConfig::drips) && !raining && since < DRIPPING
+		boolean wet = biome.value().hasPrecipitation() && celsius > 3;
+		if (FoleyClient.wants(FoleyConfig::drips) && wet && !raining && since < DRIPPING
 				&& random.nextFloat() < 0.4f * (1 - since / (float) DRIPPING)) {
 			BlockPos leaf = find(level, eye, 8, state -> state.is(BlockTags.LEAVES));
 			if (leaf != null) {

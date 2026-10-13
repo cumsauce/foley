@@ -12,6 +12,7 @@ import net.minecraft.world.entity.monster.zombie.Drowned;
 import net.minecraft.world.entity.monster.zombie.Husk;
 import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.entity.monster.zombie.ZombieVillager;
+import net.minecraft.world.entity.monster.zombie.ZombifiedPiglin;
 
 /**
  * Zombies breathing (M7), when Foley voices them: within {@value #REACH} blocks, each one's breath follows it, louder,
@@ -44,7 +45,9 @@ public final class Breathing {
 		}
 		var eye = minecraft.player.getEyePosition();
 		var near = minecraft.level.getEntitiesOfClass(Zombie.class, minecraft.player.getBoundingBox().inflate(REACH),
-				z -> z.isAlive() && !z.isSilent() && z.distanceTo(minecraft.player) <= REACH);
+				// Zombified piglins are zombies to the game, but not voiced as them.
+				z -> z.isAlive() && !z.isSilent() && !(z instanceof ZombifiedPiglin)
+						&& z.distanceTo(minecraft.player) <= REACH);
 		near.sort((a, b) -> Double.compare(a.distanceToSqr(eye), b.distanceToSqr(eye)));
 		if (near.size() > MOST) near = near.subList(0, MOST);
 		var keep = new HashMap<UUID, Integer>();
