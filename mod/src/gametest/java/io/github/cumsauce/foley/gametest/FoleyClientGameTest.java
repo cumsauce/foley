@@ -33,6 +33,8 @@ import net.minecraft.sounds.SoundSource;
 public class FoleyClientGameTest implements FabricClientGameTest {
 	@Override
 	public void runTest(ClientGameTestContext context) {
+		// Recording the listening scene instead ({@link SceneRecording}).
+		if (System.getenv("FOLEY_SCENE") != null) return;
 		if (FoleyClient.bridge() == null) throw new AssertionError("the native synthesis didn't load");
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			singleplayer.getConnection().waitForChunksRender();
