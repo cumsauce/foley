@@ -6,7 +6,7 @@ use std::f32::consts::TAU;
 use crate::water::plunge_radius;
 use crate::{BandPass, Bubble, Contact, LowPass, Material, Rng, SAMPLE_RATE, contact};
 
-fn add_at(out: &mut Vec<f32>, at: usize, sound: &[f32], gain: f32) {
+pub(crate) fn add_at(out: &mut Vec<f32>, at: usize, sound: &[f32], gain: f32) {
     if out.len() < at + sound.len() {
         out.resize(at + sound.len(), 0.0);
     }
@@ -16,7 +16,7 @@ fn add_at(out: &mut Vec<f32>, at: usize, sound: &[f32], gain: f32) {
 }
 
 /// Peaks at `peak`, so every call comes out at a known level.
-fn normalize(mut out: Vec<f32>, peak: f32) -> Vec<f32> {
+pub(crate) fn normalize(mut out: Vec<f32>, peak: f32) -> Vec<f32> {
     let loudest = out.iter().fold(0f32, |m, x| m.max(x.abs()));
     if loudest > 0.0 {
         out.iter_mut().for_each(|x| *x *= peak / loudest);

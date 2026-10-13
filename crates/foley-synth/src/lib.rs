@@ -2,6 +2,7 @@
 //! that dominates what is heard (docs/PLAN.md), at [`SAMPLE_RATE`], mono.
 
 mod air;
+mod birds;
 mod bubble;
 mod filter;
 mod fire;
@@ -18,6 +19,7 @@ mod water;
 mod wind;
 
 pub use crate::air::{absorption_cutoff, absorption_db_per_m};
+pub use crate::birds::{Bird, bird_call};
 pub use crate::bubble::{Bubble, minnaert_hz};
 pub use crate::filter::{BandPass, LowPass};
 pub use crate::fire::{Fire, FireScene};

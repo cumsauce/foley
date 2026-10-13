@@ -1,6 +1,6 @@
 use std::f32::consts::{PI, TAU};
 
-use crate::{BandPass, Rng, SAMPLE_RATE};
+use crate::{BandPass, Bird, Rng, SAMPLE_RATE, bird_call};
 
 /// A field cricket's chirps a minute at `celsius`: Dolbear's law (1897),
 /// T°F = 50 + (N − 40)/4, which is N ≈ 7.2·T°C − 32. None below about 8 °C.
@@ -65,124 +65,10 @@ fn cricket(celsius: f32, seed: u64) -> Vec<f32> {
     out
 }
 
-/// One syllable of a song: a pitch contour, how long, and how it's sung.
-#[derive(Debug, Clone, Copy)]
-struct Syllable {
-    from: f32,
-    to: f32,
-    seconds: f32,
-    /// A trill's rate (Hz) and depth (fraction of pitch), or 0.
-    trill: (f32, f32),
-}
-
-/// A species' song: its syllables and the order it sings them in.
-#[derive(Debug, Clone)]
-struct Song {
-    syllables: Vec<Syllable>,
-    order: Vec<usize>,
-    gap: f32,
-}
-
-impl Song {
-    /// A species, made up from `species`: 2 to 4 kinds of syllable between
-    /// 1.5 and 8 kHz (whistles, sweeps up and down, trills), sung in a
-    /// motif of 4 to 10 with repeats.
-    fn of(species: u32) -> Song {
-        let mut rng = Rng::new(0xB12D_0000 + u64::from(species));
-        let low = 1500.0 + 2500.0 * rng.unit();
-        let span = 1.0 + 1.0 * rng.unit();
-        let mut syllables = Vec::new();
-        for _ in 0..2 + (rng.unit() * 3.0) as usize {
-            let a = low * span.powf(rng.unit());
-            let b = low * span.powf(rng.unit());
-            let trill = if rng.unit() < 0.3 {
-                (20.0 + 40.0 * rng.unit(), 0.05 + 0.1 * rng.unit())
-            } else {
-                (0.0, 0.0)
-            };
-            syllables.push(Syllable {
-                from: a,
-                to: b,
-                seconds: 0.04 + 0.25 * rng.unit(),
-                trill,
-            });
-        }
-        let mut order = Vec::new();
-        let motif = 4 + (rng.unit() * 7.0) as usize;
-        while order.len() < motif {
-            let kind = (rng.unit() * syllables.len() as f32) as usize;
-            for _ in 0..1 + (rng.unit() * 3.0) as usize {
-                order.push(kind);
-            }
-        }
-        Song {
-            syllables,
-            order,
-            gap: 0.02 + 0.08 * rng.unit(),
-        }
-    }
-}
-
-/// A bird of `species` singing its song once (M5), through a model of the
-/// syrinx: its labia as a self-sustained (van der Pol) oscillator,
-/// x″ = μω(p − x²)x′ − ω²x, set going by the air sac's pressure p and tuned
-/// by the syringeal muscles' tension (ω), as in Mindlin and Laje's work.
-/// Below threshold pressure it falls silent; the pitch follows each
-/// syllable's contour. The trachea and beak, which songbirds tune to the
-/// note, take off most of the overtones.
+/// A bird singing (M5): `species` picks one of the real birds Foley knows
+/// ([`Bird::of`]), `seed` the individual and rendition.
 pub fn birdsong(species: u32, seed: u64) -> Vec<f32> {
-    let mut rng = Rng::new(seed);
-    let song = Song::of(species);
-    let rate = SAMPLE_RATE as f32;
-    let dt = 1.0 / rate;
-    let detune = 1.0 + 0.03 * rng.signed();
-    // Sometimes a song is cut short.
-    let sung = if rng.unit() < 0.25 {
-        (song.order.len() / 2).max(2)
-    } else {
-        song.order.len()
-    };
-    let mut out = Vec::new();
-    let (mut x, mut v) = (0.01f32, 0.0f32);
-    let mut tract = BandPass::new(3000.0, 3.0);
-    for &kind in &song.order[..sung] {
-        let syllable = song.syllables[kind];
-        let seconds = syllable.seconds * (1.0 + 0.08 * rng.signed());
-        let samples = (seconds * rate) as usize;
-        let gap = ((song.gap * (1.0 + 0.2 * rng.signed())) * rate) as usize;
-        for i in 0..samples + gap {
-            let t = i as f32 / samples.max(1) as f32;
-            let singing = i < samples;
-            // Pressure: up in 5 ms, held, down in the last 10 ms; below
-            // zero between syllables, which quenches the labia.
-            let p = if singing {
-                let attack = (i as f32 / (0.005 * rate)).min(1.0);
-                let release = ((samples - i) as f32 / (0.01 * rate)).min(1.0);
-                attack * release
-            } else {
-                -1.0
-            };
-            let mut f = syllable.from * (syllable.to / syllable.from).powf(t.min(1.0)) * detune;
-            if syllable.trill.0 > 0.0 {
-                f *= 1.0 + syllable.trill.1 * (TAU * syllable.trill.0 * i as f32 * dt).sin();
-            }
-            // Pre-warped so the integrator rings at f.
-            let omega = 2.0 * rate * (PI * f * dt).sin();
-            let mu = 0.15;
-            // Semi-implicit Euler: stable for ωdt < 2.
-            v += dt * (mu * omega * (p - x * x) * v - omega * omega * x);
-            x += dt * v;
-            if !singing && x.abs() < 1e-4 {
-                x = 0.01;
-                v = 0.0;
-            }
-            tract.tune(f, 3.0);
-            let s = 0.25 * (0.7 * tract.process(x) + 0.3 * x * p.max(0.0));
-            out.push(s);
-        }
-    }
-    out.extend(std::iter::repeat_n(0.0, (0.05 * rate) as usize));
-    out
+    bird_call(Bird::of(species), seed)
 }
 
 /// A frog of body length `size_cm` calling (M5): glottal pulses, 60 to
@@ -287,34 +173,6 @@ mod tests {
         assert!(warm > cool, "{cool} then {warm}");
         assert!(crickets(4.0, 1).iter().all(|x| *x == 0.0));
         assert!(peak(&crickets(25.0, 2)) > 0.1);
-    }
-
-    #[test]
-    fn a_species_sings_its_own_song() {
-        let a = birdsong(3, 1);
-        let b = birdsong(3, 2);
-        let c = birdsong(7, 1);
-        for s in [&a, &b, &c] {
-            assert!(s.iter().all(|x| x.is_finite()));
-            assert!(peak(s) > 0.05 && peak(s) < 2.0, "{}", peak(s));
-            assert!(s.len() < 6 * SAMPLE_RATE as usize);
-        }
-        // Pitch in the birds' range: zero crossings in the loudest 20 ms.
-        let i = a
-            .iter()
-            .enumerate()
-            .fold(
-                (0, 0f32),
-                |m, (i, x)| if x.abs() > m.1 { (i, x.abs()) } else { m },
-            )
-            .0;
-        let window = &a[i.saturating_sub(480)..(i + 480).min(a.len())];
-        let hz = window
-            .windows(2)
-            .filter(|w| w[0] <= 0.0 && w[1] > 0.0)
-            .count() as f32
-            / (window.len() as f32 / SAMPLE_RATE as f32);
-        assert!((1200.0..9000.0).contains(&hz), "{hz} Hz");
     }
 
     #[test]

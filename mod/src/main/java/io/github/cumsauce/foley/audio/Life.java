@@ -30,8 +30,9 @@ import org.jspecify.annotations.Nullable;
  * it pans and Earshot shapes it.
  *
  * <ul>
- *   <li><b>Birds</b> sing from the trees round about by day, most at the dawn chorus, not in the rain. Each biome has
- *       its own three species, so a forest keeps its voices.</li>
+ *   <li><b>Birds</b> sing from the trees round about by day, most at the dawn chorus, not in the rain: real ones, each
+ *       where it lives (robins, cardinals and chickadees in the woods, chickadees in the taiga, doves and crows in the
+ *       open). A bird stays on its perch and sings again for a while before another takes over.</li>
  *   <li><b>Crickets</b> chirp from the grass at night when it's warm enough (from 10 °C), at Dolbear's rate for the
  *       temperature, each staying where it is.</li>
  *   <li><b>Frogs</b> call from still water at night or in the rain; bigger ones in swamps.</li>
@@ -47,8 +48,11 @@ import org.jspecify.annotations.Nullable;
  * it: out in the open, or under trees (the wind's exposure and leaves).
  */
 public final class Life {
-	/** Species of bird, generated: {@code foley:bird_<n>}. */
-	public static final int SPECIES = 12;
+	/** Birds, generated: {@code foley:bird_<n>}, in the native order. */
+	public static final int CROW = 0, DOVE = 1, ROBIN = 2, CARDINAL = 3, CHICKADEE = 4;
+	public static final int SPECIES = 5;
+	/** How loud each sings: a crow carries, a dove is soft. */
+	private static final float[] BIRD_VOLUME = {0.7f, 0.4f, 0.35f, 0.4f, 0.3f};
 	/** Crickets are rendered for these temperatures (°C): {@code foley:crickets_<n>}. */
 	public static final float[] CRICKET_CELSIUS = {12, 16, 20, 24, 28};
 	/** Frogs' body lengths, cm: {@code foley:frog_<n>}. */
@@ -70,6 +74,10 @@ public final class Life {
 	private int rainedAt = Integer.MIN_VALUE / 2;
 	private @Nullable BlockPos shore;
 	private int shoreFoundAt = Integer.MIN_VALUE / 2;
+	/** The bird singing now, where, and until when (tick) it keeps at it. */
+	private @Nullable BlockPos perch;
+	private int singer;
+	private int perchUntil;
 
 	/** A cricket in the grass, and when it next chirps (tick). */
 	private record Cricket(BlockPos at, int next) {}
@@ -103,14 +111,16 @@ public final class Life {
 		float celsius = 20 * biome.value().getBaseTemperature() - (night ? 5 : 0);
 
 		if (ticks % 20 == 0) {
-			// Birds: about one song every 4 s, three times as many at dawn.
-			if (FoleyClient.wants(FoleyConfig::birds) && !night && !raining && random.nextFloat() < (dawn ? 0.2f : 0.06f) * exposure) {
-				BlockPos tree = find(level, eye, 24, state -> state.is(BlockTags.LEAVES));
-				if (tree != null) {
-					int species = Math.floorMod(biome.unwrapKey().map(k -> k.identifier().hashCode()).orElse(0)
-							+ 5 * random.nextInt(3), SPECIES);
-					call(minecraft, "bird_" + species, tree.above(), 0.35f);
+			// Birds: a song every half a minute or so, four times as often at dawn. Mostly the same bird again from
+			// its perch, as one sings on and off for a minute or two.
+			if (FoleyClient.wants(FoleyConfig::birds) && !night && !raining && random.nextFloat() < (dawn ? 0.12f : 0.03f) * exposure) {
+				if (perch == null || ticks > perchUntil || perch.distSqr(BlockPos.containing(eye)) > 48 * 48
+						|| random.nextFloat() < 0.3f) {
+					singer = pickBird(biome, celsius);
+					perch = find(level, eye, singer == CROW ? 40 : 24, state -> state.is(BlockTags.LEAVES));
+					perchUntil = ticks + 20 * (40 + random.nextInt(80));
 				}
+				if (perch != null) call(minecraft, "bird_" + singer, perch.above(), BIRD_VOLUME[singer]);
 			}
 			// Frogs: at night or in the rain, from still water.
 			boolean swamp = biome.is(Biomes.SWAMP) || biome.is(Biomes.MANGROVE_SWAMP);
@@ -208,6 +218,26 @@ public final class Life {
 			// Each rendition is 3 s.
 			crickets.set(i, new Cricket(cricket.at, ticks + 60));
 		}
+	}
+
+	/** A bird that lives here, more or less likely by what the biome is like. */
+	private int pickBird(Holder<Biome> biome, float celsius) {
+		int[] weights; // crow, dove, robin, cardinal, chickadee
+		if (biome.is(BiomeTags.IS_TAIGA) || celsius < 6) {
+			weights = new int[] {35, 0, 20, 0, 45};
+		} else if (biome.is(BiomeTags.IS_FOREST)) {
+			weights = new int[] {15, 10, 30, 25, 20};
+		} else if (biome.is(BiomeTags.IS_JUNGLE) || biome.is(Biomes.SWAMP) || biome.is(Biomes.MANGROVE_SWAMP)) {
+			weights = new int[] {35, 30, 0, 35, 0};
+		} else {
+			weights = new int[] {30, 35, 25, 10, 0};
+		}
+		int roll = random.nextInt(100);
+		for (int i = 0; i < weights.length; i++) {
+			roll -= weights[i];
+			if (roll < 0) return i;
+		}
+		return CROW;
 	}
 
 	private void call(Minecraft minecraft, String name, BlockPos at, float volume) {

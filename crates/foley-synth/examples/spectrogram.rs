@@ -2,7 +2,8 @@
 //! made of: `cargo run --release -p foley-synth --example spectrogram -- out.png`.
 //! Rows: zombie groan, zombie close by, cow, sheep, cat, wolf growl; or the
 //! M8 or M9 sets (a second argument `m8` or `m9`), or the outdoors (`outdoors`:
-//! surf, woodpecker, owl, cicadas, a wolf howling), or footsteps (`steps`:
+//! surf, woodpecker, owl, cicadas, a wolf howling), or `birds` (crow, dove,
+//! robin, cardinal, chickadee), or footsteps (`steps`:
 //! stone, wood, grass, gravel, snow), or `drips` (into water, on stone, lava,
 //! a small frog, a big one). 0–8 kHz, log magnitude;
 //! each row spans its whole sound.
@@ -68,6 +69,11 @@ fn main() -> std::io::Result<()> {
         .iter()
         .map(|m| contact(Contact::Step, *m, 1.0, 3))
         .collect()
+    } else if set == "birds" {
+        foley_synth::Bird::ALL
+            .iter()
+            .map(|bird| foley_synth::bird_call(*bird, 1))
+            .collect()
     } else if set == "outdoors" {
         vec![
             surf(1.5, 1),
