@@ -14,33 +14,40 @@ import org.jspecify.annotations.Nullable;
  */
 public final class PlacedBeds {
 	private static final int SAMPLE_EVERY = 10;
+	/**
+	 * A bed's gain when Earshot fades it with distance: Earshot's inverse-distance law starts from 3 blocks, Foley's
+	 * own from 2, so this keeps a bed as loud as it was.
+	 */
+	private static final float SHAPED_GAIN = 2f / 3;
 
-	private final Slot<Surroundings.Water> water;
-	private final Slot<Surroundings.Fire> fire;
-	private final Slot<Surroundings.Lava> lava;
+	/** One bed per quarter round the listener, for each kind. */
+	private final Parts<Surroundings.Water> water;
+	private final Parts<Surroundings.Fire> fire;
+	private final Parts<Surroundings.Lava> lava;
 	private Surroundings around = Surroundings.NONE;
 	private int ticks;
 
 	public PlacedBeds(NativeBridge bridge) {
-		water = new Slot<>(bridge, "water", SoundSource.AMBIENT, NativeBridge.BED_WATER);
-		fire = new Slot<>(bridge, "fire", SoundSource.BLOCKS, NativeBridge.BED_FIRE);
-		lava = new Slot<>(bridge, "lava", SoundSource.BLOCKS, NativeBridge.BED_LAVA);
+		water = new Parts<>(bridge, "water", SoundSource.AMBIENT, NativeBridge.BED_WATER);
+		fire = new Parts<>(bridge, "fire", SoundSource.BLOCKS, NativeBridge.BED_FIRE);
+		lava = new Parts<>(bridge, "lava", SoundSource.BLOCKS, NativeBridge.BED_LAVA);
 	}
 
 	public Surroundings around() {
 		return around;
 	}
 
+	/** A water bed playing, if any (there may be one in each quarter). */
 	public @Nullable BedSound<Surroundings.Water> water() {
-		return water.sound;
+		return water.any();
 	}
 
 	public @Nullable BedSound<Surroundings.Fire> fire() {
-		return fire.sound;
+		return fire.any();
 	}
 
 	public @Nullable BedSound<Surroundings.Lava> lava() {
-		return lava.sound;
+		return lava.any();
 	}
 
 	public void tick(Minecraft minecraft) {
@@ -57,15 +64,23 @@ public final class PlacedBeds {
 		// With Earshot, a bed fades with distance as any sound does, so it also gets the reverb, air and occlusion
 		// a sound that far off would: it plays at its effective distance, in its direction, at full gain.
 		boolean shaped = FoleyClient.earshot();
-		Surroundings.Water w = around.water();
-		Surroundings.Fire f = around.fire();
-		Surroundings.Lava l = around.lava();
-		water.keep(minecraft, shaped ? new Surroundings.Water(w.flow(), w.falls(), w.gain() > 0 ? 1 : 0, w.at()) : w,
-				w.heard() && FoleyClient.wants(FoleyConfig::water), heardAt(eye, w.at(), w.gain(), shaped), shaped);
-		fire.keep(minecraft, shaped ? new Surroundings.Fire(f.size(), f.gain() > 0 ? 1 : 0, f.at()) : f,
-				f.heard() && FoleyClient.wants(FoleyConfig::fire), heardAt(eye, f.at(), f.gain(), shaped), shaped);
-		lava.keep(minecraft, shaped ? new Surroundings.Lava(l.area(), l.gain() > 0 ? 1 : 0, l.at()) : l,
-				l.heard() && FoleyClient.wants(FoleyConfig::lava), heardAt(eye, l.at(), l.gain(), shaped), shaped);
+		for (int part = 0; part < Surroundings.PARTS; part++) {
+			Surroundings.Water w = around.waterParts()[part];
+			Surroundings.Fire f = around.fireParts()[part];
+			Surroundings.Lava l = around.lavaParts()[part];
+			water.slots[part].keep(minecraft,
+					w != null && shaped ? new Surroundings.Water(w.flow(), w.falls(), w.gain() > 0 ? SHAPED_GAIN : 0, w.at()) : w,
+					w != null && w.heard() && FoleyClient.wants(FoleyConfig::water),
+					w == null ? eye : heardAt(eye, w.at(), w.gain(), shaped), shaped);
+			fire.slots[part].keep(minecraft,
+					f != null && shaped ? new Surroundings.Fire(f.size(), f.gain() > 0 ? SHAPED_GAIN : 0, f.at()) : f,
+					f != null && f.heard() && FoleyClient.wants(FoleyConfig::fire),
+					f == null ? eye : heardAt(eye, f.at(), f.gain(), shaped), shaped);
+			lava.slots[part].keep(minecraft,
+					l != null && shaped ? new Surroundings.Lava(l.area(), l.gain() > 0 ? SHAPED_GAIN : 0, l.at()) : l,
+					l != null && l.heard() && FoleyClient.wants(FoleyConfig::lava),
+					l == null ? eye : heardAt(eye, l.at(), l.gain(), shaped), shaped);
+		}
 	}
 
 	/**
@@ -77,6 +92,27 @@ public final class PlacedBeds {
 		if (!shaped || gain <= 0 || toward.lengthSqr() < 1e-4) return centre;
 		double distance = Math.max(1, 2 / gain);
 		return eye.add(toward.normalize().scale(distance));
+	}
+
+	/** A kind's beds, one per quarter round the listener. */
+	private static final class Parts<S extends Scene> {
+		@SuppressWarnings("unchecked")
+		final Slot<S>[] slots = new Slot[Surroundings.PARTS];
+
+		Parts(NativeBridge bridge, String name, SoundSource source, int kind) {
+			for (int i = 0; i < slots.length; i++) slots[i] = new Slot<>(bridge, name, source, kind);
+		}
+
+		@Nullable BedSound<S> any() {
+			for (Slot<S> slot : slots) {
+				if (slot.sound != null) return slot.sound;
+			}
+			return null;
+		}
+
+		void stop(Minecraft minecraft) {
+			for (Slot<S> slot : slots) slot.stop(minecraft);
+		}
 	}
 
 	/** One placed bed, started when there's something to hear, moved as that moves, stopped when it's gone. */
@@ -94,8 +130,8 @@ public final class PlacedBeds {
 			this.kind = kind;
 		}
 
-		void keep(Minecraft minecraft, S scene, boolean heard, Vec3 at, boolean attenuated) {
-			if (!heard) {
+		void keep(Minecraft minecraft, @Nullable S scene, boolean heard, Vec3 at, boolean attenuated) {
+			if (!heard || scene == null) {
 				stop(minecraft);
 				return;
 			}

@@ -13,7 +13,8 @@ public final class WindController {
 	private static final float SHUT_IN = 0.02f;
 
 	private final NativeBridge bridge;
-	private @Nullable BedSound<WindScene> sound;
+	/** Heard all round, more from the open side. */
+	private final SurroundBeds<WindScene> beds;
 	private WindScene scene = WindScene.CALM;
 	/** A speed set by command, overriding the weather, or null. */
 	private @Nullable Float forced;
@@ -21,14 +22,16 @@ public final class WindController {
 
 	public WindController(NativeBridge bridge) {
 		this.bridge = bridge;
+		this.beds = new SurroundBeds<>("wind", SoundSource.AMBIENT, bridge, NativeBridge.BED_WIND);
 	}
 
 	public WindScene scene() {
 		return scene;
 	}
 
+	/** One of its beds, if it's playing. */
 	public @Nullable BedSound<WindScene> sound() {
-		return sound;
+		return beds.any();
 	}
 
 	/** Forces the reference wind to {@code speed} m/s at the ear, or back to the weather with null. */
@@ -44,23 +47,17 @@ public final class WindController {
 		}
 		if (ticks++ % SAMPLE_EVERY != 0) return;
 		WindScene sampled = WindScene.sample(minecraft);
-		if (forced != null) sampled = new WindScene(forced, sampled.exposure(), sampled.leaves());
+		if (forced != null) sampled = sampled.withSpeed(forced);
 		scene = sampled;
 		if (!io.github.cumsauce.foley.FoleyClient.wants(io.github.cumsauce.foley.config.FoleyConfig::wind)
 				|| scene.speed() < STILL || (scene.exposure() < SHUT_IN && scene.leaves() < 0.05f)) {
 			stop(minecraft);
 			return;
 		}
-		if (sound == null || !minecraft.getSoundManager().isActive(sound)) {
-			sound = new BedSound<>("wind", SoundSource.AMBIENT, bridge, NativeBridge.BED_WIND, scene);
-			minecraft.getSoundManager().play(sound);
-		} else {
-			sound.setScene(scene);
-		}
+		beds.keep(minecraft, scene, scene.around());
 	}
 
 	private void stop(Minecraft minecraft) {
-		if (sound != null) minecraft.getSoundManager().stop(sound);
-		sound = null;
+		beds.stop(minecraft);
 	}
 }

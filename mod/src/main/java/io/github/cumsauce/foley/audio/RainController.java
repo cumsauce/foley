@@ -17,7 +17,8 @@ public final class RainController {
 	private static final int LINGER = 100;
 
 	private final NativeBridge bridge;
-	private @Nullable BedSound<RainScene> sound;
+	/** Heard all round, more from the open side. */
+	private final SurroundBeds<RainScene> beds;
 	private RainScene scene = RainScene.DRY;
 	/** A rate set by command, overriding the weather, or null. */
 	private @Nullable Float forced;
@@ -26,6 +27,7 @@ public final class RainController {
 
 	public RainController(NativeBridge bridge) {
 		this.bridge = bridge;
+		this.beds = new SurroundBeds<>("rain", SoundSource.WEATHER, bridge, NativeBridge.BED_RAIN);
 	}
 
 	/** Whether Foley is making the rain, so the game's own rain sounds are skipped. */
@@ -37,8 +39,9 @@ public final class RainController {
 		return scene;
 	}
 
+	/** One of its beds, if it's playing. */
 	public @Nullable BedSound<RainScene> sound() {
-		return sound;
+		return beds.any();
 	}
 
 	/** Forces the rain to {@code rate} mm/h whatever the weather, or back to the weather with null. */
@@ -73,21 +76,16 @@ public final class RainController {
 		scene = sampled;
 		if (scene.rate() <= 0) {
 			dryFor += SAMPLE_EVERY;
-			if (sound != null) sound.setScene(scene);
+			beds.setScene(scene);
 			if (dryFor > LINGER) stop(minecraft);
 			return;
 		}
 		dryFor = 0;
-		if (sound == null || !minecraft.getSoundManager().isActive(sound)) {
-			sound = new BedSound<>("rain", SoundSource.WEATHER, bridge, NativeBridge.BED_RAIN, scene);
-			minecraft.getSoundManager().play(sound);
-		} else {
-			sound.setScene(scene);
-		}
+		WindController wind = io.github.cumsauce.foley.FoleyClient.wind();
+		beds.keep(minecraft, scene, wind == null ? new float[SurroundBeds.AROUND] : wind.scene().around());
 	}
 
 	private void stop(Minecraft minecraft) {
-		if (sound != null) minecraft.getSoundManager().stop(sound);
-		sound = null;
+		beds.stop(minecraft);
 	}
 }

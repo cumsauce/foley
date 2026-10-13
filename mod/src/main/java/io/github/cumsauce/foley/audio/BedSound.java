@@ -14,6 +14,7 @@ import net.minecraft.client.sounds.SoundBufferLibrary;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A bed (rain, wind, water, fire, lava): a native synth rendered as it plays, an endless stream the game reads like
@@ -48,6 +49,39 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 		this.relative = true;
 		this.attenuation = SoundInstance.Attenuation.NONE;
 		this.volume = io.github.cumsauce.foley.FoleyClient.gain();
+	}
+
+	/** Where it plays from relative to the ear (world axes), following the player, or null. */
+	private @Nullable Vec3 offset;
+	/** How loud, against Foley's volume: the weight it's heading for, and where it's got to. */
+	private float weight = 1;
+	private float heardWeight = 1;
+
+	/**
+	 * Plays it {@code offset} from the player's ear (in world axes, so it stays put as they turn), following them, at
+	 * {@code weight} times Foley's volume. Client thread.
+	 */
+	public BedSound<S> follow(Vec3 offset, float weight) {
+		this.offset = offset;
+		this.weight = weight;
+		this.heardWeight = weight;
+		relative = false;
+		attenuation = SoundInstance.Attenuation.NONE;
+		this.volume = io.github.cumsauce.foley.FoleyClient.gain() * weight;
+		var player = net.minecraft.client.Minecraft.getInstance().player;
+		if (player != null) moveTo(player.getEyePosition().add(offset));
+		return this;
+	}
+
+	/** Heads for {@code weight} times Foley's volume, over a second or so. Client thread. */
+	public void weigh(float weight) {
+		this.weight = weight;
+	}
+
+	private void moveTo(Vec3 at) {
+		x = at.x;
+		y = at.y;
+		z = at.z;
 	}
 
 	/** Places it at {@code at} in the world, from now on. Called on the client thread. */
@@ -97,10 +131,15 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 		return false;
 	}
 
-	/** Follows Foley's volume setting. */
+	/** Follows Foley's volume setting, its weight, and the player if it follows them. */
 	@Override
 	public void tick() {
-		volume = io.github.cumsauce.foley.FoleyClient.gain();
+		heardWeight += (weight - heardWeight) * 0.05f;
+		volume = io.github.cumsauce.foley.FoleyClient.gain() * heardWeight;
+		if (offset != null) {
+			var player = net.minecraft.client.Minecraft.getInstance().player;
+			if (player != null) moveTo(player.getEyePosition().add(offset));
+		}
 	}
 
 	@Override

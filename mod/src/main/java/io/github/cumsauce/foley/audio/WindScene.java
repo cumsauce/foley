@@ -24,9 +24,16 @@ import net.minecraft.world.phys.Vec3;
  * @param speed    the mean wind at the ear, m/s
  * @param exposure 0 shut in to 1 in the open
  * @param leaves   0 to 1
+ * @param around   how open each quarter round the listener is, to sky and leaves (0 to 1), in {@link SurroundBeds}'
+ *                 order: what the wind and rain are heard most from
  */
-public record WindScene(float speed, float exposure, float leaves) implements Scene {
-	public static final WindScene CALM = new WindScene(0, 0, 0);
+public record WindScene(float speed, float exposure, float leaves, float[] around) implements Scene {
+	public static final WindScene CALM = new WindScene(0, 0, 0, new float[SurroundBeds.AROUND]);
+
+	/** The same, at {@code speed}. */
+	public WindScene withSpeed(float speed) {
+		return new WindScene(speed, exposure, leaves, around);
+	}
 	static final float CLEAR = 5;
 	static final float RAIN = 9;
 	static final float STORM = 16;
@@ -48,6 +55,8 @@ public record WindScene(float speed, float exposure, float leaves) implements Sc
 		float weights = 0;
 		float open = 0;
 		float leaves = 0;
+		float[] around = new float[SurroundBeds.AROUND];
+		float[] quarterWeights = new float[SurroundBeds.AROUND];
 		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 		for (int dx = -RADIUS; dx <= RADIUS; dx += STEP) {
 			for (int dz = -RADIUS; dz <= RADIUS; dz += STEP) {
@@ -58,9 +67,15 @@ public record WindScene(float speed, float exposure, float leaves) implements Sc
 				float weight = 1f / (1 + (dx * dx + dz * dz) / 64f);
 				ground += weight * top;
 				weights += weight;
-				if (canopy <= eye.y + 1) open += weight;
+				int quarter = SurroundBeds.quarter(dx, dz);
+				quarterWeights[quarter] += weight;
+				if (canopy <= eye.y + 1) {
+					open += weight;
+					around[quarter] += weight;
+				}
 				if (canopy > top && Surfaces.of(level.getBlockState(pos.set(x, canopy - 1, z))) == Surfaces.LEAVES) {
 					leaves += weight;
+					around[quarter] += weight;
 				}
 			}
 		}
@@ -79,7 +94,10 @@ public record WindScene(float speed, float exposure, float leaves) implements Sc
 		// Exposure: the ear itself under the sky counts half, the columns round it the rest.
 		float sky = level.canSeeSky(BlockPos.containing(eye)) ? 1 : 0;
 		float exposure = Math.clamp(0.5f * sky + 0.5f * open, 0, 1);
-		return new WindScene((float) Math.min(speed, 60), exposure, Math.clamp(leaves, 0, 1));
+		for (int q = 0; q < around.length; q++) {
+			around[q] = quarterWeights[q] > 0 ? Math.clamp(around[q] / quarterWeights[q], 0, 1) : 0;
+		}
+		return new WindScene((float) Math.min(speed, 60), exposure, Math.clamp(leaves, 0, 1), around);
 	}
 
 	@Override
