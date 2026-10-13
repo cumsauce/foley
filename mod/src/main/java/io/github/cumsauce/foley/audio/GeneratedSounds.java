@@ -60,6 +60,9 @@ public final class GeneratedSounds {
 			case "owl" -> bridge.renderOneShot(NativeBridge.SHOT_OWL, 0, seed);
 			case "cicadas" -> bridge.renderOneShot(NativeBridge.SHOT_CICADAS, Life.CICADA_CELSIUS[n], seed);
 			case "howl" -> bridge.renderOneShot(NativeBridge.SHOT_HOWL, 0, seed);
+			case "brush" -> bridge.renderOneShot(NativeBridge.SHOT_BRUSH, n, seed);
+			case "ice" -> bridge.renderOneShot(NativeBridge.SHOT_ICE_SINGING, 0, seed);
+			case "settle" -> bridge.renderOneShot(NativeBridge.SHOT_SETTLING_STONE, 0, seed);
 			default -> otherwise;
 		};
 	}

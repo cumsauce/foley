@@ -76,6 +76,11 @@ pub struct Water {
     voices: Vec<Bubble>,
     roar: [LowPass; 2],
     spray: LowPass,
+    /// Sheets of falling water breaking up: the spray surges a few times a
+    /// second.
+    surge: LowPass,
+    /// A stream's ripples slapping and splashing, 2 to 6 kHz.
+    ripple: BandPass,
     rush: [BandPass; 2],
     lapping: LowPass,
     distance: [LowPass; 2],
@@ -97,7 +102,9 @@ impl Water {
             until_next: 0.0,
             voices: Vec::with_capacity(MAX_VOICES),
             roar: [LowPass::new(500.0), LowPass::new(500.0)],
-            spray: LowPass::new(4000.0),
+            spray: LowPass::new(9000.0),
+            surge: LowPass::new(3.0),
+            ripple: BandPass::new(3200.0, 0.7),
             rush: [BandPass::new(900.0, 0.6), BandPass::new(350.0, 0.9)],
             lapping: LowPass::new(1.2),
             distance: [LowPass::new(16000.0), LowPass::new(16000.0)],
@@ -140,9 +147,9 @@ impl Water {
                 // A river's surface: turbulence heard as a soft, wide rush,
                 // growing slowly with how much of it there is.
                 rush_level = 0.006 * h.flow.min(100.0).sqrt();
-                // Further away, water loses its sparkle first: the air and the
-                // ground take the highs.
-                let cutoff = 2500.0 + 15000.0 * h.gain * h.gain;
+                // Further away, water loses a little of its sparkle (the ground
+                // takes some highs; Earshot adds the air's own absorption).
+                let cutoff = 6000.0 + 14000.0 * h.gain.sqrt();
                 self.distance.iter_mut().for_each(|f| f.tune(cutoff));
             }
             self.samples += 1;
@@ -174,12 +181,15 @@ impl Water {
                     self.roar[1].process(first)
                 };
                 let spray = self.spray.process(noise) - low;
-                mix += roar_level * (2.0 * low + 0.15 * spray);
+                let surge = (1.0 + 5.0 * self.surge.process(self.rng.signed())).clamp(0.3, 1.8);
+                mix += roar_level * (2.0 * low + 0.22 * surge * spray);
             }
             if rush_level > 0.0 {
                 // Lapping: the rush swells and ebbs a little, about once a second.
                 let lap = 1.0 + 6.0 * self.lapping.process(self.rng.signed());
-                let rush = self.rush[0].process(noise) + 0.7 * self.rush[1].process(noise);
+                let rush = self.rush[0].process(noise)
+                    + 0.7 * self.rush[1].process(noise)
+                    + 0.35 * self.ripple.process(noise);
                 mix += rush_level * lap.clamp(0.4, 1.8) * rush;
             }
             let first = self.distance[0].process(mix);

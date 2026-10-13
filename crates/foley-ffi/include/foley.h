@@ -23,8 +23,9 @@
  *     bats) and calls (growls, purrs, the fuse, breathing, …).
  * 11: everyday animals and rarer hostiles (M8, M9): 52 mobs, 43 calls.
  * 12: more life outdoors: surf, woodpeckers, owls, cicadas, a wolf's howl.
+ * 13: brushing through plants, lake ice singing, stones settling in caves.
  */
-#define FOLEY_ABI_VERSION 12
+#define FOLEY_ABI_VERSION 13
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -88,6 +89,15 @@
 #define FOLEY_SHOT_CICADAS 9
 
 #define FOLEY_SHOT_HOWL 10
+
+/**
+ * Brushing through plants: `size` is the plant (0 grass, 1 leaves, 2 dry).
+ */
+#define FOLEY_SHOT_BRUSH 11
+
+#define FOLEY_SHOT_ICE_SINGING 12
+
+#define FOLEY_SHOT_SETTLING_STONE 13
 
 /**
  * Materials for `foley_render_contact`: stone, wood, metal, glass, ice,

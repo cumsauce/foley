@@ -184,6 +184,7 @@ public final class FoleyClient implements ClientModInitializer {
 		Breathing breaths = new Breathing();
 		breathing = breaths;
 		ClientTickEvents.END_CLIENT_TICK.register(breaths::tick);
+		ClientTickEvents.END_CLIENT_TICK.register(new io.github.cumsauce.foley.audio.Brush()::tick);
 		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
 		registerCommands(loaded);
 	}

@@ -42,6 +42,9 @@ import org.jspecify.annotations.Nullable;
  *   <li><b>Cicadas</b> drone in the heat of the day, in jungle, savanna and badlands.</li>
  *   <li><b>Wolves</b> howl now and then on cold nights, far off.</li>
  *   <li>After rain, the trees go on <b>dripping</b> for a minute.</li>
+ *   <li>Frogs <b>answer</b> each other along the water; night insects come in through dusk.</li>
+ *   <li>Lake <b>ice sings</b> in the cold, most at dawn and dusk; lakes lap in a light wind.</li>
+ *   <li>In <b>caves</b>, a stone settles now and then off in the dark, and water drips from the roof.</li>
  * </ul>
  *
  * Only in a dimension with a sky and no ceiling (the Overworld), and only when the listener is outside enough to hear
@@ -75,6 +78,9 @@ public final class Life {
 	private @Nullable BlockPos shore;
 	private int shoreFoundAt = Integer.MIN_VALUE / 2;
 	/** The bird singing now, where, and until when (tick) it keeps at it. */
+	private @Nullable BlockPos frogReply;
+	private int frogReplySize;
+	private int frogReplyAt;
 	private @Nullable BlockPos perch;
 	private int singer;
 	private int perchUntil;
@@ -101,7 +107,10 @@ public final class Life {
 		// Under trees the sky is hidden, but the woods are all around: they count as outside.
 		float exposure = wind == null ? 1
 				: Math.max(wind.scene().exposure(), 0.8f * wind.scene().leaves());
-		if (exposure < 0.2f) return;
+		if (exposure < 0.2f) {
+			caves(minecraft, level);
+			return;
+		}
 		Vec3 eye = minecraft.player.getEyePosition();
 		long time = Math.floorMod(level.getOverworldClockTime(), 24000L);
 		boolean night = time >= 13000 && time < 23000;
@@ -111,9 +120,10 @@ public final class Life {
 		float celsius = 20 * biome.value().getBaseTemperature() - (night ? 5 : 0);
 
 		if (ticks % 20 == 0) {
-			// Birds: a song every half a minute or so, four times as often at dawn. Mostly the same bird again from
+			// Birds: a song every half a minute or so through the day, four times as often in the dawn chorus, more again
+			// in the evening. Mostly the same bird again from
 			// its perch, as one sings on and off for a minute or two.
-			if (FoleyClient.wants(FoleyConfig::birds) && !night && !raining && random.nextFloat() < (dawn ? 0.12f : 0.03f) * exposure) {
+			if (FoleyClient.wants(FoleyConfig::birds) && !night && !raining && random.nextFloat() < 0.12f * birdActivity(time) * exposure) {
 				if (perch == null || ticks > perchUntil || perch.distSqr(BlockPos.containing(eye)) > 48 * 48
 						|| random.nextFloat() < 0.3f) {
 					singer = pickBird(biome, celsius);
@@ -129,8 +139,24 @@ public final class Life {
 				if (water != null) {
 					int size = swamp ? 1 + random.nextInt(2) : random.nextInt(2);
 					call(minecraft, "frog_" + size, water.above(), 0.6f);
+					// Often another answers from elsewhere along the water, a moment later.
+					if (random.nextFloat() < 0.5f) {
+						frogReply = water.offset(random.nextInt(13) - 6, 0, random.nextInt(13) - 6);
+						frogReplySize = size;
+						frogReplyAt = ticks + 10 + random.nextInt(30);
+					}
 				}
 			}
+		}
+		if (frogReply != null && ticks >= frogReplyAt) {
+			call(minecraft, "frog_" + frogReplySize, frogReply.above(), 0.5f);
+			frogReply = null;
+		}
+		// Lake ice sings in the cold, most as the air warms or cools at dawn and dusk.
+		if (FoleyClient.wants(FoleyConfig::water) && ticks % 20 == 0 && celsius < 2
+				&& random.nextFloat() < (dawn || time >= 11500 && time < 13500 ? 0.06f : 0.015f)) {
+			BlockPos ice = find(level, eye, 32, state -> state.is(Blocks.ICE));
+			if (ice != null) call(minecraft, "ice_0", ice, 0.6f);
 		}
 		if (ticks % 20 == 0) {
 			boolean woods = biome.is(BiomeTags.IS_FOREST) || biome.is(BiomeTags.IS_TAIGA) || biome.is(BiomeTags.IS_JUNGLE);
@@ -165,7 +191,7 @@ public final class Life {
 			boolean sea = biome.is(BiomeTags.IS_OCEAN) || biome.is(BiomeTags.IS_DEEP_OCEAN)
 					|| biome.is(BiomeTags.IS_BEACH);
 			float windSpeed = wind == null ? 0 : wind.scene().speed();
-			if (shore != null && (sea || windSpeed > 4)) {
+			if (shore != null && (sea || windSpeed > 1.5f)) {
 				int size = !sea ? 0 : level.isThundering() || raining ? 2 : 1;
 				call(minecraft, "surf_" + size, shore, sea ? 1f : 0.6f);
 			}
@@ -197,12 +223,13 @@ public final class Life {
 			}
 		}
 		// Crickets: a few, each in its place, chirping on and on.
-		if (!FoleyClient.wants(FoleyConfig::crickets) || !night || raining || celsius < 10) {
+		float insects = insectActivity(time);
+		if (!FoleyClient.wants(FoleyConfig::crickets) || insects <= 0 || raining || celsius < 10) {
 			crickets.clear();
 			return;
 		}
 		crickets.removeIf(c -> c.at.distToCenterSqr(eye) > 24 * 24);
-		if (crickets.size() < MAX_CRICKETS && ticks % 20 == 0) {
+		if (crickets.size() < Math.round(MAX_CRICKETS * insects) && ticks % 20 == 0) {
 			BlockPos grass = find(level, eye, 14, state -> state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.SHORT_GRASS)
 					|| state.is(Blocks.TALL_GRASS));
 			if (grass != null) crickets.add(new Cricket(grass.above(), ticks + random.nextInt(60)));
@@ -218,6 +245,56 @@ public final class Life {
 			// Each rendition is 3 s.
 			crickets.set(i, new Cricket(cricket.at, ticks + 60));
 		}
+	}
+
+	/**
+	 * How much the birds sing at {@code time} (ticks, 0 at 6 am), 0 to 1: the dawn chorus before and round sunrise, a
+	 * lull through the day, a smaller chorus in the evening.
+	 */
+	static float birdActivity(long time) {
+		double hour = (time / 1000.0 + 6) % 24;
+		double dawn = Math.exp(-Math.pow((hour - 5.5) / 1.2, 2));
+		double evening = 0.5 * Math.exp(-Math.pow((hour - 18.3) / 0.9, 2));
+		double day = hour > 6 && hour < 19 ? 0.25 : 0;
+		return (float) Math.min(1, dawn + evening + day);
+	}
+
+	/** How many of the night insects are out at {@code time}, 0 to 1: coming in through dusk, gone by dawn. */
+	static float insectActivity(long time) {
+		if (time >= 12000 && time < 13500) return (time - 12000) / 1500f;
+		if (time >= 13500 && time < 22000) return 1;
+		if (time >= 22000 && time < 23500) return (23500 - time) / 1500f;
+		return 0;
+	}
+
+	/**
+	 * Underground: now and then a stone working loose and settling somewhere off in the cave, and water dripping from
+	 * the roof; Earshot gives them the cave's echo.
+	 */
+	private void caves(Minecraft minecraft, ClientLevel level) {
+		if (ticks % 20 != 0 || minecraft.player == null) return;
+		BlockPos ear = BlockPos.containing(minecraft.player.getEyePosition());
+		boolean underground = level.getBrightness(net.minecraft.world.level.LightLayer.SKY, ear) == 0
+				&& ear.getY() < level.getHeight(Heightmap.Types.WORLD_SURFACE, ear.getX(), ear.getZ()) - 8;
+		if (!underground) return;
+		BlockPos air = caveAir(level, ear);
+		if (air == null) return;
+		if (FoleyClient.wants(FoleyConfig::strikes) && random.nextFloat() < 0.04f) {
+			call(minecraft, "settle_0", air, 0.5f);
+		} else if (FoleyClient.wants(FoleyConfig::drips) && random.nextFloat() < 0.15f) {
+			dripAt(minecraft, air);
+		}
+	}
+
+	/** A spot on the floor of the cave 6 to 20 blocks off, or null. */
+	private @Nullable BlockPos caveAir(ClientLevel level, BlockPos ear) {
+		for (int tries = 0; tries < 6; tries++) {
+			BlockPos at = ear.offset(random.nextInt(41) - 20, random.nextInt(9) - 4, random.nextInt(41) - 20);
+			if (at.distSqr(ear) < 36 || !level.getBlockState(at).isAir()) continue;
+			for (int down = 0; down < 8 && level.getBlockState(at.below()).isAir(); down++) at = at.below();
+			if (!level.getBlockState(at.below()).isAir()) return at;
+		}
+		return null;
 	}
 
 	/** A bird that lives here, more or less likely by what the biome is like. */
