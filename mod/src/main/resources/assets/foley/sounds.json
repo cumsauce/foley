@@ -22,7 +22,8 @@
 		"sounds": [
 			{
 				"name": "fabric-sound-api-v1:empty",
-				"stream": true
+				"stream": true,
+				"attenuation_distance": 32
 			}
 		]
 	},
@@ -31,7 +32,8 @@
 		"sounds": [
 			{
 				"name": "fabric-sound-api-v1:empty",
-				"stream": true
+				"stream": true,
+				"attenuation_distance": 16
 			}
 		]
 	},
@@ -40,7 +42,8 @@
 		"sounds": [
 			{
 				"name": "fabric-sound-api-v1:empty",
-				"stream": true
+				"stream": true,
+				"attenuation_distance": 32
 			}
 		]
 	},
@@ -5138,6 +5141,153 @@
 			{
 				"name": "foley:generated/settle_0_3",
 				"attenuation_distance": 48
+			}
+		]
+	},
+	"bird_5": {
+		"subtitle": "subtitles.foley.gull",
+		"sounds": [
+			{
+				"name": "foley:generated/bird_5_0",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "foley:generated/bird_5_1",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "foley:generated/bird_5_2",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "foley:generated/bird_5_3",
+				"attenuation_distance": 64
+			}
+		]
+	},
+	"bird_6": {
+		"subtitle": "subtitles.foley.loon",
+		"sounds": [
+			{
+				"name": "foley:generated/bird_6_0",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "foley:generated/bird_6_1",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "foley:generated/bird_6_2",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "foley:generated/bird_6_3",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"bird_7": {
+		"subtitle": "subtitles.foley.jay",
+		"sounds": [
+			{
+				"name": "foley:generated/bird_7_0",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/bird_7_1",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/bird_7_2",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/bird_7_3",
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"bird_8": {
+		"subtitle": "subtitles.foley.bird",
+		"sounds": [
+			{
+				"name": "foley:generated/bird_8_0",
+				"attenuation_distance": 32
+			},
+			{
+				"name": "foley:generated/bird_8_1",
+				"attenuation_distance": 32
+			},
+			{
+				"name": "foley:generated/bird_8_2",
+				"attenuation_distance": 32
+			},
+			{
+				"name": "foley:generated/bird_8_3",
+				"attenuation_distance": 32
+			}
+		]
+	},
+	"flush_0": {
+		"subtitle": "subtitles.foley.flush",
+		"sounds": [
+			{
+				"name": "foley:generated/flush_0_0",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "foley:generated/flush_0_1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "foley:generated/flush_0_2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "foley:generated/flush_0_3",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"buzz_0": {
+		"subtitle": "subtitles.foley.bee",
+		"sounds": [
+			{
+				"name": "foley:generated/buzz_0_0",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "foley:generated/buzz_0_1",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "foley:generated/buzz_0_2",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "foley:generated/buzz_0_3",
+				"attenuation_distance": 8
+			}
+		]
+	},
+	"buzz_1": {
+		"subtitle": "subtitles.foley.fly",
+		"sounds": [
+			{
+				"name": "foley:generated/buzz_1_0",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "foley:generated/buzz_1_1",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "foley:generated/buzz_1_2",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "foley:generated/buzz_1_3",
+				"attenuation_distance": 8
 			}
 		]
 	}

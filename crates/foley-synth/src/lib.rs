@@ -29,7 +29,7 @@ pub use crate::life::{birdsong, crickets, dolbear_chirps_per_minute, frog};
 pub use crate::modal::{Contact, Material, contact, fracture, hertz_time};
 pub use crate::oneshot::{drip_into_water, drip_on_stone, lava_drip};
 pub use crate::outdoors::{cicadas, owl, surf, woodpecker};
-pub use crate::plants::{Plant, brush, ice_singing, settling_stone};
+pub use crate::plants::{Plant, brush, buzz, flush, ice_singing, settling_stone};
 pub use crate::rain::{Rain, RainScene, Surface};
 pub use crate::rng::Rng;
 pub use crate::thunder::{Segment, Thunder, ThunderScene, channel, strike};

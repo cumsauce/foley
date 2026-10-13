@@ -1,5 +1,5 @@
-//! Brushing through plants, lake ice singing, and stones settling in caves
-//! (M11).
+//! Brushing through plants, lake ice singing, stones settling in caves, a
+//! bird flushed from cover and insects round flowers (M11).
 
 use std::f32::consts::TAU;
 
@@ -149,6 +149,70 @@ pub fn settling_stone(seed: u64) -> Vec<f32> {
     normalize(out, 0.35)
 }
 
+/// A bird flushed from cover: its wings clap and whirr as it takes off, a
+/// dozen beats at 10 to 20 a second (a small bird beats faster), each a
+/// short burst of air through the feathers, fading as it flies off.
+pub fn flush(seed: u64) -> Vec<f32> {
+    let mut rng = Rng::new(seed ^ 0xF1A9);
+    let rate = SAMPLE_RATE as f32;
+    let beats_per_second = 10.0 + 10.0 * rng.unit();
+    let beats = 8 + (rng.unit() * 8.0) as usize;
+    let mut out = Vec::new();
+    let mut at = 0.0f32;
+    for k in 0..beats {
+        let n = (0.03 * rate) as usize;
+        let mut feathers = BandPass::new(1200.0 + 800.0 * rng.unit(), 0.8);
+        let beat: Vec<f32> = (0..n)
+            .map(|i| {
+                let t = i as f32 / rate;
+                (t / 0.002).min(1.0) * (-t / 0.008).exp() * feathers.process(rng.signed())
+            })
+            .collect();
+        // The first beats, pushing off, are the loudest.
+        let loud = (1.0 - k as f32 / beats as f32).powf(1.5) * (0.7 + 0.3 * rng.unit());
+        add_at(&mut out, (at * rate) as usize, &beat, loud);
+        at += (1.0 + 0.1 * rng.signed()) / beats_per_second;
+    }
+    normalize(out, 0.3)
+}
+
+/// An insect on the wing round flowers: `size` 0 a bee, 1 a fly. Its wings
+/// beat at about 230 Hz (a honeybee) or 190 Hz (a housefly), a buzz rich in
+/// harmonics, swelling and fading and bending in pitch (Doppler) as it
+/// darts nearer and away.
+pub fn buzz(size: u32, seed: u64) -> Vec<f32> {
+    let mut rng = Rng::new(seed ^ 0xB22);
+    let rate = SAMPLE_RATE as f32;
+    let (f0, darting) = if size == 0 {
+        (230.0, 0.6)
+    } else {
+        (190.0, 1.5)
+    };
+    let f0 = f0 * (0.92 + 0.16 * rng.unit());
+    let n = ((2.0 + 1.5 * rng.unit()) * rate) as usize;
+    let mut path = [LowPass::new(darting), LowPass::new(darting)];
+    let mut phase = 0.0f32;
+    let mut last = 1.0f32;
+    let mut out = Vec::with_capacity(n);
+    for i in 0..n {
+        let t = i as f32 / n as f32;
+        // Its distance wanders between about 0.3 and 2 m.
+        let first = path[0].process(rng.signed());
+        let r = (1.0 + 30.0 * path[1].process(first)).clamp(0.3, 2.0);
+        let speed = (r - last) * rate;
+        last = r;
+        let f = f0 * (1.0 - speed / 343.0);
+        phase = (phase + f / rate) % 1.0;
+        // A buzzy, saw-like wingbeat.
+        let wave = 2.0 * phase - 1.0;
+        let fade = (t * 10.0).min(1.0) * ((1.0 - t) * 10.0).min(1.0);
+        out.push(fade * wave / r);
+    }
+    let mut soften = LowPass::new(3000.0);
+    let out: Vec<f32> = out.iter().map(|x| soften.process(*x)).collect();
+    normalize(out, 0.25)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -168,10 +232,13 @@ mod tests {
             brush(Plant::Dry, 3),
             ice_singing(4),
             settling_stone(5),
+            flush(6),
+            buzz(0, 7),
+            buzz(1, 8),
         ] {
             assert!(sound.iter().all(|x| x.is_finite() && x.abs() <= 0.4));
             assert!(sound.iter().any(|x| x.abs() > 0.05));
-            assert!(sound.len() < 3 * SAMPLE_RATE as usize);
+            assert!(sound.len() < 4 * SAMPLE_RATE as usize);
         }
     }
 

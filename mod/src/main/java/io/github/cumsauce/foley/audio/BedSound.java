@@ -53,7 +53,16 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 
 	/** Places it at {@code at} in the world, from now on. Called on the client thread. */
 	public BedSound<S> place(Vec3 at) {
+		return place(at, false);
+	}
+
+	/**
+	 * Places it at {@code at} in the world, from now on; {@code attenuated}, it fades with distance as other sounds do
+	 * (for Earshot to shape), rather than by its scene's gain. Called on the client thread.
+	 */
+	public BedSound<S> place(Vec3 at, boolean attenuated) {
 		relative = false;
+		attenuation = attenuated ? SoundInstance.Attenuation.LINEAR : SoundInstance.Attenuation.NONE;
 		x = at.x;
 		y = at.y;
 		z = at.z;

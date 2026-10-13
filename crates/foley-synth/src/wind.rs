@@ -26,6 +26,8 @@ const TURBULENCE: f32 = 0.25;
 const GUST_TIME: f32 = 4.0;
 /// How loud the leaves' patter is.
 const LEAVES: f32 = 0.18;
+/// How long before the ear the trees round about hear a gust, seconds.
+const GUST_LEAD: f32 = 0.8;
 /// The speed is updated this often, samples.
 const BLOCK: usize = 64;
 
@@ -40,6 +42,11 @@ pub struct Wind {
     rng: Rng,
     scene: WindScene,
     speed: f32,
+    /// Recent speeds, a block apart: a gust sweeps through the trees upwind
+    /// before it reaches the ear, so the leaves hear the speed now and the
+    /// ear the speed of [`GUST_LEAD`] ago.
+    history: std::collections::VecDeque<f32>,
+    ear: f32,
     roar: BandPass,
     whoosh: BandPass,
     rustle: BandPass,
@@ -64,6 +71,8 @@ impl Wind {
             rng: Rng::new(seed),
             scene: WindScene::CALM,
             speed: 0.0,
+            history: std::collections::VecDeque::new(),
+            ear: 0.0,
             roar: BandPass::new(150.0, 0.7),
             whoosh: BandPass::new(600.0, 1.2),
             rustle: BandPass::new(4000.0, 1.5),
@@ -82,6 +91,10 @@ impl Wind {
     }
 
     pub fn set_scene(&mut self, scene: WindScene) {
+        // The wind is already blowing when it's first heard.
+        if self.history.is_empty() {
+            self.speed = scene.speed.max(0.0);
+        }
         self.scene = scene;
     }
 
@@ -99,9 +112,15 @@ impl Wind {
         self.speed +=
             (mean - self.speed) * dt / GUST_TIME + sigma * (2.0 * dt / GUST_TIME).sqrt() * noise;
         self.speed = self.speed.max(0.0);
+        self.history.push_back(self.speed);
+        let lead = (GUST_LEAD * SAMPLE_RATE as f32 / BLOCK as f32) as usize;
+        while self.history.len() > lead {
+            self.history.pop_front();
+        }
+        self.ear = self.history.front().copied().unwrap_or(self.speed);
         let indoors = 1.0 - self.scene.exposure.clamp(0.0, 1.0);
         // Pitch rises with speed; indoors only the low part gets through.
-        let centre = (80.0 + 25.0 * self.speed) * (1.0 - 0.6 * indoors);
+        let centre = (80.0 + 25.0 * self.ear) * (1.0 - 0.6 * indoors);
         self.roar.tune(centre, 0.7);
         self.whoosh.tune(centre * 4.0 * (1.0 - 0.7 * indoors), 1.2);
     }
@@ -175,10 +194,11 @@ impl Wind {
                 self.gust();
             }
             self.samples += 1;
-            let u = self.speed;
+            let (u, ear) = (self.speed, self.ear);
             // Amplitude ∝ U³, against a 10 m/s wind; muffled to a tenth indoors.
             // Amplitude ∝ U³, capped for gales and flight; never quite silent outside.
-            let level = (0.06 * (u / 10.0).powi(3).min(2.5) + if u > 0.3 { 0.004 } else { 0.0 })
+            let level = (0.06 * (ear / 10.0).powi(3).min(2.5)
+                + if ear > 0.3 { 0.004 } else { 0.0 })
                 * (0.1 + 0.9 * exposure);
             let roar = self.roar.process(self.rng.signed());
             let whoosh = self.whoosh.process(self.rng.signed());

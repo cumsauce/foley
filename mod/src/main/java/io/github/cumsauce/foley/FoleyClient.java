@@ -105,6 +105,13 @@ public final class FoleyClient implements ClientModInitializer {
 		return !bypassed && now.volume() > 0 && setting.test(now);
 	}
 
+	/** Whether Earshot is installed to shape sounds (and so to fade placed beds with distance). */
+	public static boolean earshot() {
+		return EARSHOT;
+	}
+
+	private static final boolean EARSHOT = net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("earshot");
+
 	/** Foley's volume as a gain, 0 to 1. */
 	public static float gain() {
 		return config.gain();

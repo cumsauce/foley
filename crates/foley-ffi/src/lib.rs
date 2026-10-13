@@ -14,8 +14,8 @@ mod guard;
 use foley_synth::{
     Call, Contact, Fire, FireScene, Lava, LavaScene, Material, Mob, Plant, Rain, RainScene,
     SAMPLE_RATE, Surface, Thunder, ThunderScene, Water, WaterScene, Wind, WindScene, birdsong,
-    brush, cicadas, contact, crickets, drip_into_water, drip_on_stone, fracture, frog, howl,
-    ice_singing, lava_drip, owl, settling_stone, surf, to_pcm, voice, woodpecker,
+    brush, buzz, cicadas, contact, crickets, drip_into_water, drip_on_stone, flush, fracture, frog,
+    howl, ice_singing, lava_drip, owl, settling_stone, surf, to_pcm, voice, woodpecker,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -36,7 +36,9 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 /// 11: everyday animals and rarer hostiles (M8, M9): 52 mobs, 43 calls.
 /// 12: more life outdoors: surf, woodpeckers, owls, cicadas, a wolf's howl.
 /// 13: brushing through plants, lake ice singing, stones settling in caves.
-pub const FOLEY_ABI_VERSION: u32 = 13;
+/// 14: more birds (gull, loon, jay, warbler), a bird flushed, insects
+///     buzzing.
+pub const FOLEY_ABI_VERSION: u32 = 14;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -83,6 +85,9 @@ pub const FOLEY_SHOT_HOWL: i32 = 10;
 pub const FOLEY_SHOT_BRUSH: i32 = 11;
 pub const FOLEY_SHOT_ICE_SINGING: i32 = 12;
 pub const FOLEY_SHOT_SETTLING_STONE: i32 = 13;
+pub const FOLEY_SHOT_FLUSH: i32 = 14;
+/// An insect buzzing: `size` 0 a bee, 1 a fly.
+pub const FOLEY_SHOT_BUZZ: i32 = 15;
 
 /// Materials for `foley_render_contact`: stone, wood, metal, glass, ice,
 /// earth, granular (sand, gravel), plant, soft (wool), snow.
@@ -433,8 +438,10 @@ pub unsafe extern "C" fn foley_render_one_shot(
             FOLEY_SHOT_BRUSH if (0.0..=2.0).contains(&size) => brush(Plant::of(size as u32), seed),
             FOLEY_SHOT_ICE_SINGING => ice_singing(seed),
             FOLEY_SHOT_SETTLING_STONE => settling_stone(seed),
+            FOLEY_SHOT_FLUSH => flush(seed),
+            FOLEY_SHOT_BUZZ if (0.0..=1.0).contains(&size) => buzz(size as u32, seed),
             FOLEY_SHOT_CRICKETS | FOLEY_SHOT_BIRDSONG | FOLEY_SHOT_FROG | FOLEY_SHOT_SURF
-            | FOLEY_SHOT_CICADAS | FOLEY_SHOT_BRUSH => {
+            | FOLEY_SHOT_CICADAS | FOLEY_SHOT_BRUSH | FOLEY_SHOT_BUZZ => {
                 return Err(FfiError::invalid("size out of range"));
             }
             _ => return Err(FfiError::invalid("unknown one-shot kind")),
@@ -738,6 +745,8 @@ mod tests {
             (FOLEY_SHOT_BRUSH, 1.0),
             (FOLEY_SHOT_ICE_SINGING, 0.0),
             (FOLEY_SHOT_SETTLING_STONE, 0.0),
+            (FOLEY_SHOT_FLUSH, 0.0),
+            (FOLEY_SHOT_BUZZ, 1.0),
         ] {
             let mut needed = 0;
             // SAFETY: a null buffer with capacity 0 is not written.

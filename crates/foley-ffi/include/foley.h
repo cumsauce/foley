@@ -24,8 +24,10 @@
  * 11: everyday animals and rarer hostiles (M8, M9): 52 mobs, 43 calls.
  * 12: more life outdoors: surf, woodpeckers, owls, cicadas, a wolf's howl.
  * 13: brushing through plants, lake ice singing, stones settling in caves.
+ * 14: more birds (gull, loon, jay, warbler), a bird flushed, insects
+ *     buzzing.
  */
-#define FOLEY_ABI_VERSION 13
+#define FOLEY_ABI_VERSION 14
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -98,6 +100,13 @@
 #define FOLEY_SHOT_ICE_SINGING 12
 
 #define FOLEY_SHOT_SETTLING_STONE 13
+
+#define FOLEY_SHOT_FLUSH 14
+
+/**
+ * An insect buzzing: `size` 0 a bee, 1 a fly.
+ */
+#define FOLEY_SHOT_BUZZ 15
 
 /**
  * Materials for `foley_render_contact`: stone, wood, metal, glass, ice,

@@ -26,15 +26,27 @@ pub enum Bird {
     /// Black-capped chickadee: the "fee-bee" whistle, or its
     /// "chick-a-dee-dee-dee".
     Chickadee,
+    /// Herring gull: long calls and laughter, by the sea.
+    Gull,
+    /// Common loon: long wails across a lake at dusk and at night.
+    Loon,
+    /// Blue jay: loud, harsh "jay!"s.
+    Jay,
+    /// Yellow warbler: a quick, high "sweet sweet sweet, I'm so sweet".
+    Warbler,
 }
 
 impl Bird {
-    pub const ALL: [Bird; 5] = [
+    pub const ALL: [Bird; 9] = [
         Bird::Crow,
         Bird::Dove,
         Bird::Robin,
         Bird::Cardinal,
         Bird::Chickadee,
+        Bird::Gull,
+        Bird::Loon,
+        Bird::Jay,
+        Bird::Warbler,
     ];
 
     /// By its index in [`Bird::ALL`], wrapping round.
@@ -53,6 +65,10 @@ pub fn bird_call(bird: Bird, seed: u64) -> Vec<f32> {
         Bird::Robin => robin(&mut rng),
         Bird::Cardinal => cardinal(&mut rng),
         Bird::Chickadee => chickadee(&mut rng),
+        Bird::Gull => gull(&mut rng),
+        Bird::Loon => loon(&mut rng),
+        Bird::Jay => jay(&mut rng),
+        Bird::Warbler => warbler(&mut rng),
     };
     let mut out = out;
     out.extend(std::iter::repeat_n(
@@ -125,45 +141,158 @@ fn crow(rng: &mut Rng) -> Vec<f32> {
     let mut at = 0.0f32;
     for c in 0..caws {
         let seconds = 0.28 + 0.14 * rng.unit();
-        let n = (seconds * rate) as usize;
         let pitch = f0 * (1.0 + 0.04 * rng.signed());
-        let mut formants = [
-            BandPass::new(1200.0 * tract, 5.0),
-            BandPass::new(2000.0 * tract, 6.0),
-            BandPass::new(3100.0 * tract, 7.0),
-        ];
-        let mut breath = BandPass::new(1800.0 * tract, 1.2);
-        let mut caw = Vec::with_capacity(n);
-        let mut until = 0.0f32;
-        let mut odd = false;
-        let mut strength = 1.0;
-        let mut pulse = 0.0f32;
-        for i in 0..n {
-            let t = i as f32 / n as f32;
-            let f = pitch * (1.0 + 0.06 * (t * 5.0).min(1.0) - 0.2 * t * t);
-            until -= 1.0;
-            if until <= 0.0 {
-                odd = !odd;
-                until += rate / f * (1.0 + 0.04 * rng.signed());
-                strength = (0.75 + 0.25 * rng.unit()) * if odd { 1.0 } else { 0.55 };
-                pulse = strength;
-            }
-            // Each pulse a sharp opening that closes over a fraction of a
-            // millisecond.
-            let excitation = pulse + 0.04 * strength * rng.signed();
-            pulse *= 0.6;
-            let envelope = smooth((i as f32 / (0.02 * rate)).min(1.0))
-                * smooth(((n - i) as f32 / (0.06 * rate)).min(1.0))
-                * (1.0 - 0.3 * t);
-            let voiced = 1.0 * formants[0].process(excitation)
-                + 0.8 * formants[1].process(excitation)
-                + 0.4 * formants[2].process(excitation);
-            caw.push(envelope * (voiced + 0.04 * breath.process(rng.signed())));
-        }
+        let caw = harsh(
+            rng,
+            seconds,
+            |t| pitch * (1.0 + 0.06 * (t * 5.0).min(1.0) - 0.2 * t * t),
+            [1200.0 * tract, 2000.0 * tract, 3100.0 * tract],
+            0.55,
+        );
         add_at(&mut out, (at * rate) as usize, &caw, 1.0 - 0.1 * c as f32);
         at += seconds + 0.2 + 0.2 * rng.unit();
     }
     normalize(out, 0.5)
+}
+
+/// A harsh note, `seconds` long: the syrinx driven hard, pulses at `pitch(t)`
+/// (t from 0 to 1 through the note), jittery, every other one `doubling` as
+/// strong (the period doubling that makes it rasp; 1 for none), through the
+/// throat and beak's three resonances at `formants`.
+fn harsh(
+    rng: &mut Rng,
+    seconds: f32,
+    pitch: impl Fn(f32) -> f32,
+    formants: [f32; 3],
+    doubling: f32,
+) -> Vec<f32> {
+    let rate = SAMPLE_RATE as f32;
+    let n = (seconds * rate) as usize;
+    let mut filters = [
+        BandPass::new(formants[0], 5.0),
+        BandPass::new(formants[1], 6.0),
+        BandPass::new(formants[2], 7.0),
+    ];
+    let mut breath = BandPass::new(formants[1], 1.2);
+    let mut note = Vec::with_capacity(n);
+    let (mut until, mut odd, mut strength, mut pulse) = (0.0f32, false, 1.0f32, 0.0f32);
+    for i in 0..n {
+        let t = i as f32 / n as f32;
+        let f = pitch(t);
+        until -= 1.0;
+        if until <= 0.0 {
+            odd = !odd;
+            until += rate / f * (1.0 + 0.04 * rng.signed());
+            strength = (0.75 + 0.25 * rng.unit()) * if odd { 1.0 } else { doubling };
+            pulse = strength;
+        }
+        // Each pulse a sharp opening that closes over a fraction of a
+        // millisecond.
+        let excitation = pulse + 0.04 * strength * rng.signed();
+        pulse *= 0.6;
+        let envelope = smooth((i as f32 / (0.02 * rate)).min(1.0))
+            * smooth(((n - i) as f32 / (0.06 * rate)).min(1.0))
+            * (1.0 - 0.3 * t);
+        let voiced = filters[0].process(excitation)
+            + 0.8 * filters[1].process(excitation)
+            + 0.4 * filters[2].process(excitation);
+        note.push(envelope * (voiced + 0.04 * breath.process(rng.signed())));
+    }
+    note
+}
+
+/// A herring gull's long call: a few long, rising-then-falling "kyow"s, then
+/// a run of quick laughing "ha"s, each harsh, its pulses near 800 Hz.
+fn gull(rng: &mut Rng) -> Vec<f32> {
+    let rate = SAMPLE_RATE as f32;
+    let f0 = 700.0 + 200.0 * rng.unit();
+    let formants = [1700.0, 2900.0, 4200.0];
+    let mut out = Vec::new();
+    let mut at = 0.0f32;
+    for _ in 0..1 + (rng.unit() * 2.0) as usize {
+        let note = harsh(
+            rng,
+            0.38,
+            |t| f0 * (1.0 + 0.5 * (std::f32::consts::PI * t).sin()),
+            formants,
+            0.85,
+        );
+        add_at(&mut out, (at * rate) as usize, &note, 1.0);
+        at += 0.5;
+    }
+    for k in 0..4 + (rng.unit() * 6.0) as usize {
+        let note = harsh(rng, 0.11, |t| f0 * 1.3 * (1.0 - 0.15 * t), formants, 0.85);
+        add_at(&mut out, (at * rate) as usize, &note, 0.9 - 0.05 * k as f32);
+        at += 0.16;
+    }
+    normalize(out, 0.45)
+}
+
+/// A blue jay's "jay! jay!": two to four loud, harsh, falling calls, pulses
+/// near 1 kHz, bright with the beak's resonances at 2.5 to 5 kHz.
+fn jay(rng: &mut Rng) -> Vec<f32> {
+    let rate = SAMPLE_RATE as f32;
+    let f0 = 950.0 + 250.0 * rng.unit();
+    let mut out = Vec::new();
+    let mut at = 0.0f32;
+    for _ in 0..2 + (rng.unit() * 3.0) as usize {
+        let note = harsh(
+            rng,
+            0.22,
+            |t| f0 * (1.15 - 0.35 * t),
+            [2500.0, 3600.0, 5000.0],
+            0.7,
+        );
+        add_at(&mut out, (at * rate) as usize, &note, 1.0);
+        at += 0.35 + 0.15 * rng.unit();
+    }
+    normalize(out, 0.45)
+}
+
+/// A common loon's wail across a lake at dusk: one to three long, pure,
+/// mournful notes, sliding up from about 600 Hz to near 1 kHz and back, each
+/// a couple of seconds, with a slow waver.
+fn loon(rng: &mut Rng) -> Vec<f32> {
+    let rate = SAMPLE_RATE as f32;
+    let f = 580.0 + 80.0 * rng.unit();
+    let mut out = Vec::new();
+    let mut at = 0.0f32;
+    let notes: [&[(f32, f32)]; 3] = [
+        &[(0.0, 1.0), (0.3, 1.0), (0.5, 1.6), (1.0, 1.55)],
+        &[(0.0, 1.55), (0.2, 1.75), (0.6, 1.7), (1.0, 1.5)],
+        &[(0.0, 1.5), (0.5, 1.6), (1.0, 1.2)],
+    ];
+    for contour in &notes[..1 + (rng.unit() * 3.0) as usize] {
+        let contour: Vec<(f32, f32)> = contour.iter().map(|&(t, k)| (t, k * f)).collect();
+        let seconds = 1.6 + 0.6 * rng.unit();
+        let note = whistle(&contour, seconds, 0.3, (0.15, 0.4), rng);
+        add_at(&mut out, (at * rate) as usize, &note, 1.0);
+        at += seconds + 0.3;
+    }
+    normalize(out, 0.35)
+}
+
+/// A yellow warbler's "sweet sweet sweet, I'm so sweet": quick whistled
+/// notes between 3.5 and 7 kHz, quickening, ending in an upslur.
+fn warbler(rng: &mut Rng) -> Vec<f32> {
+    let rate = SAMPLE_RATE as f32;
+    let k = 0.9 + 0.2 * rng.unit();
+    let mut out = Vec::new();
+    let mut at = 0.0f32;
+    let notes = 5 + (rng.unit() * 4.0) as usize;
+    for i in 0..notes {
+        let last = i + 1 == notes;
+        let contour = if last {
+            vec![(0.0, 4000.0 * k), (1.0, 6800.0 * k)]
+        } else {
+            vec![(0.0, 6200.0 * k), (0.5, 4300.0 * k), (1.0, 5200.0 * k)]
+        };
+        let seconds = if last { 0.16 } else { 0.08 };
+        let note = whistle(&contour, seconds, 0.05, (0.008, 0.02), rng);
+        add_at(&mut out, (at * rate) as usize, &note, 1.0);
+        at += seconds + 0.12 * (1.0 - 0.07 * i as f32);
+    }
+    normalize(out, 0.3)
 }
 
 /// A mourning dove's perch-coo: "coo-OO-oo", the second part swooping up
@@ -392,7 +521,7 @@ mod tests {
                     "{bird:?}"
                 );
                 assert!(s.len() > SAMPLE_RATE as usize / 4, "{bird:?}");
-                assert!(s.len() < 6 * SAMPLE_RATE as usize, "{bird:?} {}", s.len());
+                assert!(s.len() < 8 * SAMPLE_RATE as usize, "{bird:?} {}", s.len());
             }
         }
     }

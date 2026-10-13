@@ -17,6 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 abstract class SoundEngineMixin {
 	@Inject(method = "play", at = @At("HEAD"), cancellable = true)
 	private void foley$replace(SoundInstance sound, CallbackInfoReturnable<SoundEngine.PlayResult> cir) {
+		io.github.cumsauce.foley.audio.Life.heard(sound);
 		if (Replacements.replace(sound)) {
 			cir.setReturnValue(SoundEngine.PlayResult.NOT_STARTED);
 		} else {

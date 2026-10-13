@@ -11,6 +11,8 @@ import org.jspecify.annotations.Nullable;
  */
 public final class RainController {
 	private static final int SAMPLE_EVERY = 10;
+	/** The rain rate heard now, mm/h, following the sky's slowly. */
+	private float heardRate;
 	/** Rain stops this many ticks after the scene goes dry, so a gap in the clouds doesn't cut it off. */
 	private static final int LINGER = 100;
 
@@ -59,6 +61,14 @@ public final class RainController {
 		if (forced != null) {
 			float[] surfaces = sampled.rate() > 0 ? sampled.surfaces() : RainScene.DRY.surfaces();
 			sampled = new RainScene(forced, surfaces, sampled.roof(), sampled.height());
+		}
+		if (forced == null) {
+			// Rain comes on over half a minute (first a scatter of drops, then the downpour) and eases off over
+			// some ten seconds, rather than as fast as the sky darkens.
+			float k = sampled.rate() > heardRate ? 0.025f : 0.06f;
+			heardRate += (sampled.rate() - heardRate) * k;
+			if (sampled.rate() <= 0 && heardRate < 0.05f) heardRate = 0;
+			sampled = new RainScene(heardRate, sampled.surfaces(), sampled.roof(), sampled.height());
 		}
 		scene = sampled;
 		if (scene.rate() <= 0) {

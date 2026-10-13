@@ -63,6 +63,8 @@ public final class GeneratedSounds {
 			case "brush" -> bridge.renderOneShot(NativeBridge.SHOT_BRUSH, n, seed);
 			case "ice" -> bridge.renderOneShot(NativeBridge.SHOT_ICE_SINGING, 0, seed);
 			case "settle" -> bridge.renderOneShot(NativeBridge.SHOT_SETTLING_STONE, 0, seed);
+			case "flush" -> bridge.renderOneShot(NativeBridge.SHOT_FLUSH, 0, seed);
+			case "buzz" -> bridge.renderOneShot(NativeBridge.SHOT_BUZZ, n, seed);
 			default -> otherwise;
 		};
 	}
