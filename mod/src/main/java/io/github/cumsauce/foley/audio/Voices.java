@@ -41,8 +41,14 @@ public final class Voices {
 
 	private Voices() {}
 
+	private static final Map<String, List<String>> CALLS_OF = new java.util.concurrent.ConcurrentHashMap<>();
+
 	/** The calls Foley makes for native mob {@code mob}. */
 	public static List<String> callsOf(String mob) {
+		return CALLS_OF.computeIfAbsent(mob, Voices::findCalls);
+	}
+
+	private static List<String> findCalls(String mob) {
 		var calls = new java.util.ArrayList<String>();
 		VoiceTable.GAME.forEach((game, table) -> table.forEach((call, target) -> {
 			String m = target.contains(":") ? target.substring(0, target.indexOf(':')) : game;
@@ -50,7 +56,7 @@ public final class Voices {
 			if (m.equals(mob) && !calls.contains(c)) calls.add(c);
 		}));
 		calls.addAll(VoiceTable.EXTRA.getOrDefault(mob, List.of()));
-		return calls;
+		return List.copyOf(calls);
 	}
 
 	/** The settings group native mob {@code mob} belongs to, as a bit index, or -1. */

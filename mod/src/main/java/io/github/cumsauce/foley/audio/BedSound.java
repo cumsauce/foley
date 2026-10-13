@@ -129,10 +129,16 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 			return FORMAT;
 		}
 
+		/** Reused: the game uploads each buffer to OpenAL before it reads the next. */
+		private @org.jspecify.annotations.Nullable ByteBuffer scratch;
+
 		@Override
 		public synchronized ByteBuffer read(int size) {
 			int bytes = size & ~1;
-			ByteBuffer buffer = ByteBuffer.allocateDirect(bytes).order(ByteOrder.LITTLE_ENDIAN);
+			if (scratch == null || scratch.capacity() < bytes) {
+				scratch = ByteBuffer.allocateDirect(bytes).order(ByteOrder.LITTLE_ENDIAN);
+			}
+			ByteBuffer buffer = scratch.clear().limit(bytes);
 			if (closed) return buffer.limit(0);
 			bridge.bedRender(bed, MemorySegment.ofBuffer(buffer));
 			rendered += bytes / 2;
