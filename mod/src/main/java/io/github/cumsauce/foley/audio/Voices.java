@@ -121,6 +121,9 @@ public final class Voices {
 			volume = own.foley$volume();
 			pitch = own.foley$pitch();
 		}
+		// Each mob its own voice, the same call to call and session to session, in its own habits.
+		Individuals.Voice own = Individuals.of(parsed.mob, sound.getX(), sound.getY(), sound.getZ(), pitch);
+		if (own != null) pitch = own.pitch();
 		pitch *= parsed.pitch;
 		String call = parsed.call;
 		Minecraft minecraft = Minecraft.getInstance();
@@ -131,7 +134,8 @@ public final class Voices {
 			if (distance < NEAR) call = "ambient_near";
 			volume *= (float) (0.7 + 0.3 * Math.clamp(1 - distance / 16, 0, 1));
 		}
-		play(minecraft, parsed.mob, call, sound.getSource(), volume, pitch, sound.getX(), sound.getY(), sound.getZ());
+		play(minecraft, parsed.mob, call, sound.getSource(), volume, pitch, sound.getX(), sound.getY(), sound.getZ(),
+				own);
 		FoleyClient.countReplaced();
 		return true;
 	}
@@ -146,7 +150,7 @@ public final class Voices {
 		if (call == null) return false;
 		float pitch = sound instanceof AbstractSoundInstanceAccessor own ? own.foley$pitch() : 1f;
 		play(Minecraft.getInstance(), mob, call, sound.getSource(), 0.7f, pitch * 1.5f, sound.getX(), sound.getY(),
-				sound.getZ());
+				sound.getZ(), null);
 		FoleyClient.countReplaced();
 		return true;
 	}
@@ -168,9 +172,31 @@ public final class Voices {
 		return Sounds.event("voice_" + mob + "_" + call);
 	}
 
+	/** Plays a call; {@code own}, if there is one, picks which of its renditions rather than leaving it to chance. */
 	private static void play(Minecraft minecraft, String mob, String call, SoundSource source, float volume,
-			float pitch, double x, double y, double z) {
+			float pitch, double x, double y, double z, Individuals.@Nullable Voice own) {
 		minecraft.getSoundManager().play(new SimpleSoundInstance(event(mob, call), source, volume * FoleyClient.gain(),
-				Math.clamp(pitch, 0.5f, 2f), SoundInstance.createUnseededRandom(), x, y, z));
+				Math.clamp(pitch, 0.5f, 2f), SoundInstance.createUnseededRandom(), x, y, z) {
+			@Override
+			public net.minecraft.client.sounds.WeighedSoundEvents getOrResolve(
+					net.minecraft.client.sounds.SoundManager manager) {
+				var events = super.getOrResolve(manager);
+				if (own != null && sound != null && events != null) {
+					sound = rendition(sound, own.rendition(events.getWeight()));
+				}
+				return events;
+			}
+		});
+	}
+
+	/** {@code sound} (a generated rendition, {@code …_<n>}) as its rendition {@code n}, keeping the rest. */
+	static Sound rendition(Sound sound, int n) {
+		String path = sound.getLocation().getPath();
+		int split = path.lastIndexOf('_');
+		if (split < 0 || !path.startsWith(GeneratedSounds.PREFIX)) return sound;
+		Identifier chosen = Identifier.fromNamespaceAndPath(sound.getLocation().getNamespace(),
+				path.substring(0, split + 1) + n);
+		return new Sound(chosen, sound.getVolume(), sound.getPitch(), sound.getWeight(), sound.getType(),
+				sound.shouldStream(), sound.shouldPreload(), sound.getAttenuationDistance());
 	}
 }
