@@ -1128,6 +1128,331 @@
 			"foley:generated/step_snow_7"
 		]
 	},
+	"surf_0": {
+		"subtitle": "subtitles.foley.surf",
+		"sounds": [
+			{
+				"name": "foley:generated/surf_0_0",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_0_1",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_0_2",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_0_3",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_0_4",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_0_5",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_0_6",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_0_7",
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"surf_1": {
+		"subtitle": "subtitles.foley.surf",
+		"sounds": [
+			{
+				"name": "foley:generated/surf_1_0",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_1_1",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_1_2",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_1_3",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_1_4",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_1_5",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_1_6",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_1_7",
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"surf_2": {
+		"subtitle": "subtitles.foley.surf",
+		"sounds": [
+			{
+				"name": "foley:generated/surf_2_0",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_2_1",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_2_2",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_2_3",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_2_4",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_2_5",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_2_6",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/surf_2_7",
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"woodpecker_0": {
+		"subtitle": "subtitles.foley.woodpecker",
+		"sounds": [
+			{
+				"name": "foley:generated/woodpecker_0_0",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/woodpecker_0_1",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/woodpecker_0_2",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/woodpecker_0_3",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/woodpecker_0_4",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/woodpecker_0_5",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/woodpecker_0_6",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "foley:generated/woodpecker_0_7",
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"owl_0": {
+		"subtitle": "subtitles.foley.owl",
+		"sounds": [
+			{
+				"name": "foley:generated/owl_0_0",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "foley:generated/owl_0_1",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "foley:generated/owl_0_2",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "foley:generated/owl_0_3",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "foley:generated/owl_0_4",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "foley:generated/owl_0_5",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "foley:generated/owl_0_6",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "foley:generated/owl_0_7",
+				"attenuation_distance": 64
+			}
+		]
+	},
+	"cicadas_0": {
+		"subtitle": "subtitles.foley.cicadas",
+		"sounds": [
+			{
+				"name": "foley:generated/cicadas_0_0",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_0_1",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_0_2",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_0_3",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_0_4",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_0_5",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_0_6",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_0_7",
+				"attenuation_distance": 28
+			}
+		]
+	},
+	"cicadas_1": {
+		"subtitle": "subtitles.foley.cicadas",
+		"sounds": [
+			{
+				"name": "foley:generated/cicadas_1_0",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_1_1",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_1_2",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_1_3",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_1_4",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_1_5",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_1_6",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_1_7",
+				"attenuation_distance": 28
+			}
+		]
+	},
+	"cicadas_2": {
+		"subtitle": "subtitles.foley.cicadas",
+		"sounds": [
+			{
+				"name": "foley:generated/cicadas_2_0",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_2_1",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_2_2",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_2_3",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_2_4",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_2_5",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_2_6",
+				"attenuation_distance": 28
+			},
+			{
+				"name": "foley:generated/cicadas_2_7",
+				"attenuation_distance": 28
+			}
+		]
+	},
+	"howl_0": {
+		"subtitle": "subtitles.foley.howl",
+		"sounds": [
+			{
+				"name": "foley:generated/howl_0_0",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "foley:generated/howl_0_1",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "foley:generated/howl_0_2",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "foley:generated/howl_0_3",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "foley:generated/howl_0_4",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "foley:generated/howl_0_5",
+				"attenuation_distance": 96
+			}
+		]
+	},
 	"voice_armadillo_ambient": {
 		"subtitle": "subtitles.entity.armadillo.ambient",
 		"sounds": [

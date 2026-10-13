@@ -28,7 +28,7 @@ public final class GeneratedSounds {
 		return sound.getNamespace().equals("foley") && sound.getPath().startsWith(PREFIX);
 	}
 
-	/** A bird's song, a cricket's chirping or a frog's call ({@link Life}), or {@code otherwise}. */
+	/** A bird's song, a cricket's chirping, a frog's call, a wave, … ({@link Life}), or {@code otherwise}. */
 	private static short @org.jspecify.annotations.Nullable [] life(NativeBridge bridge, String model, int variant,
 			short @org.jspecify.annotations.Nullable [] otherwise) {
 		if (model.startsWith("voice_")) {
@@ -55,6 +55,11 @@ public final class GeneratedSounds {
 			case "bird" -> bridge.renderOneShot(NativeBridge.SHOT_BIRDSONG, n, seed);
 			case "crickets" -> bridge.renderOneShot(NativeBridge.SHOT_CRICKETS, Life.CRICKET_CELSIUS[n], seed);
 			case "frog" -> bridge.renderOneShot(NativeBridge.SHOT_FROG, Life.FROG_CM[n], seed);
+			case "surf" -> bridge.renderOneShot(NativeBridge.SHOT_SURF, Life.SURF_M[n], seed);
+			case "woodpecker" -> bridge.renderOneShot(NativeBridge.SHOT_WOODPECKER, 0, seed);
+			case "owl" -> bridge.renderOneShot(NativeBridge.SHOT_OWL, 0, seed);
+			case "cicadas" -> bridge.renderOneShot(NativeBridge.SHOT_CICADAS, Life.CICADA_CELSIUS[n], seed);
+			case "howl" -> bridge.renderOneShot(NativeBridge.SHOT_HOWL, 0, seed);
 			default -> otherwise;
 		};
 	}

@@ -1,9 +1,11 @@
 //! Spectrograms of a few calls, as one PNG, for looking at what a voice is
 //! made of: `cargo run --release -p foley-synth --example spectrogram -- out.png`.
 //! Rows: zombie groan, zombie close by, cow, sheep, cat, wolf growl; or the
-//! M8 or M9 sets (a second argument `m8` or `m9`). 0–8 kHz, log magnitude.
+//! M8 or M9 sets (a second argument `m8` or `m9`), or the outdoors (`outdoors`:
+//! surf, woodpecker, owl, cicadas, a wolf howling). 0–8 kHz, log magnitude;
+//! each row spans its whole sound.
 
-use foley_synth::{Call, Mob, voice};
+use foley_synth::{Call, Mob, cicadas, howl, owl, surf, voice, woodpecker};
 
 const N: usize = 1024;
 const HOP: usize = 256;
@@ -15,7 +17,7 @@ fn main() -> std::io::Result<()> {
         .nth(1)
         .unwrap_or_else(|| "spectrogram.png".into());
     let set = std::env::args().nth(2).unwrap_or_default();
-    let rows: Vec<(Mob, Call)> = if set == "m8" {
+    let calls: Vec<(Mob, Call)> = if set == "m8" {
         vec![
             (Mob::Horse, Call::Ambient),
             (Mob::Donkey, Call::Ambient),
@@ -43,13 +45,27 @@ fn main() -> std::io::Result<()> {
             (Mob::Wolf, Call::Growl),
         ]
     };
+    let rows: Vec<Vec<f32>> = if set == "outdoors" {
+        vec![
+            surf(1.5, 1),
+            woodpecker(2),
+            owl(3),
+            cicadas(30.0, 4),
+            howl(5),
+        ]
+    } else {
+        calls
+            .iter()
+            .map(|(mob, call)| voice(*mob, *call, 1))
+            .collect()
+    };
     let height = rows.len() * (BINS + 4);
     let mut image = vec![0u8; WIDTH * height];
-    for (r, (mob, call)) in rows.iter().enumerate() {
-        let sound = voice(*mob, *call, 1);
-        let frames = ((sound.len().saturating_sub(N)) / HOP).min(WIDTH);
+    for (r, sound) in rows.iter().enumerate() {
+        let hop = ((sound.len().saturating_sub(N)) / WIDTH).max(HOP);
+        let frames = ((sound.len().saturating_sub(N)) / hop).min(WIDTH);
         for f in 0..frames {
-            let spectrum = magnitudes(&sound[f * HOP..f * HOP + N]);
+            let spectrum = magnitudes(&sound[f * hop..f * hop + N]);
             for (b, magnitude) in spectrum.iter().take(BINS).enumerate() {
                 let db = 20.0 * magnitude.max(1e-7).log10();
                 let v = ((db + 90.0) / 90.0).clamp(0.0, 1.0);

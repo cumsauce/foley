@@ -22,8 +22,9 @@
  * 10: voice engine 2: more mobs (zombies' kin, skeletons, spiders, creepers,
  *     bats) and calls (growls, purrs, the fuse, breathing, …).
  * 11: everyday animals and rarer hostiles (M8, M9): 52 mobs, 43 calls.
+ * 12: more life outdoors: surf, woodpeckers, owls, cicadas, a wolf's howl.
  */
-#define FOLEY_ABI_VERSION 11
+#define FOLEY_ABI_VERSION 12
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -62,7 +63,9 @@
  * One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
  * water drips (0.1 to 10), and unused for lava; the air's temperature in °C
  * for crickets (-30 to 50); the species (0 to 1000) for birdsong; the body
- * length in cm for a frog (2 to 20).
+ * length in cm for a frog (2 to 20); the wave's height in m for surf (0.2 to
+ * 3); the temperature for cicadas, like crickets; unused for woodpeckers,
+ * owls and howls.
  */
 #define FOLEY_SHOT_DRIP_INTO_WATER 0
 
@@ -75,6 +78,16 @@
 #define FOLEY_SHOT_BIRDSONG 4
 
 #define FOLEY_SHOT_FROG 5
+
+#define FOLEY_SHOT_SURF 6
+
+#define FOLEY_SHOT_WOODPECKER 7
+
+#define FOLEY_SHOT_OWL 8
+
+#define FOLEY_SHOT_CICADAS 9
+
+#define FOLEY_SHOT_HOWL 10
 
 /**
  * Materials for `foley_render_contact`: stone, wood, metal, glass, ice,

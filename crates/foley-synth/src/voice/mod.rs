@@ -302,6 +302,41 @@ pub(super) fn vary(rng: &mut Rng, x: f32, by: f32) -> f32 {
     x * (1.0 + by * rng.signed())
 }
 
+/// A wolf howling, far off on a cold night: a long, nearly pure "oooo" that
+/// slides up a fifth or so, holds with a slow waver, and falls away, the
+/// lips rounded and the jaw opening a little at its height; often a second,
+/// shorter one after it.
+pub fn howl(seed: u64) -> Vec<f32> {
+    let mut rng = Rng::new(seed ^ 0x40A1);
+    let mut voice = Mob::Wolf.voice();
+    voice.f0 *= 0.85 + 0.25 * rng.unit();
+    let mut segments = Vec::new();
+    for n in 0..1 + usize::from(rng.unit() < 0.6) {
+        let mut h = Seg::new(vary(&mut rng, if n == 0 { 2.6 } else { 1.6 }, 0.15)).vowels(&[
+            (0.0, OO),
+            (0.45, UH),
+            (1.0, OO),
+        ]);
+        h.f0 = k(&[
+            (0.0, 0.75),
+            (0.25, 1.15),
+            (0.6, 1.2),
+            (0.85, 1.05),
+            (1.0, 0.7),
+        ]);
+        h.lips = k(&[(0.0, 0.3), (0.45, 0.6), (1.0, 0.25)]);
+        // A soft, smooth glottal pulse: few overtones, nearly a pure tone.
+        h.rd = c(2.2);
+        h.breath = c(0.1);
+        h.tremolo = (vary(&mut rng, 4.5, 0.2), 0.12);
+        h.jitter = 0.006;
+        h.loud = k(&[(0.0, 0.0), (0.15, 0.8), (0.5, 1.0), (0.85, 0.8), (1.0, 0.0)]);
+        h.gap = vary(&mut rng, 0.6, 0.3);
+        segments.push(h);
+    }
+    finish(perform(&mut rng, voice, &segments), 0.4)
+}
+
 /// A call of `mob`, made up from `seed`. Calls a mob doesn't have fall back
 /// to its ambient one.
 pub fn voice(mob: Mob, call: Call, seed: u64) -> Vec<f32> {

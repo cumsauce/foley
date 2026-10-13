@@ -13,8 +13,9 @@ mod guard;
 
 use foley_synth::{
     Call, Contact, Fire, FireScene, Lava, LavaScene, Material, Mob, Rain, RainScene, Surface,
-    Thunder, ThunderScene, Water, WaterScene, Wind, WindScene, birdsong, contact, crickets,
-    drip_into_water, drip_on_stone, fracture, frog, lava_drip, to_pcm, voice,
+    Thunder, ThunderScene, Water, WaterScene, Wind, WindScene, birdsong, cicadas, contact,
+    crickets, drip_into_water, drip_on_stone, fracture, frog, howl, lava_drip, owl, surf, to_pcm,
+    voice, woodpecker,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -33,7 +34,8 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 /// 10: voice engine 2: more mobs (zombies' kin, skeletons, spiders, creepers,
 ///     bats) and calls (growls, purrs, the fuse, breathing, …).
 /// 11: everyday animals and rarer hostiles (M8, M9): 52 mobs, 43 calls.
-pub const FOLEY_ABI_VERSION: u32 = 11;
+/// 12: more life outdoors: surf, woodpeckers, owls, cicadas, a wolf's howl.
+pub const FOLEY_ABI_VERSION: u32 = 12;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -62,13 +64,20 @@ pub const FOLEY_BED_THUNDER: i32 = 5;
 /// One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
 /// water drips (0.1 to 10), and unused for lava; the air's temperature in °C
 /// for crickets (-30 to 50); the species (0 to 1000) for birdsong; the body
-/// length in cm for a frog (2 to 20).
+/// length in cm for a frog (2 to 20); the wave's height in m for surf (0.2 to
+/// 3); the temperature for cicadas, like crickets; unused for woodpeckers,
+/// owls and howls.
 pub const FOLEY_SHOT_DRIP_INTO_WATER: i32 = 0;
 pub const FOLEY_SHOT_DRIP_ON_STONE: i32 = 1;
 pub const FOLEY_SHOT_LAVA_DRIP: i32 = 2;
 pub const FOLEY_SHOT_CRICKETS: i32 = 3;
 pub const FOLEY_SHOT_BIRDSONG: i32 = 4;
 pub const FOLEY_SHOT_FROG: i32 = 5;
+pub const FOLEY_SHOT_SURF: i32 = 6;
+pub const FOLEY_SHOT_WOODPECKER: i32 = 7;
+pub const FOLEY_SHOT_OWL: i32 = 8;
+pub const FOLEY_SHOT_CICADAS: i32 = 9;
+pub const FOLEY_SHOT_HOWL: i32 = 10;
 
 /// Materials for `foley_render_contact`: stone, wood, metal, glass, ice,
 /// earth, granular (sand, gravel), plant, soft (wool), snow.
@@ -369,7 +378,13 @@ pub unsafe extern "C" fn foley_render_one_shot(
             FOLEY_SHOT_CRICKETS if (-30.0..=50.0).contains(&size) => crickets(size, seed),
             FOLEY_SHOT_BIRDSONG if (0.0..=1000.0).contains(&size) => birdsong(size as u32, seed),
             FOLEY_SHOT_FROG if (2.0..=20.0).contains(&size) => frog(size, seed),
-            FOLEY_SHOT_CRICKETS | FOLEY_SHOT_BIRDSONG | FOLEY_SHOT_FROG => {
+            FOLEY_SHOT_SURF if (0.2..=3.0).contains(&size) => surf(size, seed),
+            FOLEY_SHOT_WOODPECKER => woodpecker(seed),
+            FOLEY_SHOT_OWL => owl(seed),
+            FOLEY_SHOT_CICADAS if (-30.0..=50.0).contains(&size) => cicadas(size, seed),
+            FOLEY_SHOT_HOWL => howl(seed),
+            FOLEY_SHOT_CRICKETS | FOLEY_SHOT_BIRDSONG | FOLEY_SHOT_FROG | FOLEY_SHOT_SURF
+            | FOLEY_SHOT_CICADAS => {
                 return Err(FfiError::invalid("size out of range"));
             }
             _ => return Err(FfiError::invalid("unknown one-shot kind")),
@@ -665,6 +680,11 @@ mod tests {
             (FOLEY_SHOT_CRICKETS, 22.0),
             (FOLEY_SHOT_BIRDSONG, 5.0),
             (FOLEY_SHOT_FROG, 8.0),
+            (FOLEY_SHOT_SURF, 1.0),
+            (FOLEY_SHOT_WOODPECKER, 0.0),
+            (FOLEY_SHOT_OWL, 0.0),
+            (FOLEY_SHOT_CICADAS, 30.0),
+            (FOLEY_SHOT_HOWL, 0.0),
         ] {
             let mut needed = 0;
             // SAFETY: a null buffer with capacity 0 is not written.
