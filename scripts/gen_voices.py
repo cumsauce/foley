@@ -83,9 +83,10 @@ GAME = {
     "silverfish": AHD, "endermite": AHD,
 }
 # Calls Foley makes itself (not in place of a game sound).
-EXTRA = {m: ["breath", "breath_heavy", "ambient_near"] for m in ["zombie", "husk", "drowned", "zombie_villager"]}
+EXTRA = {m: ["breath", "breath_heavy", "ambient_near", "growl"] for m in ["zombie", "husk", "drowned", "zombie_villager"]}
 LOOPS = {"loop", "loop_aggressive"}
-EXTRA_SUBTITLES = {"breath": "subtitles.foley.breath", "breath_heavy": "subtitles.foley.breath"}
+EXTRA_SUBTITLES = {"breath": "subtitles.foley.breath", "breath_heavy": "subtitles.foley.breath",
+                   "growl": "subtitles.foley.snarl"}
 
 
 def vanilla_subtitles():

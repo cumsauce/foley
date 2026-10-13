@@ -122,10 +122,10 @@ public final class VoiceTable {
 			Map.entry("endermite", Map.ofEntries(Map.entry("ambient", "ambient"), Map.entry("hurt", "hurt"), Map.entry("death", "death"))));
 	/** Calls Foley makes itself, beyond the game's. */
 	public static final Map<String, List<String>> EXTRA = Map.ofEntries(
-			Map.entry("zombie", List.of("breath", "breath_heavy", "ambient_near")),
-			Map.entry("husk", List.of("breath", "breath_heavy", "ambient_near")),
-			Map.entry("drowned", List.of("breath", "breath_heavy", "ambient_near")),
-			Map.entry("zombie_villager", List.of("breath", "breath_heavy", "ambient_near")));
+			Map.entry("zombie", List.of("breath", "breath_heavy", "ambient_near", "growl")),
+			Map.entry("husk", List.of("breath", "breath_heavy", "ambient_near", "growl")),
+			Map.entry("drowned", List.of("breath", "breath_heavy", "ambient_near", "growl")),
+			Map.entry("zombie_villager", List.of("breath", "breath_heavy", "ambient_near", "growl")));
 
 	private VoiceTable() {}
 }

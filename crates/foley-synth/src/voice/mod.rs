@@ -12,7 +12,7 @@ mod speech;
 mod tract;
 
 use creatures::{Bones, Call3, CreeperCall};
-use score::{AA, AE, EE, EH, OH, OO, Seg, UH, Voice, c, finish, k, perform};
+use score::{AA, AE, EE, EH, K, OH, OO, Seg, UH, Voice, c, finish, k, perform};
 
 use crate::Rng;
 
@@ -406,6 +406,7 @@ pub fn voice(mob: Mob, call: Call, seed: u64) -> Vec<f32> {
                 Call::Breath if hostile => 0.3,
                 Call::BreathHeavy if hostile => 0.5,
                 Call::AmbientNear if hostile => 0.65,
+                Call::Growl if hostile => 0.7,
                 _ if hostile => 0.45,
                 _ => 0.5,
             };
@@ -526,6 +527,55 @@ fn groan(rng: &mut Rng, dry: bool, nasal: bool) -> Vec<Seg> {
     segments
 }
 
+/// A zombie right on top of you: a wet, rattling gasp in, then a snarl
+/// through bared teeth, pressed hard, rough with subharmonics and chaos,
+/// that breaks up into fry, and sometimes a choke as it runs out of air.
+fn snarl(rng: &mut Rng, dry: bool, nasal: bool) -> Vec<Seg> {
+    let mut gasp = Seg::new(vary(rng, 0.3, 0.25)).vowels(&[(0.0, UH), (1.0, AA)]);
+    gasp.ingressive = true;
+    gasp.voicing = c(0.45);
+    gasp.breath = c(0.7);
+    gasp.creak = c(0.8);
+    gasp.chaos = c(0.5);
+    gasp.f0 = c(0.75);
+    gasp.loud = k(&[(0.0, 0.0), (0.5, 0.7), (1.0, 0.2)]);
+    gasp.gap = vary(rng, 0.04, 0.4);
+    let mut snarl =
+        Seg::new(vary(rng, 0.9, 0.25)).vowels(&[(0.0, EH), (0.25, AE), (0.8, AA), (1.0, UH)]);
+    snarl.lips = c(1.0);
+    snarl.rd = c(if dry { 1.0 } else { 0.5 });
+    snarl.f0 = k(&[(0.0, 0.8), (0.25, 1.0), (0.7, 0.85), (1.0, 0.6)]);
+    snarl.sub = c(0.6);
+    snarl.chaos = k(&[(0.0, 0.4), (0.3, 0.7), (1.0, 0.5)]);
+    snarl.sidebands = c(0.4);
+    snarl.sideband_hz = 30.0 + 25.0 * rng.unit();
+    snarl.creak = k(&[(0.0, 0.3), (0.6, 0.2), (1.0, 0.9)]);
+    snarl.breath = c(if dry { 0.6 } else { 0.4 });
+    snarl.jitter = 0.04;
+    snarl.loud = k(&[(0.0, 0.0), (0.1, 0.8), (0.35, 1.0), (0.8, 0.85), (1.0, 0.0)]);
+    if dry {
+        snarl.fric = c(0.3);
+        snarl.fric_at = (0.25, 0.5);
+    }
+    if nasal {
+        snarl.velum = c(0.5);
+    }
+    let mut segments = vec![gasp, snarl];
+    if rng.unit() < 0.5 {
+        let mut choke = Seg::new(vary(rng, 0.18, 0.3)).vowels(&[(0.0, UH)]);
+        choke.ingressive = true;
+        choke.voicing = c(0.6);
+        choke.creak = c(1.0);
+        choke.chaos = c(0.6);
+        choke.f0 = c(1.1);
+        choke.breath = c(0.5);
+        choke.loud = k(&[(0.0, 0.0), (0.2, 0.7), (1.0, 0.0)]);
+        segments[1].gap = vary(rng, 0.08, 0.4);
+        segments.push(choke);
+    }
+    segments
+}
+
 /// A zombie breathing: rough, half-voiced breaths out and in. Heavy, they
 /// come faster and harder, more voiced, catching in the throat.
 fn breathe(rng: &mut Rng, heavy: bool, dry: bool, nasal: bool) -> Vec<Seg> {
@@ -586,6 +636,9 @@ fn script(rng: &mut Rng, mob: Mob, call: Call) -> Vec<Seg> {
             mob == Mob::Husk,
             mob == Mob::ZombieVillager,
         ),
+        (Mob::Zombie | Mob::Husk | Mob::Drowned | Mob::ZombieVillager, Call::Growl) => {
+            snarl(rng, mob == Mob::Husk, mob == Mob::ZombieVillager)
+        }
         (Mob::Zombie | Mob::Husk | Mob::Drowned | Mob::ZombieVillager, _) => {
             let mut g = groan(rng, mob == Mob::Husk, mob == Mob::ZombieVillager);
             if call == Call::AmbientNear {
@@ -750,33 +803,102 @@ fn script(rng: &mut Rng, mob: Mob, call: Call) -> Vec<Seg> {
             }
             clucks
         }
-        (Mob::Villager, _) => {
-            let mut h = Seg::new(vary(rng, 0.55, 0.3)).vowels(&[(0.0, UH)]);
-            h.velum = c(1.0);
-            h.lips = c(0.0);
-            h.rd = c(1.2);
-            h.f0 = match (rng.unit() * 3.0) as usize {
-                0 => k(&[(0.0, 1.12), (1.0, 0.84)]),
-                1 => k(&[(0.0, 0.88), (1.0, 1.2)]),
-                _ => k(&[(0.0, 0.92), (0.5, 1.16), (1.0, 0.88)]),
-            };
-            let roll = rng.unit();
-            if roll < 0.3 {
-                // "Hrm", with fry at its start.
-                h.creak = k(&[(0.0, 0.5), (0.3, 0.0)]);
-            } else if roll < 0.5 {
-                // "Huh?": open and breathy.
-                h.velum = c(0.0);
-                h.lips = c(1.0);
-                h.voicing = c(0.6);
-                h.breath = c(0.4);
-                h.secs = vary(rng, 0.3, 0.2);
-                h.f0 = k(&[(0.0, 0.95), (1.0, 1.25)]);
-            }
-            vec![h]
-        }
+        (Mob::Villager, _) => villager(rng),
         // A call this mob doesn't have: its ambient one.
         _ => mobs2::script(rng, mob, Call::Ambient).unwrap_or_else(|| vec![Seg::new(0.3)]),
+    }
+}
+
+/// A villager to itself, through its big nose: one of a "hrm", a "huh?", a
+/// musing "mm-hm-hmm" with a tune to it, a sigh, a throat cleared, a sniff.
+fn villager(rng: &mut Rng) -> Vec<Seg> {
+    let hum = |rng: &mut Rng, secs: f32, f0: K| {
+        let mut h = Seg::new(vary(rng, secs, 0.25)).vowels(&[(0.0, UH)]);
+        h.velum = c(1.0);
+        h.lips = c(0.0);
+        h.rd = c(1.2);
+        h.f0 = f0;
+        h.jitter = 0.015;
+        h
+    };
+    let roll = rng.unit();
+    if roll < 0.25 {
+        // "Hrm", with fry at its start.
+        let f0 = if rng.unit() < 0.5 {
+            k(&[(0.0, 1.12), (1.0, 0.84)])
+        } else {
+            k(&[(0.0, 0.92), (0.5, 1.16), (1.0, 0.88)])
+        };
+        let mut h = hum(rng, 0.55, f0);
+        h.creak = k(&[(0.0, 0.5), (0.3, 0.0)]);
+        vec![h]
+    } else if roll < 0.4 {
+        // "Huh?": open and breathy, rising.
+        let mut h = hum(rng, 0.3, k(&[(0.0, 0.95), (1.0, 1.25)]));
+        h.velum = c(0.0);
+        h.lips = c(1.0);
+        h.voicing = c(0.6);
+        h.breath = c(0.4);
+        vec![h]
+    } else if roll < 0.7 {
+        // Musing: two or three hums, a little tune, the last one trailing off.
+        let n = 2 + (rng.unit() * 2.0) as usize;
+        let mut level = 1.0 + 0.1 * rng.signed();
+        (0..n)
+            .map(|i| {
+                let last = i + 1 == n;
+                let step = 0.12 * rng.signed();
+                let f0 = if last {
+                    k(&[(0.0, level), (1.0, level * 0.82)])
+                } else {
+                    k(&[(0.0, level), (1.0, level + step)])
+                };
+                level += step;
+                let mut h = hum(rng, if last { 0.4 } else { 0.18 }, f0);
+                if last {
+                    h.creak = k(&[(0.0, 0.0), (0.6, 0.0), (1.0, 0.5)]);
+                }
+                h.gap = vary(rng, 0.07, 0.4);
+                h
+            })
+            .collect()
+    } else if roll < 0.82 {
+        // A sigh: breath in through the nose, out through the mouth, falling.
+        let mut inward = hum(rng, 0.35, c(1.0));
+        inward.ingressive = true;
+        inward.voicing = c(0.0);
+        inward.breath = c(0.8);
+        inward.gap = 0.05;
+        let mut out = hum(rng, 0.7, k(&[(0.0, 1.1), (1.0, 0.75)]));
+        out.velum = c(0.3);
+        out.lips = c(0.8);
+        out.mouth = vec![(0.0, AA), (1.0, UH)];
+        out.voicing = k(&[(0.0, 0.6), (1.0, 0.1)]);
+        out.breath = c(0.6);
+        out.creak = k(&[(0.0, 0.0), (0.7, 0.0), (1.0, 0.6)]);
+        vec![inward, out]
+    } else if roll < 0.92 {
+        // Clearing its throat: a rasp at the back of the mouth, then "hm".
+        let mut rasp = Seg::new(vary(rng, 0.14, 0.2))
+            .vowels(&[(0.0, UH)])
+            .voicing(0.15)
+            .fric(0.7, 0.35, 0.3)
+            .loud(&[(0.0, 0.0), (0.2, 1.0), (1.0, 0.0)])
+            .gap(0.04);
+        rasp.creak = c(0.6);
+        let second = rasp.clone().gap(0.1);
+        let mut hm = hum(rng, 0.25, k(&[(0.0, 1.0), (1.0, 0.9)]));
+        hm.creak = k(&[(0.0, 0.4), (0.4, 0.0)]);
+        if rng.unit() < 0.5 {
+            vec![rasp, second, hm]
+        } else {
+            vec![rasp, hm]
+        }
+    } else {
+        // A sniff or two, then a satisfied "hm".
+        let mut s = speech::sniff(2 + (rng.unit() * 2.0) as usize, 7.0, 0.0, rng);
+        s.push(hum(rng, 0.25, k(&[(0.0, 0.95), (1.0, 1.1)])));
+        s
     }
 }
 

@@ -17,6 +17,31 @@ fn add_at(out: &mut Vec<f32>, at: usize, sound: &[f32]) {
     }
 }
 
+/// Stick-slip friction: a creak, `hz` slips a second, wandering, rung
+/// through a body that resonates at `body` Hz.
+fn stick_slip(rng: &mut Rng, seconds: f32, hz: f32, body: f32) -> Vec<f32> {
+    let rate = SAMPLE_RATE as f32;
+    let n = (seconds * rate) as usize;
+    let mut resonance = BandPass::new(body, 4.0);
+    let mut phase = 0.0f32;
+    let mut f = hz;
+    (0..n)
+        .map(|i| {
+            let t = i as f32 / n as f32;
+            f *= 1.0 + 0.002 * rng.signed();
+            phase += f * (0.8 + 0.4 * t) / rate;
+            let slip = if phase >= 1.0 {
+                phase -= 1.0;
+                1.0 + 0.6 * rng.signed()
+            } else {
+                0.0
+            };
+            let envelope = (t * 10.0).min(1.0) * (1.0 - t).sqrt();
+            4.0 * envelope * resonance.process(slip)
+        })
+        .collect()
+}
+
 /// Damped modes (frequency, decay a second, amplitude) and a contact click,
 /// until they die away.
 fn ring(modes: &[(f32, f32, f32)], click: f32, rng: &mut Rng) -> Vec<f32> {
@@ -105,6 +130,30 @@ pub(super) fn skeleton(rng: &mut Rng, call: Call3, kind: Bones) -> Vec<f32> {
                 );
                 let quiet: Vec<f32> = sound.iter().map(|x| 0.4 * x).collect();
                 add_at(&mut out, (0.1 * rate) as usize, &quiet);
+            }
+            if rng.unit() < 0.35 {
+                // Air through the ribs and the empty skull: a faint, hollow
+                // whistle, like blowing across a bottle.
+                let seconds = 0.6 + 0.6 * rng.unit();
+                let n = (seconds * rate) as usize;
+                let mut tube = BandPass::new(350.0 + 300.0 * rng.unit(), 12.0);
+                let mut wander = LowPass::new(3.0);
+                let hollow: Vec<f32> = (0..n)
+                    .map(|i| {
+                        let t = i as f32 / n as f32;
+                        let swell =
+                            (PI * t).sin().powi(2) * (1.0 + 3.0 * wander.process(rng.signed()));
+                        0.5 * swell * tube.process(rng.signed())
+                    })
+                    .collect();
+                add_at(&mut out, (0.2 * rng.unit() * rate) as usize, &hollow);
+            }
+            if rng.unit() < 0.3 {
+                // Its bow, drawn a little: the string and limbs creaking.
+                let (seconds, hz) = (0.25 + 0.2 * rng.unit(), 90.0 + 60.0 * rng.unit());
+                let creak = stick_slip(rng, seconds, hz, 1600.0);
+                let quiet: Vec<f32> = creak.iter().map(|x| 0.5 * x).collect();
+                add_at(&mut out, (0.4 * rng.unit() * rate) as usize, &quiet);
             }
         }
         Call3::Hurt => {
@@ -230,6 +279,28 @@ pub(super) fn spider(rng: &mut Rng, call: Call3, scale: f32) -> Vec<f32> {
                 let seconds = 0.3 + 0.3 * rng.unit();
                 hiss(rng, &mut out, 0.0, seconds, 0.25);
             }
+            // Eight feet: a quick, soft patter in fours, as it shifts its weight.
+            if rng.unit() < 0.6 {
+                let mut step_at = 0.1 + 0.4 * rng.unit();
+                for _ in 0..1 + (rng.unit() * 3.0) as usize {
+                    for foot in 0..4 {
+                        let f = (350.0 + 300.0 * rng.unit()) / scale.sqrt();
+                        let tap = ring(&[(f, 250.0, 0.25), (2.3 * f, 400.0, 0.1)], 0.2, rng);
+                        let at = step_at + foot as f32 * (0.018 + 0.012 * rng.unit());
+                        add_at(&mut out, (at * rate) as usize, &tap);
+                    }
+                    step_at += 0.15 + 0.15 * rng.unit();
+                }
+            }
+            // Mandibles working: wet, quick double clicks.
+            if rng.unit() < 0.5 {
+                let at = rng.unit() * 0.5;
+                for j in 0..2 {
+                    let f = (1800.0 + 900.0 * rng.unit()) * scale;
+                    let click = ring(&[(f, 2500.0, 0.35)], 0.25, rng);
+                    add_at(&mut out, ((at + 0.03 * j as f32) * rate) as usize, &click);
+                }
+            }
         }
         Call3::Hurt => {
             hiss(rng, &mut out, 0.0, 0.25, 1.0);
@@ -267,6 +338,9 @@ pub(super) fn creeper(rng: &mut Rng, call: CreeperCall) -> Vec<f32> {
             let mut whistle = 0.0f32;
             let mut until_spark = 0.0f32;
             let mut spark = 0.0f32;
+            let mut leaves = BandPass::new(4500.0, 1.2);
+            let mut shiver_phase = 0.0f32;
+            let mut rumble_phase = 0.0f32;
             (0..n)
                 .map(|i| {
                     let t = i as f32 / n as f32;
@@ -283,7 +357,16 @@ pub(super) fn creeper(rng: &mut Rng, call: CreeperCall) -> Vec<f32> {
                     spark *= 0.97;
                     let fizz = spark * rng.signed() * 0.4;
                     let fade = ((n - i) as f32 / (0.02 * rate)).min(1.0);
-                    fade * swell * (wobble * hiss + 0.06 * t * whistle.sin() + fizz)
+                    // Its leafy body shivering, faster and harder as it swells,
+                    // and a low pressure building under it all.
+                    shiver_phase += (12.0 + 18.0 * t) / rate;
+                    let tremble = 0.5 + 0.5 * (TAU * shiver_phase).sin();
+                    let shiver = 0.5 * t * tremble * leaves.process(rng.signed());
+                    rumble_phase += TAU * (55.0 + 50.0 * t * t) / rate;
+                    let rumble = 0.12 * t * t * rumble_phase.sin();
+                    fade * (swell * (wobble * hiss + 0.06 * t * whistle.sin() + fizz)
+                        + shiver
+                        + rumble)
                 })
                 .collect()
         }

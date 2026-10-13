@@ -1,4 +1,4 @@
-use crate::{Bubble, LowPass, Rng, SAMPLE_RATE};
+use crate::{BandPass, Bubble, LowPass, Rng, SAMPLE_RATE};
 
 /// The moving water near the listener.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -68,43 +68,84 @@ fn babble_radius(rng: &mut Rng) -> f32 {
 pub struct Water {
     rng: Rng,
     scene: WaterScene,
+    /// What's heard now, gliding toward the scene over a fraction of a
+    /// second, so the bed never jumps when the world is sampled again.
+    heard: WaterScene,
+    fresh: bool,
     until_next: f32,
     voices: Vec<Bubble>,
     roar: [LowPass; 2],
     spray: LowPass,
+    rush: [BandPass; 2],
+    lapping: LowPass,
+    distance: [LowPass; 2],
+    samples: usize,
 }
+
+/// How fast what's heard follows the scene, seconds.
+const GLIDE: f32 = 0.4;
+/// Rates and filters are updated this often, samples.
+const BLOCK: usize = 64;
 
 impl Water {
     pub fn new(seed: u64) -> Water {
         Water {
             rng: Rng::new(seed),
             scene: WaterScene::STILL,
+            heard: WaterScene::STILL,
+            fresh: true,
             until_next: 0.0,
             voices: Vec::with_capacity(MAX_VOICES),
             roar: [LowPass::new(500.0), LowPass::new(500.0)],
             spray: LowPass::new(4000.0),
+            rush: [BandPass::new(900.0, 0.6), BandPass::new(350.0, 0.9)],
+            lapping: LowPass::new(1.2),
+            distance: [LowPass::new(16000.0), LowPass::new(16000.0)],
+            samples: 0,
         }
     }
 
     pub fn set_scene(&mut self, scene: WaterScene) {
         self.scene = scene;
+        if self.fresh {
+            self.heard = scene;
+            self.fresh = false;
+        }
     }
 
     pub fn render(&mut self, out: &mut [f32]) {
         let dt = 1.0 / SAMPLE_RATE as f32;
-        let flow = self.scene.flow.clamp(0.0, 200.0) * FLOW_BUBBLES;
-        let falls = self.scene.falls.clamp(0.0, 200.0) * FALL_BUBBLES;
-        let wanted = flow + falls;
-        let rate = wanted.min(MAX_BUBBLES);
-        let boost = if rate > 0.0 {
-            (wanted / rate).sqrt().min(2.0)
-        } else {
-            1.0
-        };
-        let plunging = if wanted > 0.0 { falls / wanted } else { 0.0 };
-        let gain = self.scene.gain.clamp(0.0, 1.0);
-        let roar_level = 0.2 * self.scene.falls.clamp(0.0, 20.0).sqrt();
+        let glide = BLOCK as f32 * dt / GLIDE;
+        let (mut rate, mut boost, mut plunging, mut roar_level, mut rush_level) =
+            (0.0, 1.0, 0.0, 0.0, 0.0);
         for sample in out {
+            if self.samples.is_multiple_of(BLOCK) {
+                let (to, h) = (self.scene, &mut self.heard);
+                h.flow += (to.flow.clamp(0.0, 200.0) - h.flow) * glide;
+                h.falls += (to.falls.clamp(0.0, 200.0) - h.falls) * glide;
+                h.gain += (to.gain.clamp(0.0, 1.0) - h.gain) * glide;
+                let flow = h.flow * FLOW_BUBBLES;
+                let falls = h.falls * FALL_BUBBLES;
+                let wanted = flow + falls;
+                rate = wanted.min(MAX_BUBBLES);
+                // Past the cap, many bubbles blur into a hiss: a little louder
+                // each, and the rush below takes over.
+                boost = if rate > 0.0 {
+                    (wanted / rate).sqrt().min(1.5)
+                } else {
+                    1.0
+                };
+                plunging = if wanted > 0.0 { falls / wanted } else { 0.0 };
+                roar_level = 0.15 * h.falls.min(12.0).sqrt();
+                // A river's surface: turbulence heard as a soft, wide rush,
+                // growing slowly with how much of it there is.
+                rush_level = 0.006 * h.flow.min(100.0).sqrt();
+                // Further away, water loses its sparkle first: the air and the
+                // ground take the highs.
+                let cutoff = 2500.0 + 15000.0 * h.gain * h.gain;
+                self.distance.iter_mut().for_each(|f| f.tune(cutoff));
+            }
+            self.samples += 1;
             if rate > 0.0 {
                 self.until_next -= dt;
                 while self.until_next <= 0.0 {
@@ -126,8 +167,8 @@ impl Water {
             for voice in &mut self.voices {
                 mix += voice.sample();
             }
+            let noise = self.rng.signed();
             if roar_level > 0.0 {
-                let noise = self.rng.signed();
                 let low = {
                     let first = self.roar[0].process(noise);
                     self.roar[1].process(first)
@@ -135,7 +176,15 @@ impl Water {
                 let spray = self.spray.process(noise) - low;
                 mix += roar_level * (2.0 * low + 0.15 * spray);
             }
-            *sample = gain * mix;
+            if rush_level > 0.0 {
+                // Lapping: the rush swells and ebbs a little, about once a second.
+                let lap = 1.0 + 6.0 * self.lapping.process(self.rng.signed());
+                let rush = self.rush[0].process(noise) + 0.7 * self.rush[1].process(noise);
+                mix += rush_level * lap.clamp(0.4, 1.8) * rush;
+            }
+            let first = self.distance[0].process(mix);
+            let near = self.distance[1].process(first);
+            *sample = self.heard.gain * near;
         }
         self.voices.retain(|voice| !voice.done());
     }
@@ -186,7 +235,8 @@ mod tests {
             falls: 10.0,
             gain: 0.1,
         });
-        assert!((far / fall - 0.1).abs() < 0.01);
+        // A tenth the gain, and darker for being further.
+        assert!(far < 0.1 * fall && far > 0.04 * fall, "{far} vs {fall}");
         assert_eq!(rms(WaterScene::STILL), 0.0);
     }
 }

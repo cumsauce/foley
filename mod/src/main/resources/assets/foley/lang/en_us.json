@@ -55,6 +55,7 @@
 	"foley.settings.voices.note": "Foley can make these mobs' calls from a model of their voices, sized by their anatomy (zombies breathe heavier as they close in), or from what they're made of. Each keeps the game's until you choose Foley.",
 	"foley.settings.voice.tooltip": "Foley's voice: a source–filter model, its pitch and formants from the mob's size. Its ambient, hurt and death calls, in every variant.",
 	"subtitles.foley.breath": "Zombie breathes",
+	"subtitles.foley.snarl": "Zombie snarls",
 	"foley.settings.voice.cow": "Cows",
 	"foley.settings.voice.pig": "Pigs",
 	"foley.settings.voice.sheep": "Sheep",

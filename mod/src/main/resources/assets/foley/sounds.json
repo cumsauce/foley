@@ -1826,6 +1826,23 @@
 			"foley:generated/voice_drowned_death_water_11"
 		]
 	},
+	"voice_drowned_growl": {
+		"subtitle": "subtitles.foley.snarl",
+		"sounds": [
+			"foley:generated/voice_drowned_growl_0",
+			"foley:generated/voice_drowned_growl_1",
+			"foley:generated/voice_drowned_growl_2",
+			"foley:generated/voice_drowned_growl_3",
+			"foley:generated/voice_drowned_growl_4",
+			"foley:generated/voice_drowned_growl_5",
+			"foley:generated/voice_drowned_growl_6",
+			"foley:generated/voice_drowned_growl_7",
+			"foley:generated/voice_drowned_growl_8",
+			"foley:generated/voice_drowned_growl_9",
+			"foley:generated/voice_drowned_growl_10",
+			"foley:generated/voice_drowned_growl_11"
+		]
+	},
 	"voice_drowned_hurt": {
 		"subtitle": "subtitles.entity.drowned.hurt",
 		"sounds": [
@@ -2640,6 +2657,23 @@
 			"foley:generated/voice_husk_death_9",
 			"foley:generated/voice_husk_death_10",
 			"foley:generated/voice_husk_death_11"
+		]
+	},
+	"voice_husk_growl": {
+		"subtitle": "subtitles.foley.snarl",
+		"sounds": [
+			"foley:generated/voice_husk_growl_0",
+			"foley:generated/voice_husk_growl_1",
+			"foley:generated/voice_husk_growl_2",
+			"foley:generated/voice_husk_growl_3",
+			"foley:generated/voice_husk_growl_4",
+			"foley:generated/voice_husk_growl_5",
+			"foley:generated/voice_husk_growl_6",
+			"foley:generated/voice_husk_growl_7",
+			"foley:generated/voice_husk_growl_8",
+			"foley:generated/voice_husk_growl_9",
+			"foley:generated/voice_husk_growl_10",
+			"foley:generated/voice_husk_growl_11"
 		]
 	},
 	"voice_husk_hurt": {
@@ -4647,6 +4681,23 @@
 			"foley:generated/voice_zombie_death_11"
 		]
 	},
+	"voice_zombie_growl": {
+		"subtitle": "subtitles.foley.snarl",
+		"sounds": [
+			"foley:generated/voice_zombie_growl_0",
+			"foley:generated/voice_zombie_growl_1",
+			"foley:generated/voice_zombie_growl_2",
+			"foley:generated/voice_zombie_growl_3",
+			"foley:generated/voice_zombie_growl_4",
+			"foley:generated/voice_zombie_growl_5",
+			"foley:generated/voice_zombie_growl_6",
+			"foley:generated/voice_zombie_growl_7",
+			"foley:generated/voice_zombie_growl_8",
+			"foley:generated/voice_zombie_growl_9",
+			"foley:generated/voice_zombie_growl_10",
+			"foley:generated/voice_zombie_growl_11"
+		]
+	},
 	"voice_zombie_hurt": {
 		"subtitle": "subtitles.entity.zombie.hurt",
 		"sounds": [
@@ -4747,6 +4798,23 @@
 			"foley:generated/voice_zombie_villager_death_9",
 			"foley:generated/voice_zombie_villager_death_10",
 			"foley:generated/voice_zombie_villager_death_11"
+		]
+	},
+	"voice_zombie_villager_growl": {
+		"subtitle": "subtitles.foley.snarl",
+		"sounds": [
+			"foley:generated/voice_zombie_villager_growl_0",
+			"foley:generated/voice_zombie_villager_growl_1",
+			"foley:generated/voice_zombie_villager_growl_2",
+			"foley:generated/voice_zombie_villager_growl_3",
+			"foley:generated/voice_zombie_villager_growl_4",
+			"foley:generated/voice_zombie_villager_growl_5",
+			"foley:generated/voice_zombie_villager_growl_6",
+			"foley:generated/voice_zombie_villager_growl_7",
+			"foley:generated/voice_zombie_villager_growl_8",
+			"foley:generated/voice_zombie_villager_growl_9",
+			"foley:generated/voice_zombie_villager_growl_10",
+			"foley:generated/voice_zombie_villager_growl_11"
 		]
 	},
 	"voice_zombie_villager_hurt": {
