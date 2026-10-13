@@ -5,6 +5,7 @@
 	"name": "Foley",
 	"description": "Procedurally generated, physically based sound effects and ambience. Client only.",
 	"license": "MIT OR Apache-2.0",
+	"icon": "assets/foley/icon.png",
 	"contact": {
 		"homepage": "https://github.com/cumsauce/foley",
 		"sources": "https://github.com/cumsauce/foley",

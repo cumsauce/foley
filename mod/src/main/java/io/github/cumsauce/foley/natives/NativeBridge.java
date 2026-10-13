@@ -118,13 +118,7 @@ public final class NativeBridge {
 	 * temperature for crickets (°C), a bird's species, or a frog's length (cm).
 	 */
 	public short[] renderOneShot(int kind, float size, long seed) {
-		long[] needed = new long[1];
-		check((int) invoke(renderOneShot, kind, size, seed, MemorySegment.ofArray(new short[0]), 0L,
-				MemorySegment.ofArray(needed)));
-		short[] out = new short[(int) needed[0]];
-		check((int) invoke(renderOneShot, kind, size, seed, MemorySegment.ofArray(out), (long) out.length,
-				MemorySegment.ofArray(needed)));
-		return out;
+		return render((out, needed) -> invoke(renderOneShot, kind, size, seed, out, (long) (out.byteSize() / 2), needed));
 	}
 
 	/**
@@ -132,24 +126,32 @@ public final class NativeBridge {
 	 * as 16-bit PCM.
 	 */
 	public short[] renderContact(int contact, int material, float speed, long seed) {
-		long[] needed = new long[1];
-		check((int) invoke(renderContact, contact, material, speed, seed, MemorySegment.ofArray(new short[0]), 0L,
-				MemorySegment.ofArray(needed)));
-		short[] out = new short[(int) needed[0]];
-		check((int) invoke(renderContact, contact, material, speed, seed, MemorySegment.ofArray(out),
-				(long) out.length, MemorySegment.ofArray(needed)));
-		return out;
+		return render((out, needed) -> invoke(renderContact, contact, material, speed, seed, out, (long) (out.byteSize() / 2), needed));
 	}
 
 	/** A {@code call} ({@code Voices.CALLS}) of {@code mob} ({@code Voices.MOBS}), as 16-bit PCM. */
 	public short[] renderVoice(int mob, int call, long seed) {
+		return render((out, needed) -> invoke(renderVoice, mob, call, seed, out, (long) (out.byteSize() / 2), needed));
+	}
+
+	/** One native render call: into {@code out} (16-bit samples), its length to {@code needed}; the status. */
+	private interface Render {
+		Object call(MemorySegment out, MemorySegment needed);
+	}
+
+	/** Most sounds fit this many samples (8 s), so they're made once; a longer one is made again to fit. */
+	private static final int USUAL = 8 * 48_000;
+
+	/** Renders once into a buffer big enough for nearly every sound, again only if it wasn't. */
+	private short[] render(Render render) {
 		long[] needed = new long[1];
-		check((int) invoke(renderVoice, mob, call, seed, MemorySegment.ofArray(new short[0]), 0L,
-				MemorySegment.ofArray(needed)));
-		short[] out = new short[(int) needed[0]];
-		check((int) invoke(renderVoice, mob, call, seed, MemorySegment.ofArray(out), (long) out.length,
-				MemorySegment.ofArray(needed)));
-		return out;
+		short[] out = new short[USUAL];
+		check((int) render.call(MemorySegment.ofArray(out), MemorySegment.ofArray(needed)));
+		if (needed[0] > out.length) {
+			out = new short[Math.toIntExact(needed[0])];
+			check((int) render.call(MemorySegment.ofArray(out), MemorySegment.ofArray(needed)));
+		}
+		return java.util.Arrays.copyOf(out, (int) needed[0]);
 	}
 
 	private void check(int code) {
