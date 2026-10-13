@@ -2,7 +2,9 @@
 //! made of: `cargo run --release -p foley-synth --example spectrogram -- out.png`.
 //! Rows: zombie groan, zombie close by, cow, sheep, cat, wolf growl; or the
 //! M8 or M9 sets (a second argument `m8` or `m9`), or the outdoors (`outdoors`:
-//! surf, woodpecker, owl, cicadas, a wolf howling). 0–8 kHz, log magnitude;
+//! surf, woodpecker, owl, cicadas, a wolf howling), or footsteps (`steps`:
+//! stone, wood, grass, gravel, snow), or `drips` (into water, on stone, lava,
+//! a small frog, a big one). 0–8 kHz, log magnitude;
 //! each row spans its whole sound.
 
 use foley_synth::{Call, Mob, cicadas, howl, owl, surf, voice, woodpecker};
@@ -45,7 +47,28 @@ fn main() -> std::io::Result<()> {
             (Mob::Wolf, Call::Growl),
         ]
     };
-    let rows: Vec<Vec<f32>> = if set == "outdoors" {
+    let rows: Vec<Vec<f32>> = if set == "drips" {
+        use foley_synth::{drip_into_water, drip_on_stone, frog, lava_drip};
+        vec![
+            drip_into_water(0.0015, 2),
+            drip_on_stone(0.0025, 3),
+            lava_drip(4),
+            frog(4.0, 6),
+            frog(12.0, 7),
+        ]
+    } else if set == "steps" {
+        use foley_synth::{Contact, Material, contact};
+        [
+            Material::Stone,
+            Material::Wood,
+            Material::Plant,
+            Material::Granular,
+            Material::Snow,
+        ]
+        .iter()
+        .map(|m| contact(Contact::Step, *m, 1.0, 3))
+        .collect()
+    } else if set == "outdoors" {
         vec![
             surf(1.5, 1),
             woodpecker(2),

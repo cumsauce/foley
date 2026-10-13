@@ -345,19 +345,115 @@ fn loudness(props: &Props) -> f32 {
 pub fn contact(contact: Contact, material: Material, speed: f32, seed: u64) -> Vec<f32> {
     let mut rng = Rng::new(seed);
     let props = material.props();
+    let peak = match contact {
+        Contact::Tap => 0.35,
+        Contact::Place => 0.5,
+        Contact::Land => 0.7,
+        Contact::Step => 0.4,
+    };
+    let mut out = strike(&mut rng, contact, material, &props, speed);
+    if contact == Contact::Step {
+        step_through(&mut rng, &mut out, material, &props, speed);
+    }
+    normalize(&mut out, peak * loudness(&props));
+    out
+}
+
+/// The rest of a footstep after the heel: the sole scuffing as the foot rolls
+/// forward, then the ball of the foot coming down 60 to 120 ms later, softer;
+/// grass swishes round the shoe, and a wooden floor now and then creaks
+/// under the weight.
+fn step_through(rng: &mut Rng, out: &mut Vec<f32>, material: Material, props: &Props, speed: f32) {
+    let rate = SAMPLE_RATE as f32;
+    let roll = 0.06 + 0.06 * rng.unit();
+    // The scuff: the sole sliding a little on the surface, grittier on stone
+    // and gravel, nothing on soft things.
+    let (grit, centre) = match material {
+        Material::Stone | Material::Granular => (0.12, 3500.0),
+        Material::Wood | Material::Metal | Material::Glass | Material::Ice => (0.06, 2500.0),
+        Material::Earth => (0.05, 1500.0),
+        Material::Plant => (0.0, 0.0),
+        Material::Soft | Material::Snow => (0.02, 1200.0),
+    };
+    if grit > 0.0 {
+        let at = (0.01 * rate) as usize;
+        let centre = centre * (0.8 + 0.4 * rng.unit());
+        noise_burst(rng, out, at, roll, centre, grit);
+    }
+    // The ball of the foot.
+    let mut toe = strike(rng, Contact::Step, material, props, 0.6 * speed);
+    let gain = 0.45 + 0.25 * rng.unit();
+    toe.iter_mut().for_each(|x| *x *= gain);
+    let at = (roll * rate) as usize;
+    if out.len() < at + toe.len() {
+        out.resize(at + toe.len(), 0.0);
+    }
+    for (o, t) in out[at..].iter_mut().zip(&toe) {
+        *o += t;
+    }
+    match material {
+        // Blades brushing the shoe as it goes in and comes out: a few soft
+        // rustles over the step.
+        Material::Plant => {
+            for _ in 0..3 + (rng.unit() * 4.0) as usize {
+                let at = ((0.02 + 0.2 * rng.unit()) * rate) as usize;
+                let seconds = 0.03 + 0.05 * rng.unit();
+                let centre = 3000.0 + 3000.0 * rng.unit();
+                noise_burst(rng, out, at, seconds, centre, 0.15);
+            }
+        }
+        // A board creaking: its fibres sticking and slipping against the
+        // nails as the weight comes on.
+        Material::Wood if rng.unit() < 0.15 => {
+            let seconds = 0.12 + 0.15 * rng.unit();
+            let n = (seconds * rate) as usize;
+            let mut body = BandPass::new(700.0 + 900.0 * rng.unit(), 5.0);
+            let mut hz = 90.0 + 80.0 * rng.unit();
+            let mut phase = 0.0f32;
+            let start = (0.03 * rate) as usize;
+            if out.len() < start + n {
+                out.resize(start + n, 0.0);
+            }
+            for i in 0..n {
+                let t = i as f32 / n as f32;
+                hz *= 1.0 + 0.003 * rng.signed();
+                phase += hz / rate;
+                let slip = if phase >= 1.0 {
+                    phase -= 1.0;
+                    1.0 + 0.5 * rng.signed()
+                } else {
+                    0.0
+                };
+                let envelope = (t * 6.0).min(1.0) * (1.0 - t);
+                out[start + i] += 0.5 * envelope * body.process(slip);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// One strike of `contact` on `material` at `speed`: the surface's modes,
+/// the contact's click, and what the material does besides (grains, crunch).
+fn strike(
+    rng: &mut Rng,
+    contact: Contact,
+    material: Material,
+    props: &Props,
+    speed: f32,
+) -> Vec<f32> {
     let target = (props.young, props.poisson);
-    let (mass, radius, striker, peak) = match contact {
-        Contact::Tap => (0.5, 0.01, (200e9, 0.3), 0.35),
-        Contact::Place => (2.0, 0.05, target, 0.5),
-        Contact::Land => (70.0, 0.1, (10e6, 0.45), 0.7),
-        Contact::Step => (8.0, 0.05, (10e6, 0.45), 0.4),
+    let (mass, radius, striker) = match contact {
+        Contact::Tap => (0.5, 0.01, (200e9, 0.3)),
+        Contact::Place => (2.0, 0.05, target),
+        Contact::Land => (70.0, 0.1, (10e6, 0.45)),
+        Contact::Step => (8.0, 0.05, (10e6, 0.45)),
     };
     // Grains crushed go with the blow's momentum, against a landing's.
     let crush = (mass * speed / 350.0).sqrt().clamp(0.1, 1.5);
     let stiffness = effective_modulus(striker, target);
     let tau = hertz_time(mass, radius, stiffness, speed);
     let mut out = Vec::new();
-    let mut bank = struck_modes(&mut rng, &props, tau, 1.0);
+    let mut bank = struck_modes(rng, props, tau, 1.0);
     bank.render_into(&mut out, 0);
     // The contact's own click: the force pulse's change, a half-sine's
     // derivative, as loud as the modes' start.
@@ -376,8 +472,8 @@ pub fn contact(contact: Contact, material: Material, speed: f32, seed: u64) -> V
         *sample = smooth.process(*sample);
     }
     match material {
-        Material::Granular => grains(&mut rng, &mut out, (60.0 * crush) as usize, 0.06, 0.3, 0.7),
-        Material::Earth => grains(&mut rng, &mut out, (16.0 * crush) as usize, 0.04, 0.2, 0.2),
+        Material::Granular => grains(rng, &mut out, (60.0 * crush) as usize, 0.06, 0.3, 0.7),
+        Material::Earth => grains(rng, &mut out, (16.0 * crush) as usize, 0.04, 0.2, 0.2),
         Material::Snow => {
             // Bonds breaking as it compacts: crackling bursts, sizes ∝ E^-1.7,
             // over the 0.1 s the foot takes to sink in.
@@ -386,13 +482,12 @@ pub fn contact(contact: Contact, material: Material, speed: f32, seed: u64) -> V
                 let at = (0.1 * rng.unit().sqrt() * SAMPLE_RATE as f32) as usize;
                 let energy = (1.0 + rng.unit() * (30f32.powf(-0.7) - 1.0)).powf(-1.0 / 0.7);
                 let centre = 1500.0 + 2500.0 * rng.unit();
-                noise_burst(&mut rng, &mut out, at, 0.003, centre, 0.8 * energy.sqrt());
+                noise_burst(rng, &mut out, at, 0.003, centre, 0.8 * energy.sqrt());
             }
         }
-        Material::Plant => noise_burst(&mut rng, &mut out, 0, 0.08, 4000.0, 0.6),
+        Material::Plant => noise_burst(rng, &mut out, 0, 0.08, 4000.0, 0.6),
         _ => {}
     }
-    normalize(&mut out, peak * loudness(&props));
     out
 }
 
@@ -564,7 +659,8 @@ mod tests {
         let peak = |s: &[f32]| s.iter().fold(0f32, |p, x| p.max(x.abs()));
         let step = contact(Contact::Step, Material::Stone, 1.0, 1);
         let tap = contact(Contact::Tap, Material::Stone, 3.0, 1);
-        assert!(crossings(&step[..2400.min(step.len())]) < crossings(&tap[..2400.min(tap.len())]));
+        // The heel lands duller than a pick: its first 8 ms, before the sole scuffs.
+        assert!(crossings(&step[..400]) < crossings(&tap[..400]));
         // Snow keeps crunching after the heel lands.
         let snow = contact(Contact::Step, Material::Snow, 1.0, 1);
         assert!(snow.len() > SAMPLE_RATE as usize / 20);

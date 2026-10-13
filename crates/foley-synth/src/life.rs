@@ -193,21 +193,50 @@ pub fn frog(size_cm: f32, seed: u64) -> Vec<f32> {
     let mut rng = Rng::new(seed);
     let rate = SAMPLE_RATE as f32;
     let sac = 2500.0 * (3.0 / size_cm.clamp(2.0, 20.0)) * (1.0 + 0.05 * rng.signed());
-    let pulse_rate = 60.0 + 90.0 * rng.unit();
-    let notes = 1 + (rng.unit() * 3.0) as usize;
+    // Some frogs croak, slow pulses in a few notes; others trill, fast ones.
+    let trill = size_cm < 8.0 && rng.unit() < 0.35;
+    let pulse_rate = if trill {
+        180.0 + 80.0 * rng.unit()
+    } else {
+        60.0 + 90.0 * rng.unit()
+    };
+    let notes = if trill {
+        1
+    } else {
+        1 + (rng.unit() * 3.0) as usize
+    };
     let mut out = Vec::new();
     let mut resonance = [BandPass::new(sac, 8.0), BandPass::new(2.3 * sac, 6.0)];
+    let mut breath = BandPass::new(sac * 0.5, 1.0);
     for _ in 0..notes {
-        let seconds = 0.1 + 0.4 * rng.unit();
+        let seconds = if trill {
+            0.6 + 0.8 * rng.unit()
+        } else {
+            0.1 + 0.4 * rng.unit()
+        };
         let samples = (seconds * rate) as usize;
-        let period = (rate / pulse_rate) as usize;
         let width = (0.001 * rate) as usize;
+        // Each pulse a little early or late and a little louder or softer
+        // than the last, as a living larynx is.
+        let mut next = 0usize;
+        let mut pulse_at = usize::MAX;
+        let mut strength = 1.0;
         for i in 0..samples {
             let t = i as f32 / samples as f32;
+            if i >= next {
+                pulse_at = i;
+                strength = 0.75 + 0.5 * rng.unit();
+                let period = rate / pulse_rate * (1.0 + 0.05 * rng.signed());
+                next = i + period as usize;
+                // The sac swells through the note, and rings a little higher.
+                let f = sac * (1.0 + 0.06 * t);
+                resonance[0].tune(f, 8.0);
+                resonance[1].tune(2.3 * f, 6.0);
+            }
             let envelope = (t * 8.0).min(1.0) * ((1.0 - t) * 6.0).min(1.0);
-            let phase = i % period;
+            let phase = i.wrapping_sub(pulse_at);
             let pulse = if phase < width {
-                (PI * phase as f32 / width as f32).sin()
+                strength * (PI * phase as f32 / width as f32).sin()
             } else {
                 0.0
             };
@@ -216,10 +245,12 @@ pub fn frog(size_cm: f32, seed: u64) -> Vec<f32> {
                 4.0 * resonance[0].process(excitation) + 1.5 * resonance[1].process(excitation),
             );
         }
-        out.extend(std::iter::repeat_n(
-            0.0,
-            ((0.05 + 0.15 * rng.unit()) * rate) as usize,
-        ));
+        // Air drawn back from the sac into the lungs between notes.
+        let gap = ((0.05 + 0.15 * rng.unit()) * rate) as usize;
+        for i in 0..gap {
+            let t = i as f32 / gap as f32;
+            out.push(0.04 * (PI * t).sin() * breath.process(rng.signed()));
+        }
     }
     out
 }
