@@ -145,6 +145,12 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 		}
 	}
 
+	/** Starts even at no volume (Foley's or its category's turned down), to be heard once it's turned up again. */
+	@Override
+	public boolean canStartSilent() {
+		return true;
+	}
+
 	@Override
 	public boolean isStopped() {
 		return false;
