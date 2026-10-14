@@ -54,7 +54,8 @@ public final class Life {
 			WARBLER = 8;
 	public static final int SPECIES = 9;
 	/** How loud each sings: a crow carries, a dove is soft. */
-	private static final float[] BIRD_VOLUME = {0.7f, 0.4f, 0.35f, 0.4f, 0.3f, 0.6f, 0.7f, 0.5f, 0.3f};
+	// Crows and jays are harsh: rarer inland (see pickBird) and quieter, so a day in the woods stays easy.
+	private static final float[] BIRD_VOLUME = {0.45f, 0.4f, 0.35f, 0.4f, 0.3f, 0.6f, 0.7f, 0.35f, 0.3f};
 	/** When something loud (an explosion, thunder) last went off, System.nanoTime(). */
 	private static volatile long startledAt = Long.MIN_VALUE / 2;
 	/** Crickets are rendered for these temperatures (°C): {@code foley:crickets_<n>}. */
@@ -133,7 +134,7 @@ public final class Life {
 		float celsius = 20 * biome.value().getBaseTemperature() - (night ? 5 : 0);
 
 		if (ticks % 20 == 0) {
-			// Birds: a song every half a minute or so through the day, four times as often in the dawn chorus, more again
+			// Birds: a song a minute or so through the day, several times as often in the dawn chorus, more again
 			// in the evening; fewer in a snowy hush. Mostly the same bird again from its perch, as one sings on and off
 			// for a minute or two. Something loud silences them all for a while.
 			boolean startled = System.nanoTime() - startledAt < 30_000_000_000L;
@@ -163,11 +164,12 @@ public final class Life {
 			// Bees round flowers on a warm day; flies over a swamp.
 			boolean swampy = biome.is(Biomes.SWAMP) || biome.is(Biomes.MANGROVE_SWAMP);
 			if (FoleyClient.wants(FoleyConfig::crickets) && !night && !raining && celsius >= 12
-					&& random.nextFloat() < (swampy ? 0.05f : 0.06f)) {
-				BlockPos bloom = swampy ? find(level, eye, 8, state -> state.is(Blocks.GRASS_BLOCK)
+					&& random.nextFloat() < 0.02f) {
+				// Now and then, softly, and from a little way off: a buzz at the ear is the opposite of restful.
+				BlockPos bloom = swampy ? find(level, eye, 12, state -> state.is(Blocks.GRASS_BLOCK)
 						|| state.getFluidState().isSourceOfType(Fluids.WATER))
-						: find(level, eye, 8, state -> state.is(BlockTags.FLOWERS));
-				if (bloom != null) call(minecraft, swampy ? "buzz_1" : "buzz_0", bloom.above(), 0.35f);
+						: find(level, eye, 12, state -> state.is(BlockTags.FLOWERS));
+				if (bloom != null) call(minecraft, swampy ? "buzz_1" : "buzz_0", bloom.above(), 0.2f);
 			}
 			// Frogs: at night or in the rain, from still water.
 			boolean swamp = biome.is(Biomes.SWAMP) || biome.is(Biomes.MANGROVE_SWAMP);
@@ -310,7 +312,8 @@ public final class Life {
 		double hour = (time / 1000.0 + 6) % 24;
 		double dawn = Math.exp(-Math.pow((hour - 5.5) / 1.2, 2));
 		double evening = 0.5 * Math.exp(-Math.pow((hour - 18.3) / 0.9, 2));
-		double day = hour > 6 && hour < 19 ? 0.25 : 0;
+		// Through the day, songs with long quiet between.
+		double day = hour > 6 && hour < 19 ? 0.15 : 0;
 		return (float) Math.min(1, dawn + evening + day);
 	}
 
@@ -358,13 +361,14 @@ public final class Life {
 		if (biome.is(BiomeTags.IS_OCEAN) || biome.is(BiomeTags.IS_BEACH)) {
 			weights = new int[] {25, 15, 0, 0, 0, 60, 0, 0, 0};
 		} else if (biome.is(BiomeTags.IS_TAIGA) || celsius < 6) {
-			weights = new int[] {30, 0, 15, 0, 40, 0, 0, 15, 0};
+			weights = new int[] {15, 0, 20, 0, 45, 0, 0, 10, 10};
 		} else if (biome.is(BiomeTags.IS_FOREST)) {
-			weights = new int[] {10, 8, 25, 18, 15, 0, 0, 12, 12};
+			// Mostly songbirds: a crow or a jay now and then.
+			weights = new int[] {4, 12, 28, 18, 18, 0, 0, 5, 15};
 		} else if (biome.is(BiomeTags.IS_JUNGLE) || biome.is(Biomes.SWAMP) || biome.is(Biomes.MANGROVE_SWAMP)) {
-			weights = new int[] {30, 25, 0, 30, 0, 0, 0, 0, 15};
+			weights = new int[] {15, 40, 0, 30, 0, 0, 0, 0, 15};
 		} else {
-			weights = new int[] {25, 30, 20, 10, 0, 0, 0, 5, 10};
+			weights = new int[] {10, 32, 25, 13, 5, 0, 0, 3, 12};
 		}
 		int roll = random.nextInt(100);
 		for (int i = 0; i < weights.length; i++) {
