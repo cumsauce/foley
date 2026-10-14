@@ -50,6 +50,10 @@ jobs:
           echo "RealtimeSanitizer caught the deliberate allocation"
       - name: Synthesis bench
         run: cargo run --release --locked -p foley-synth --example bed_bench
+      # Every bed through scripted scenes, as the game plays them: dropouts,
+      # clicks, crackle and read steps, in a second or so.
+      - name: Scene simulation
+        run: cargo run --release --locked -p foley-sim -- all
 
   # foley-ffi for every platform. Each OS builds its own targets; the mod
   # job merges them into one jar.

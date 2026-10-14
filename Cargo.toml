@@ -14,6 +14,7 @@ publish = false
 # Internal crates
 foley-ffi = { path = "crates/foley-ffi" }
 foley-dsp = { path = "crates/foley-dsp" }
+foley-sim = { path = "crates/foley-sim" }
 foley-math = { path = "crates/foley-math" }
 foley-synth = { path = "crates/foley-synth" }
 

@@ -1,0 +1,14 @@
+[package]
+name = "foley-sim"
+description = "Plays Foley's beds through scripted scenes, as the game would, without the game: WAVs and a report"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+foley-ffi.workspace = true
+
+[lints]
+workspace = true
