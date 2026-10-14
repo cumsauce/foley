@@ -29,6 +29,10 @@ const TURBULENCE: f32 = 0.25;
 const GUST_TIME: f32 = 4.0;
 /// How loud the leaves' patter is.
 const LEAVES: f32 = 0.18;
+/// What each sample keeps of a leaf's swish: about 25 ms.
+const LEAF_DECAY: f32 = 0.999_17;
+/// A leaf's share of the hush: the old 1.4 ms tick's over the 25 ms swish.
+const LEAF_STEP: f32 = 0.056;
 /// How long before the ear the trees round about hear a gust, seconds.
 const GUST_LEAD: f32 = 0.8;
 /// The speed is updated this often, samples.
@@ -150,22 +154,27 @@ impl Wind {
         let reach = 0.4 + 0.6 * exposure;
         let canopy = (2.5 * u).clamp(2.5, 20.0);
         let mut out = 0.0;
-        // Collisions: a patter, each a tick of a millisecond or two, that
-        // thickens into a hush as it blows harder but never into a hiss.
+        // Leaves fluttering: thousands within earshot, each a swish of some
+        // 25 ms, overlapping into a hush that swells and thins, more of them
+        // the harder it blows. (Ticks of a millisecond, as this once made,
+        // stood apart in a breeze and crackled.) The steps are scaled so the
+        // level is what the ticks gave.
         self.until_leaf -= dt;
         if self.until_leaf <= 0.0 {
-            self.leaf_envelope += 0.3 + 0.7 * self.rng.unit();
+            self.leaf_envelope += LEAF_STEP * (0.3 + 0.7 * self.rng.unit());
             let rate = 30.0 + 5.0 * canopy * canopy * leaves;
             self.until_leaf = self.rng.exponential(rate.min(1500.0));
         }
-        self.leaf_envelope *= 0.985;
-        // About 0.4 ms to rise.
-        self.leaf_heard += 0.05 * (self.leaf_envelope.min(1.5) - self.leaf_heard);
+        self.leaf_envelope *= LEAF_DECAY;
+        // About 5 ms to rise: no leaf starts with a click.
+        self.leaf_heard += 0.004 * (self.leaf_envelope.min(1.5) - self.leaf_heard);
         let flutter = self.flutter.next(self.rng.signed());
         let noise = self.rng.signed();
         // Leaves in a breeze are loudest at 2 to 5 kHz, not up in the hiss.
         let leaf = self.leaf[0].process(noise) + 0.4 * self.leaf[1].process(noise);
-        let loud = LEAVES * leaves * reach * (0.6 + canopy / 40.0);
+        // A smooth hush sounds quieter than ticks of the same power: lifted in
+        // a light breeze, as much as before by a strong one.
+        let loud = LEAVES * leaves * reach * (0.6 + canopy / 40.0) * (2.0 - canopy / 20.0);
         out += loud * flutter * self.leaf_heard * leaf;
         // Gusts sweeping through the crowns.
         if u > 0.5 {
