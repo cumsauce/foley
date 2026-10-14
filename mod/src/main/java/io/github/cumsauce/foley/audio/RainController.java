@@ -52,6 +52,8 @@ public final class RainController {
 
 	public void tick(Minecraft minecraft) {
 		if (minecraft.level == null) {
+			// A new world starts dry, not fading out the last one's rain.
+			heardRate = 0;
 			stop(minecraft);
 			return;
 		}

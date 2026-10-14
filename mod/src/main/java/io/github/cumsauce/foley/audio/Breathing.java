@@ -65,7 +65,9 @@ public final class Breathing {
 						: zombie instanceof Drowned ? "drowned"
 						: zombie instanceof ZombieVillager ? "zombie_villager" : "zombie";
 				float volume = (float) Math.min(1, 0.25 + 0.7 * closeness + (snarl ? 0.15 : 0)) * FoleyClient.gain();
-				float pitch = (zombie.isBaby() ? 1.4f : 0.95f + 0.1f * random.nextFloat()) * (hunting ? 0.93f : 1f);
+				// In its own voice, as its calls are, with a little breath-to-breath wander.
+				float pitch = Individuals.voice(zombie.getUUID()) * (zombie.isBaby() ? 1.4f : 0.97f + 0.06f
+						* random.nextFloat()) * (hunting ? 0.93f : 1f);
 				String call = snarl ? "growl" : heavy ? "breath_heavy" : "breath";
 				minecraft.getSoundManager().play(new EntityBoundSoundInstance(Voices.event(mob, call),
 						SoundSource.HOSTILE, volume, pitch, zombie, random.nextLong()));

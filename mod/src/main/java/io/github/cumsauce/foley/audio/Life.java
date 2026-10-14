@@ -78,10 +78,11 @@ public final class Life {
 	private int rainedAt = Integer.MIN_VALUE / 2;
 	private @Nullable BlockPos shore;
 	private int shoreFoundAt = Integer.MIN_VALUE / 2;
-	/** The bird singing now, where, and until when (tick) it keeps at it. */
+	/** A frog answering another: where, its size, and when (tick). */
 	private @Nullable BlockPos frogReply;
 	private int frogReplySize;
 	private int frogReplyAt;
+	/** The bird singing now, where, and until when (tick) it keeps at it. */
 	private @Nullable BlockPos perch;
 	private int singer;
 	private int perchUntil;
@@ -94,8 +95,19 @@ public final class Life {
 		return calls;
 	}
 
+	/** The world all the places above are in. */
+	private @Nullable ClientLevel placesIn;
+
 	public void tick(Minecraft minecraft) {
 		ClientLevel level = minecraft.level;
+		if (level != placesIn) {
+			// A new world or dimension: what was remembered is somewhere else.
+			placesIn = level;
+			crickets.clear();
+			frogReply = null;
+			perch = null;
+			shore = null;
+		}
 		if (level == null || minecraft.player == null || !level.dimensionType().hasSkyLight()
 				|| level.dimensionType().hasCeiling()) {
 			crickets.clear();

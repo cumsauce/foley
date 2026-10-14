@@ -23,8 +23,9 @@ public final class Brush {
 	private double travelled;
 
 	public void tick(Minecraft minecraft) {
-		if (minecraft.level == null || minecraft.player == null
-				|| !FoleyClient.wants(FoleyConfig::footsteps)) {
+		// Not a spectator flying through leaves, nor someone riding (the mount brushes, not their feet).
+		if (minecraft.level == null || minecraft.player == null || minecraft.player.isSpectator()
+				|| minecraft.player.isPassenger() || !FoleyClient.wants(FoleyConfig::footsteps)) {
 			last = null;
 			return;
 		}
