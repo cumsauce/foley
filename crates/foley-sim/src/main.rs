@@ -112,6 +112,14 @@ fn main() {
         }
         println!();
     }
+    if which == "all" || which.starts_with("walks") {
+        any = true;
+        let seeds: u64 = which
+            .strip_prefix("walks:")
+            .and_then(|n| n.parse().ok())
+            .unwrap_or(3);
+        failures += walks(seeds, read, &out);
+    }
     if which == "all" || which == "fuzz" {
         any = true;
         failures += fuzz();
@@ -129,6 +137,77 @@ fn main() {
 /// crackle. Rain, fire, lava and thunder are drops, pops and rolls.
 fn smooth(kind: i32) -> bool {
     kind == foley_ffi::FOLEY_BED_WIND || kind == foley_ffi::FOLEY_BED_WATER
+}
+
+/// Ten minutes of wandering per seed: wind and water as a player meets them,
+/// each param easing to a new value somewhere in its usual range every 10 to
+/// 40 s, sometimes snapping (a door, a teleport). The smooth beds must stay
+/// smooth throughout.
+fn walks(seeds: u64, read: usize, out: &std::path::Path) -> usize {
+    use foley_ffi::{FOLEY_BED_WATER, FOLEY_BED_WIND};
+    println!("walks: {seeds} seeds of ten minutes' wandering, wind and water");
+    let mut failures = 0;
+    for seed in 1..=seeds {
+        let mut rng = Lcg(seed * 7919);
+        for (name, kind, every, ranges) in [
+            (
+                "wind",
+                FOLEY_BED_WIND,
+                5,
+                vec![(0.0, 20.0), (0.0, 1.0), (0.0, 1.0)],
+            ),
+            (
+                "water",
+                FOLEY_BED_WATER,
+                10,
+                vec![(0.0, 60.0), (0.0, 15.0), (0.0, 1.0)],
+            ),
+        ] {
+            // Keyframes: (time, params, whether to snap there).
+            let mut keys: Vec<(f32, Vec<f32>, bool)> = Vec::new();
+            let mut t = 0.0;
+            while t < 600.0 {
+                let p = ranges
+                    .iter()
+                    .map(|(lo, hi)| lo + (hi - lo) * rng.unit().powi(2))
+                    .collect();
+                keys.push((t, p, rng.unit() < 0.15));
+                t += 10.0 + 30.0 * rng.unit();
+            }
+            let at = move |t: f32| -> Vec<f32> {
+                let k = keys.iter().rposition(|key| key.0 <= t).unwrap_or(0);
+                let Some(next) = keys.get(k + 1) else {
+                    return keys[k].1.clone();
+                };
+                if next.2 {
+                    return keys[k].1.clone();
+                }
+                let x = ((t - keys[k].0) / (next.0 - keys[k].0)).clamp(0.0, 1.0);
+                let x = x * x * (3.0 - 2.0 * x);
+                keys[k]
+                    .1
+                    .iter()
+                    .zip(&next.1)
+                    .map(|(a, b)| a + (b - a) * x)
+                    .collect()
+            };
+            let samples = play_with(name, kind, every, &at, &[], 600.0, read);
+            let problems = analysis::problems(&samples, read, true);
+            if !problems.is_empty() {
+                analysis::write_wav(&out.join(format!("walk{seed}-{name}.wav")), &samples);
+            }
+            println!(
+                "  seed {seed} {name:6} {} {}",
+                if problems.is_empty() { "ok  " } else { "FAIL" },
+                analysis::report(&samples, read)
+            );
+            for problem in &problems {
+                println!("           {problem}");
+            }
+            failures += problems.len();
+        }
+    }
+    failures
 }
 
 /// A tiny deterministic generator for the fuzzing.
@@ -229,6 +308,27 @@ fn fuzz() -> usize {
 /// Plays `track` for `seconds`: its scene set every `track.every` ticks, read
 /// `read` samples at a time, as the game's stream thread reads it.
 fn play(track: &scenes::Track, seconds: f32, read: usize) -> Vec<i16> {
+    play_with(
+        track.name,
+        track.kind,
+        track.every,
+        &track.params,
+        track.strikes,
+        seconds,
+        read,
+    )
+}
+
+/// [`play`], from parts: params from any function of time.
+fn play_with(
+    name: &str,
+    kind: i32,
+    every: u32,
+    params: &dyn Fn(f32) -> Vec<f32>,
+    strikes: &[f32],
+    seconds: f32,
+    read: usize,
+) -> Vec<i16> {
     let total = (seconds * RATE as f32) as usize;
     let mut bed: *mut FoleyBed = std::ptr::null_mut();
     let mut pcm = vec![0i16; total];
@@ -236,20 +336,20 @@ fn play(track: &scenes::Track, seconds: f32, read: usize) -> Vec<i16> {
     // over is valid for its length.
     #[allow(unsafe_code)]
     unsafe {
-        assert_eq!(foley_bed_create(track.kind, 7, &mut bed), FOLEY_OK);
+        assert_eq!(foley_bed_create(kind, 7, &mut bed), FOLEY_OK);
         // What the game thread has handed over and the stream thread hasn't
         // taken up yet (BedSound's pending scene and queued flashes).
-        let mut pending: Option<Vec<f32>> = Some((track.params)(0.0));
+        let mut pending: Option<Vec<f32>> = Some(params(0.0));
         let mut flashes: Vec<f32> = Vec::new();
-        let mut strikes = track.strikes.iter().peekable();
+        let mut strikes = strikes.iter().peekable();
         let mut done = 0;
         let mut tick = 0u32;
         while done < total {
             // The game ticks up to where this read starts.
             while (tick as usize) * TICK <= done {
                 let t = tick as f32 / 20.0;
-                if tick.is_multiple_of(track.every) {
-                    pending = Some((track.params)(t));
+                if tick.is_multiple_of(every) {
+                    pending = Some(params(t));
                 }
                 while strikes.next_if(|s| **s <= t).is_some() {
                     flashes.push(t);
@@ -262,7 +362,7 @@ fn play(track: &scenes::Track, seconds: f32, read: usize) -> Vec<i16> {
                     foley_bed_set_scene(bed, p.as_ptr(), p.len()),
                     FOLEY_OK,
                     "{} params",
-                    track.name
+                    name
                 );
             }
             for (n, _) in flashes.drain(..).enumerate() {
