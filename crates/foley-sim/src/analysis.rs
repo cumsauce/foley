@@ -193,3 +193,229 @@ fn read_steps(level: &[f32], read: usize) -> (f32, f32) {
     let worst = at.iter().map(|&k| step(k)).fold(0.0, f32::max);
     (mean_at / mean_else.max(1e-6), worst)
 }
+
+/// One bed's numbers, for the report, the baseline and the plot.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Metrics {
+    /// Integrated loudness, LUFS (ITU-R BS.1770: K-weighted, gated at -70).
+    pub lufs: f32,
+    pub dropouts: usize,
+    pub clicks: usize,
+    pub crackle: f32,
+    pub read_steps: f32,
+}
+
+impl Metrics {
+    pub fn of(samples: &[i16], read: usize) -> Metrics {
+        let x: Vec<f32> = samples.iter().map(|s| f32::from(*s) / 32768.0).collect();
+        let level = levels(&x);
+        let crackles: Vec<f32> = x
+            .chunks(RATE)
+            .filter(|s| s.len() == RATE)
+            .map(crackle)
+            .collect();
+        Metrics {
+            lufs: lufs(&x),
+            dropouts: dropouts(&level).len(),
+            clicks: clicks(&x),
+            crackle: if crackles.is_empty() {
+                0.0
+            } else {
+                median(&crackles)
+            },
+            read_steps: read_steps(&level, read).0,
+        }
+    }
+
+    /// A line of the baseline file: `name lufs dropouts clicks crackle steps`.
+    pub fn line(&self, name: &str) -> String {
+        format!(
+            "{name}\t{:.2}\t{}\t{}\t{:.2}\t{:.2}",
+            self.lufs, self.dropouts, self.clicks, self.crackle, self.read_steps
+        )
+    }
+
+    pub fn parse(line: &str) -> Option<(String, Metrics)> {
+        let mut f = line.split('\t');
+        let name = f.next()?.to_string();
+        let mut num = || f.next().and_then(|v| v.parse::<f32>().ok());
+        Some((
+            name,
+            Metrics {
+                lufs: num()?,
+                dropouts: num()? as usize,
+                clicks: num()? as usize,
+                crackle: num()?,
+                read_steps: num()?,
+            },
+        ))
+    }
+
+    /// What changed from `before` past what chance moves: loudness by 1 LU,
+    /// crackle by 1.5, read steps by 0.3, any dropout or click.
+    pub fn changes(&self, before: &Metrics) -> Vec<String> {
+        let mut out = Vec::new();
+        if (self.lufs - before.lufs).abs() >= 1.0 {
+            out.push(format!(
+                "loudness {:+.1} LU ({:.1} to {:.1} LUFS)",
+                self.lufs - before.lufs,
+                before.lufs,
+                self.lufs
+            ));
+        }
+        if (self.crackle - before.crackle).abs() >= 1.5 {
+            out.push(format!(
+                "crackle {:.1} to {:.1}",
+                before.crackle, self.crackle
+            ));
+        }
+        if (self.read_steps - before.read_steps).abs() >= 0.3 {
+            out.push(format!(
+                "read steps {:.2}x to {:.2}x",
+                before.read_steps, self.read_steps
+            ));
+        }
+        if self.dropouts != before.dropouts {
+            out.push(format!("dropouts {} to {}", before.dropouts, self.dropouts));
+        }
+        if self.clicks != before.clicks {
+            out.push(format!("clicks {} to {}", before.clicks, self.clicks));
+        }
+        out
+    }
+}
+
+/// Integrated loudness (ITU-R BS.1770-4 at 48 kHz, mono): K-weighted (a
+/// shelf for the head, a high-pass), in 400 ms blocks overlapping by 75 %,
+/// gated at -70 LUFS and then 10 LU under the ungated mean.
+fn lufs(x: &[f32]) -> f32 {
+    let stages = [
+        (
+            [1.535_124_9, -2.691_696_2, 1.198_392_8],
+            [-1.690_659_3, 0.732_480_8],
+        ),
+        ([1.0, -2.0, 1.0], [-1.990_047_5, 0.990_072_25]),
+    ];
+    let mut y: Vec<f32> = x.to_vec();
+    for (b, a) in stages {
+        let (mut x1, mut x2, mut y1, mut y2) = (0.0f32, 0.0f32, 0.0f32, 0.0f32);
+        for v in &mut y {
+            let out = b[0] * *v + b[1] * x1 + b[2] * x2 - a[0] * y1 - a[1] * y2;
+            (x2, x1, y2, y1) = (x1, *v, y1, out);
+            *v = out;
+        }
+    }
+    let block = RATE * 4 / 10;
+    let hop = block / 4;
+    let powers: Vec<f64> = (0..y.len().saturating_sub(block) / hop)
+        .map(|k| {
+            y[k * hop..k * hop + block]
+                .iter()
+                .map(|v| f64::from(*v).powi(2))
+                .sum::<f64>()
+                / block as f64
+        })
+        .collect();
+    let loud = |p: f64| -0.691 + 10.0 * p.max(1e-12).log10();
+    let gated: Vec<f64> = powers
+        .iter()
+        .copied()
+        .filter(|p| loud(*p) > -70.0)
+        .collect();
+    if gated.is_empty() {
+        return -70.0;
+    }
+    let mean = gated.iter().sum::<f64>() / gated.len() as f64;
+    let relative: Vec<f64> = gated
+        .iter()
+        .copied()
+        .filter(|p| loud(*p) > loud(mean) - 10.0)
+        .collect();
+    loud(relative.iter().sum::<f64>() / relative.len().max(1) as f64) as f32
+}
+
+/// An SVG of a bed's level (100 ms steps) under its scene's params (each
+/// scaled to its own range), with the reads and any dropouts marked.
+pub fn plot(samples: &[i16], read: usize, params: &[(f32, Vec<f32>)], title: &str) -> String {
+    let x: Vec<f32> = samples.iter().map(|s| f32::from(*s) / 32768.0).collect();
+    let level = levels(&x);
+    let seconds = samples.len() as f32 / RATE as f32;
+    let (w, h, top) = (1200.0f32, 360.0f32, 40.0f32);
+    let px = |t: f32| 40.0 + (w - 60.0) * t / seconds;
+    let py = |db: f32| top + (h - top - 30.0) * (-db.clamp(-80.0, 0.0)) / 80.0;
+    let mut svg = format!(
+        "<svg xmlns='http://www.w3.org/2000/svg' width='{w}' height='{h}' font-family='sans-serif' font-size='11'>\
+         <rect width='100%' height='100%' fill='white'/><text x='40' y='20' font-size='14'>{title}</text>"
+    );
+    for db in [0, -20, -40, -60, -80] {
+        let y = py(db as f32);
+        svg += &format!(
+            "<line x1='40' x2='{}' y1='{y}' y2='{y}' stroke='#eee'/><text x='4' y='{}'>{db} dB</text>",
+            w - 20.0,
+            y + 4.0
+        );
+    }
+    let reads = samples.len() / read;
+    if reads <= 400 {
+        for k in 1..=reads {
+            let t = (k * read) as f32 / RATE as f32;
+            svg += &format!(
+                "<line x1='{0}' x2='{0}' y1='{top}' y2='{1}' stroke='#f2f2ff'/>",
+                px(t),
+                h - 30.0
+            );
+        }
+    }
+    let colors = ["#2a9d8f", "#e9c46a", "#f4a261", "#9b5de5", "#00bbf9"];
+    let count = params.first().map_or(0, |p| p.1.len()).min(colors.len());
+    for (i, color) in colors.iter().enumerate().take(count) {
+        let most = params.iter().map(|p| p.1[i].abs()).fold(1e-6, f32::max);
+        let points: Vec<String> = params
+            .iter()
+            .map(|(t, p)| {
+                format!(
+                    "{:.1},{:.1}",
+                    px(*t),
+                    top + (h - top - 30.0) * (1.0 - p[i] / most)
+                )
+            })
+            .collect();
+        svg += &format!(
+            "<polyline fill='none' stroke='{color}' stroke-dasharray='4 3' points='{}'/>",
+            points.join(" ")
+        );
+        svg += &format!(
+            "<text x='{}' y='{}' fill='{color}'>param {i} (to {most:.1})</text>",
+            w - 160.0,
+            top + 14.0 * i as f32
+        );
+    }
+    let points: Vec<String> = level
+        .chunks(10)
+        .enumerate()
+        .map(|(k, f)| {
+            format!(
+                "{:.1},{:.1}",
+                px(k as f32 / 10.0),
+                py(f.iter().copied().fold(-120.0, f32::max))
+            )
+        })
+        .collect();
+    svg += &format!(
+        "<polyline fill='none' stroke='#264653' points='{}'/>",
+        points.join(" ")
+    );
+    for t in dropouts(&level) {
+        svg += &format!(
+            "<circle cx='{}' cy='{}' r='5' fill='none' stroke='red'/>",
+            px(t),
+            py(-75.0)
+        );
+    }
+    svg += &format!(
+        "<text x='{}' y='{}'>{seconds:.0} s</text></svg>",
+        w - 50.0,
+        h - 10.0
+    );
+    svg
+}

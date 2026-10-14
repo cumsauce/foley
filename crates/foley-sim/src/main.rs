@@ -5,7 +5,11 @@
 //! and reports what would be heard as wrong: dropouts, clicks, crackle, and
 //! level steps in time with the reads.
 //!
-//! `cargo run --release -p foley-sim -- [scene|all] [--read SECONDS] [--out DIR]`
+//! Also writes an SVG per bed (its level under its scene's params, reads and
+//! dropouts marked) and `metrics.tsv`; `--baseline` compares against an
+//! earlier run's.
+//!
+//! `cargo run --release -p foley-sim -- [scene|all] [--read SECONDS] [--out DIR] [--baseline FILE]`
 
 mod analysis;
 mod scenes;
@@ -25,6 +29,7 @@ fn main() {
     let mut which = String::from("all");
     let mut read_seconds = 1.0f32;
     let mut out = PathBuf::from("target/foley-sim");
+    let mut baseline: Option<PathBuf> = None;
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -35,8 +40,11 @@ fn main() {
                     .expect("--read SECONDS")
             }
             "--out" => out = args.next().map(PathBuf::from).expect("--out DIR"),
+            "--baseline" => baseline = args.next().map(PathBuf::from),
             "-h" | "--help" => {
-                println!("foley-sim [scene|all] [--read SECONDS] [--out DIR]\nscenes:");
+                println!(
+                    "foley-sim [scene|all] [--read SECONDS] [--out DIR] [--baseline FILE]\nscenes:"
+                );
                 for scene in scenes::all() {
                     println!("  {:16} {}", scene.name, scene.about);
                 }
@@ -54,6 +62,13 @@ fn main() {
     );
     let mut any = false;
     let mut failures = 0;
+    let before: std::collections::HashMap<String, analysis::Metrics> = baseline
+        .map(|path| std::fs::read_to_string(&path).expect("read the baseline"))
+        .unwrap_or_default()
+        .lines()
+        .filter_map(analysis::Metrics::parse)
+        .collect();
+    let mut lines = Vec::new();
     for scene in scenes::all()
         .into_iter()
         .filter(|s| which == "all" || s.name == which)
@@ -65,12 +80,27 @@ fn main() {
             let path = out.join(format!("{}-{}.wav", scene.name, track.name));
             analysis::write_wav(&path, &samples);
             let report = analysis::report(&samples, read);
+            let name = format!("{}/{}", scene.name, track.name);
+            let metrics = analysis::Metrics::of(&samples, read);
+            lines.push(metrics.line(&name));
+            let params: Vec<(f32, Vec<f32>)> = (0..=(scene.seconds * 4.0) as u32)
+                .map(|k| (k as f32 / 4.0, (track.params)(k as f32 / 4.0)))
+                .collect();
+            let svg = analysis::plot(&samples, read, &params, &format!("{name}: {}", scene.about));
+            std::fs::write(out.join(format!("{}-{}.svg", scene.name, track.name)), svg)
+                .expect("write the plot");
             let problems = analysis::problems(&samples, read, smooth(track.kind));
             println!(
-                "  {:8} {} {report}",
+                "  {:8} {} {:5.1} LUFS | {report}",
                 track.name,
-                if problems.is_empty() { "ok  " } else { "FAIL" }
+                if problems.is_empty() { "ok  " } else { "FAIL" },
+                metrics.lufs
             );
+            if let Some(was) = before.get(&name) {
+                for change in metrics.changes(was) {
+                    println!("           since the baseline: {change}");
+                }
+            }
             for problem in &problems {
                 println!("           {problem}");
             }
@@ -87,6 +117,7 @@ fn main() {
         failures += fuzz();
     }
     assert!(any, "no scene called {which}; --help lists them");
+    std::fs::write(out.join("metrics.tsv"), lines.join("\n") + "\n").expect("write the metrics");
     println!("WAVs in {}", out.display());
     if failures > 0 {
         eprintln!("{failures} check(s) failed");
