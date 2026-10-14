@@ -17,8 +17,8 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The moving water, fire and lava near the listener (M2), from the blocks within {@value #RADIUS} blocks across and
- * {@value #DEPTH} up and down. Chunk sections with none of them are skipped whole.
+ * The moving water, fire and lava near the listener (M2), from the blocks within {@link #radius} blocks across and
+ * {@link #depth} up and down (24 and 12; 32 and 16 with Earshot on Ultra, as far as the game plays its own). Chunk sections with none of them are skipped whole.
  *
  * <p>Each source block counts by what it does: water flowing at its surface (still water is silent), a waterfall where
  * it lands (more) and down its face (a little), lava open to the air, fire, a lit campfire. Each also gets where it is
@@ -39,8 +39,27 @@ public record Surroundings(Water water, Fire fire, Lava lava, @Nullable Water[] 
 	public static final int PARTS = 4;
 	/** A quarter with less than this share of the strongest quarter's power joins it. */
 	private static final double MINOR = 0.15;
-	static final int RADIUS = 12;
-	static final int DEPTH = 8;
+	static volatile int RADIUS = 24;
+	static volatile int DEPTH = 12;
+
+	/** How far it listens: further with Earshot on Ultra. Client thread, before a sample. */
+	static void reach(boolean ultra) {
+		RADIUS = ultra ? 32 : 24;
+		DEPTH = ultra ? 16 : 12;
+	}
+
+	/** Whether Earshot is installed and set to Ultra (read reflectively; Foley doesn't depend on it). */
+	static boolean earshotUltra() {
+		if (!io.github.cumsauce.foley.FoleyClient.earshot()) return false;
+		try {
+			Object config = Class.forName("io.github.cumsauce.earshot.EarshotClient").getMethod("config").invoke(null);
+			Object preset = config.getClass().getMethod("preset").invoke(config);
+			Object resolved = preset.getClass().getMethod("resolve").invoke(preset);
+			return "ULTRA".equals(String.valueOf(resolved));
+		} catch (ReflectiveOperationException | RuntimeException e) {
+			return false;
+		}
+	}
 	public static final Surroundings NONE = new Surroundings(Water.STILL, Fire.OUT, Lava.NONE, new Water[PARTS],
 			new Fire[PARTS], new Lava[PARTS]);
 	private static final Predicate<BlockState> HEARD = state -> !state.getFluidState().isEmpty()

@@ -67,6 +67,7 @@ public final class PlacedBeds {
 			lava.follow(eye);
 			return;
 		}
+		Surroundings.reach(Surroundings.earshotUltra());
 		around = Surroundings.sample(minecraft.level, eye);
 		// With Earshot, a bed fades with distance as any sound does, so it also gets the reverb, air and occlusion
 		// a sound that far off would: it plays at its effective distance, in its direction, at full gain.
