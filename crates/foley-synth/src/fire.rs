@@ -74,6 +74,8 @@ pub struct Fire {
     crackles: Vec<Crackle>,
     last: f32,
     events: Vec<Event>,
+    /// Buffers of finished events, to reuse.
+    spare: Vec<Vec<f32>>,
     samples: usize,
     flicker: Wobble,
     flame: BandPass,
@@ -92,6 +94,11 @@ impl Fire {
             crackles: Vec::with_capacity(MAX_VOICES),
             last: 0.0,
             events: Vec::with_capacity(MAX_EVENTS),
+            // Each big enough for the longest (a 2 s hiss), so the audio
+            // thread never allocates.
+            spare: (0..MAX_EVENTS)
+                .map(|_| Vec::with_capacity(2 * SAMPLE_RATE as usize + 1))
+                .collect(),
             samples: 0,
             flicker: Wobble::new(10.0, 4.0, 0.2, 2.0),
             flame: BandPass::new(1500.0, 0.8),
@@ -141,7 +148,8 @@ impl Fire {
                             step: (-dt / time).exp(),
                         });
                         if energy >= SNAP_ENERGY && self.events.len() < MAX_EVENTS {
-                            let sound = snap(&mut self.rng, 0.012 * energy.sqrt());
+                            let mut sound = self.spare.pop().unwrap_or_default();
+                            snap(&mut self.rng, 0.012 * energy.sqrt(), &mut sound);
                             self.events.push(Event { sound, at: 0 });
                         }
                     }
@@ -169,7 +177,8 @@ impl Fire {
                 if self.until_hiss <= 0.0 {
                     self.until_hiss = self.rng.exponential(HISSES * size.sqrt());
                     if self.events.len() < MAX_EVENTS {
-                        let sound = hiss(&mut self.rng);
+                        let mut sound = self.spare.pop().unwrap_or_default();
+                        hiss(&mut self.rng, &mut sound);
                         self.events.push(Event { sound, at: 0 });
                     }
                 }
@@ -177,7 +186,8 @@ impl Fire {
                 if self.until_settle <= 0.0 {
                     self.until_settle = self.rng.exponential(SETTLES * size.sqrt());
                     if self.events.len() < MAX_EVENTS {
-                        let sound = settle(&mut self.rng);
+                        let mut sound = self.spare.pop().unwrap_or_default();
+                        settle(&mut self.rng, &mut sound);
                         self.events.push(Event { sound, at: 0 });
                     }
                 }
@@ -187,29 +197,37 @@ impl Fire {
                 extra += event.sound[event.at];
                 event.at += 1;
             }
-            self.events.retain(|e| e.at < e.sound.len());
+            // Finished sounds go back to the spares, so nothing is freed or
+            // (once each spare has grown) allocated on the audio thread.
+            let mut k = 0;
+            while k < self.events.len() {
+                if self.events[k].at < self.events[k].sound.len() {
+                    k += 1;
+                } else {
+                    self.spare.push(self.events.swap_remove(k).sound);
+                }
+            }
             *sample = gain * (roar_level * puffing * roar + bright + flame + extra);
         }
     }
 }
 
 /// A snap: the burst rings the wood round it, a few kHz, for a few ms.
-fn snap(rng: &mut Rng, amplitude: f32) -> Vec<f32> {
+fn snap(rng: &mut Rng, amplitude: f32, out: &mut Vec<f32>) {
     let rate = SAMPLE_RATE as f32;
     let f = 1500.0 + 3000.0 * rng.unit();
     let decay = 300.0 + 400.0 * rng.unit();
     let n = (6.0 / decay * rate) as usize;
-    (0..n)
-        .map(|i| {
-            let t = i as f32 / rate;
-            amplitude * (-decay * t).exp() * (TAU * f * t).sin()
-        })
-        .collect()
+    out.clear();
+    out.extend((0..n).map(|i| {
+        let t = i as f32 / rate;
+        amplitude * (-decay * t).exp() * (TAU * f * t).sin()
+    }));
 }
 
 /// Sap or steam escaping from a crack: a hiss for half a second to two,
 /// swelling and fading; a third of the time it whistles, a wavering tone.
-fn hiss(rng: &mut Rng) -> Vec<f32> {
+fn hiss(rng: &mut Rng, out: &mut Vec<f32>) {
     let rate = SAMPLE_RATE as f32;
     let seconds = 0.5 + 1.5 * rng.unit();
     let n = (seconds * rate) as usize;
@@ -218,34 +236,32 @@ fn hiss(rng: &mut Rng) -> Vec<f32> {
     let whistle = rng.unit() < 0.33;
     let mut hz = 2000.0 + 2000.0 * rng.unit();
     let mut phase = 0.0f32;
-    (0..n)
-        .map(|i| {
-            let t = i as f32 / n as f32;
-            let envelope = (PI * t).sin().powf(0.7)
-                * (1.0 + 3.0 * wander.process(rng.signed())).clamp(0.3, 1.7);
-            let mut s = 0.02 * envelope * band.process(rng.signed());
-            if whistle {
-                hz *= 1.0 + 0.0005 * rng.signed();
-                phase += TAU * hz / rate;
-                s += 0.008 * envelope * phase.sin();
-            }
-            s
-        })
-        .collect()
+    out.clear();
+    out.extend((0..n).map(|i| {
+        let t = i as f32 / n as f32;
+        let envelope =
+            (PI * t).sin().powf(0.7) * (1.0 + 3.0 * wander.process(rng.signed())).clamp(0.3, 1.7);
+        let mut s = 0.02 * envelope * band.process(rng.signed());
+        if whistle {
+            hz *= 1.0 + 0.0005 * rng.signed();
+            phase += TAU * hz / rate;
+            s += 0.008 * envelope * phase.sin();
+        }
+        s
+    }));
 }
 
 /// A log burning through and settling: a dull wooden knock, then embers
 /// crumbling and ticking for a moment.
-fn settle(rng: &mut Rng) -> Vec<f32> {
+fn settle(rng: &mut Rng, out: &mut Vec<f32>) {
     let rate = SAMPLE_RATE as f32;
     let n = (0.5 * rate) as usize;
     let f = 150.0 + 200.0 * rng.unit();
-    let mut out: Vec<f32> = (0..n)
-        .map(|i| {
-            let t = i as f32 / rate;
-            0.12 * (-30.0 * t).exp() * (TAU * f * t).sin()
-        })
-        .collect();
+    out.clear();
+    out.extend((0..n).map(|i| {
+        let t = i as f32 / rate;
+        0.12 * (-30.0 * t).exp() * (TAU * f * t).sin()
+    }));
     for _ in 0..10 + (rng.unit() * 15.0) as usize {
         let at = (0.4 * rng.unit().powi(2) * rate) as usize;
         let tick_f = 2000.0 + 4000.0 * rng.unit();
@@ -257,7 +273,6 @@ fn settle(rng: &mut Rng) -> Vec<f32> {
             }
         }
     }
-    out
 }
 
 #[cfg(test)]

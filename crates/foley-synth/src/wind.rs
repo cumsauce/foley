@@ -76,7 +76,9 @@ impl Wind {
             rng: Rng::new(seed),
             scene: WindScene::CALM,
             speed: 0.0,
-            history: std::collections::VecDeque::new(),
+            history: std::collections::VecDeque::with_capacity(
+                (GUST_LEAD * SAMPLE_RATE as f32 / BLOCK as f32) as usize + 1,
+            ),
             ear: 0.0,
             roar: BandPass::new(150.0, 0.7),
             whoosh: BandPass::new(600.0, 1.2),

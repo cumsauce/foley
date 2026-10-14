@@ -1,11 +1,15 @@
 package io.github.cumsauce.foley.audio;
 
+import io.github.cumsauce.foley.FoleyClient;
 import io.github.cumsauce.foley.natives.NativeBridge;
 import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import javax.sound.sampled.AudioFormat;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.resources.sounds.TickableSoundInstance;
@@ -33,8 +37,10 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 	private volatile S scene;
 	private volatile long rendered;
 	private Stream stream;
-	/** Strikes made before the game opened the stream, as {x, y, z, seed}. */
-	private final java.util.List<double[]> strikes = new java.util.ArrayList<>();
+	/** A flash made before the game opened the stream. */
+	private record Strike(float x, float y, float z, long seed) {}
+
+	private final List<Strike> strikes = new ArrayList<>();
 
 	/**
 	 * @param name its sound event, {@code foley:<name>} in sounds.json
@@ -48,7 +54,7 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 		this.scene = scene;
 		this.relative = true;
 		this.attenuation = SoundInstance.Attenuation.NONE;
-		this.volume = io.github.cumsauce.foley.FoleyClient.gain();
+		this.volume = FoleyClient.gain();
 	}
 
 	/** Where it plays from relative to the ear (world axes), following the player, or null. */
@@ -69,14 +75,14 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 		this.heardWeight = weight;
 		relative = true;
 		attenuation = SoundInstance.Attenuation.NONE;
-		this.volume = io.github.cumsauce.foley.FoleyClient.gain() * weight;
+		this.volume = FoleyClient.gain() * weight;
 		turn();
 		return this;
 	}
 
 	/** Sets the head-relative position from the world offset and where the player faces. */
 	private void turn() {
-		var player = net.minecraft.client.Minecraft.getInstance().player;
+		var player = Minecraft.getInstance().player;
 		if (player == null || offset == null) return;
 		double yaw = Math.toRadians(player.getYRot());
 		// The player faces (-sin yaw, 0, cos yaw); their right is (-cos yaw, 0, -sin yaw). OpenAL's head frame has
@@ -135,7 +141,7 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 		if (stream != null) {
 			stream.strike(x, y, z, seed);
 		} else {
-			strikes.add(new double[] {x, y, z, seed});
+			strikes.add(new Strike(x, y, z, seed));
 		}
 	}
 
@@ -148,7 +154,7 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 	@Override
 	public void tick() {
 		heardWeight += (weight - heardWeight) * 0.05f;
-		volume = io.github.cumsauce.foley.FoleyClient.gain() * heardWeight;
+		volume = FoleyClient.gain() * heardWeight;
 		if (offset != null) turn();
 	}
 
@@ -157,8 +163,8 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 			boolean repeat) {
 		stream = new Stream(bridge.bedCreate(kind, random.nextLong()));
 		stream.apply(scene);
-		for (double[] strike : strikes) {
-			stream.strike((float) strike[0], (float) strike[1], (float) strike[2], (long) strike[3]);
+		for (Strike strike : strikes) {
+			stream.strike(strike.x(), strike.y(), strike.z(), strike.seed());
 		}
 		strikes.clear();
 		return CompletableFuture.completedFuture(stream);
@@ -186,13 +192,16 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 			return FORMAT;
 		}
 
-		/** Reused: the game uploads each buffer to OpenAL before it reads the next. */
-		private @org.jspecify.annotations.Nullable ByteBuffer scratch;
+		/**
+		 * Reused: the game uploads each buffer to OpenAL before it reads the next. Sized for the second the game reads at
+		 * a time, so reading doesn't allocate.
+		 */
+		private ByteBuffer scratch = ByteBuffer.allocateDirect(2 * NativeBridge.SAMPLE_RATE).order(ByteOrder.LITTLE_ENDIAN);
 
 		@Override
 		public synchronized ByteBuffer read(int size) {
 			int bytes = size & ~1;
-			if (scratch == null || scratch.capacity() < bytes) {
+			if (scratch.capacity() < bytes) {
 				scratch = ByteBuffer.allocateDirect(bytes).order(ByteOrder.LITTLE_ENDIAN);
 			}
 			ByteBuffer buffer = scratch.clear().limit(bytes);

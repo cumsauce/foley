@@ -1,5 +1,5 @@
 use crate::{LowPass, Rng, SAMPLE_RATE, absorption_cutoff};
-use std::sync::mpsc::{Receiver, Sender, channel as channel_of};
+use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 
 const SPEED_OF_SOUND: f32 = 343.0;
 const ATMOSPHERE: f32 = 101_325.0;
@@ -227,8 +227,11 @@ fn n_wave(period: f32, smear: f32, amplitude: f32, cutoff: Option<f32>) -> Vec<f
 #[derive(Debug)]
 pub struct Thunder {
     scene: ThunderScene,
-    made: Sender<Vec<f32>>,
+    made: SyncSender<Vec<f32>>,
     ready: Receiver<Vec<f32>>,
+    /// Finished thunder, handed back to be freed off the audio thread.
+    spent: SyncSender<Vec<f32>>,
+    to_free: Receiver<Vec<f32>>,
     /// Flashes whose thunder is still being made.
     making: usize,
     playing: Vec<(Vec<f32>, usize)>,
@@ -243,11 +246,16 @@ impl Default for Thunder {
 
 impl Thunder {
     pub fn new() -> Thunder {
-        let (made, ready) = channel_of();
+        // Bounded, so sending and receiving never allocate: at most
+        // `MAX_STRIKES` are ever in flight.
+        let (made, ready) = sync_channel(MAX_STRIKES);
+        let (spent, to_free) = sync_channel(MAX_STRIKES);
         Thunder {
             scene: ThunderScene::DEFAULT,
             made,
             ready,
+            spent,
+            to_free,
             making: 0,
             playing: Vec::with_capacity(MAX_STRIKES),
             muffle: [LowPass::new(20_000.0), LowPass::new(20_000.0)],
@@ -266,6 +274,8 @@ impl Thunder {
     /// A flash at `base`, metres from the listener (y up), now. Its thunder
     /// is made on a thread of its own and joins the mix when it's ready.
     pub fn strike(&mut self, base: [f32; 3], seed: u64) {
+        // Frees finished thunder here, off the audio thread.
+        while self.to_free.try_recv().is_ok() {}
         if self.making + self.playing.len() >= MAX_STRIKES {
             return;
         }
@@ -310,7 +320,17 @@ impl Thunder {
             }
             *at += take;
         }
-        self.playing.retain(|(sound, at)| *at < sound.len());
+        let mut k = 0;
+        while k < self.playing.len() {
+            let (sound, at) = &self.playing[k];
+            if *at < sound.len() {
+                k += 1;
+            } else {
+                let (sound, _) = self.playing.swap_remove(k);
+                // Never full: it holds at most `MAX_STRIKES`.
+                let _ = self.spent.try_send(sound);
+            }
+        }
         let exposure = self.scene.exposure.clamp(0.0, 1.0);
         if exposure < 0.98 {
             let gain = 0.4 + 0.6 * exposure;

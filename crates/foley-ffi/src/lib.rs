@@ -172,11 +172,13 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
         };
         *out = Box::into_raw(Box::new(FoleyBed {
             synth,
-            scratch: Vec::new(),
+            // The game reads a second at a time; sized now so rendering
+            // never allocates.
+            scratch: Vec::with_capacity(SAMPLE_RATE as usize),
             envelope: 0.0,
             guard: 1.0,
-            target: Vec::new(),
-            heard: Vec::new(),
+            target: Vec::with_capacity(MAX_PARAMS),
+            heard: Vec::with_capacity(MAX_PARAMS),
         }));
         Ok(())
     })
@@ -207,12 +209,16 @@ pub unsafe extern "C" fn foley_bed_set_scene(
         // from what's heard.
         apply(&mut bed.synth, p)?;
         if bed.heard.is_empty() {
-            bed.heard = p.to_vec();
+            bed.heard.extend_from_slice(p);
         }
-        bed.target = p.to_vec();
+        bed.target.clear();
+        bed.target.extend_from_slice(p);
         Ok(())
     })
 }
+
+/// The most params any bed takes.
+const MAX_PARAMS: usize = 3 + FOLEY_SURFACES;
 
 /// Checks `p` for this kind of bed and gives it to the synth.
 fn apply(synth: &mut Synth, p: &[f32]) -> Result<(), FfiError> {
