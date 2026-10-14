@@ -60,8 +60,8 @@ public final class PlacedBeds {
 		}
 		Vec3 eye = minecraft.player.getEyePosition();
 		if (ticks++ % SAMPLE_EVERY != 0) {
-			// Between samples, a bed at its effective distance keeps its bearing from where the ear is now: aimed
-			// only at each sample, walking past it would swing it round twice a second.
+			// Between samples, each bed glides towards where it's heard from now (with Earshot, at its effective
+			// distance from where the ear is now): set only at each sample, it stepped twice a second.
 			water.follow(eye);
 			fire.follow(eye);
 			lava.follow(eye);
@@ -135,6 +135,8 @@ public final class PlacedBeds {
 		@Nullable BedSound<S> sound;
 		/** What it was last aimed at: the sound's centre, its gain, and whether Earshot shapes it. */
 		private Vec3 centre = Vec3.ZERO;
+		/** Where it plays from now, gliding to where it's aimed. */
+		private Vec3 playsFrom = Vec3.ZERO;
 		private float gain;
 		private boolean shaped;
 
@@ -154,18 +156,21 @@ public final class PlacedBeds {
 			this.centre = centre;
 			this.gain = gain;
 			this.shaped = attenuated;
-			Vec3 at = heardAt(eye, centre, gain, attenuated);
 			if (sound == null || !minecraft.getSoundManager().isActive(sound)) {
-				sound = new BedSound<>(name, source, bridge, kind, scene).place(at, attenuated);
+				playsFrom = heardAt(eye, centre, gain, attenuated);
+				sound = new BedSound<>(name, source, bridge, kind, scene).place(playsFrom, attenuated);
 				minecraft.getSoundManager().play(sound);
 			} else {
-				sound.place(at, attenuated).setScene(scene);
+				sound.setScene(scene);
+				follow(eye);
 			}
 		}
 
-		/** Re-aims a bed at its effective distance from the ear at {@code eye}. */
+		/** Moves a bed a step towards where it's heard from, for the ear at {@code eye}: about a third of a second. */
 		void follow(Vec3 eye) {
-			if (sound != null && shaped) sound.place(heardAt(eye, centre, gain, true), true);
+			if (sound == null) return;
+			playsFrom = playsFrom.lerp(heardAt(eye, centre, gain, shaped), 0.15);
+			sound.place(playsFrom, shaped);
 		}
 
 		void stop(Minecraft minecraft) {
