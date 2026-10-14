@@ -366,13 +366,14 @@ impl Thunder {
                 let _ = self.jobs.try_send(Job::Free(sound));
             }
         }
+        // Always through the muffle (open to 20 kHz outside): bypassed in the
+        // open and taken up again at a doorway, it started from stale state,
+        // a click mid-rumble.
         let exposure = self.scene.exposure.clamp(0.0, 1.0);
-        if exposure < 0.98 {
-            let gain = 0.4 + 0.6 * exposure;
-            for sample in out {
-                let first = self.muffle[0].process(*sample);
-                *sample = gain * self.muffle[1].process(first);
-            }
+        let gain = 0.4 + 0.6 * exposure;
+        for sample in out {
+            let first = self.muffle[0].process(*sample);
+            *sample = gain * self.muffle[1].process(first);
         }
     }
 }
