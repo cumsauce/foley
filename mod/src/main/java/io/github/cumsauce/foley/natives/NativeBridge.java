@@ -5,6 +5,7 @@ import static java.lang.foreign.ValueLayout.JAVA_BYTE;
 import static java.lang.foreign.ValueLayout.JAVA_FLOAT;
 import static java.lang.foreign.ValueLayout.JAVA_INT;
 import static java.lang.foreign.ValueLayout.JAVA_LONG;
+import static java.lang.foreign.ValueLayout.JAVA_SHORT;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
@@ -83,12 +84,11 @@ public final class NativeBridge {
 		bedStrike = linker.downcallHandle(find(library, "foley_bed_strike"),
 				FunctionDescriptor.of(JAVA_INT, ADDRESS, JAVA_FLOAT, JAVA_FLOAT, JAVA_FLOAT, JAVA_LONG), critical);
 		renderOneShot = linker.downcallHandle(find(library, "foley_render_one_shot"),
-				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_FLOAT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS), critical);
+				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_FLOAT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS));
 		renderContact = linker.downcallHandle(find(library, "foley_render_contact"),
-				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_INT, JAVA_FLOAT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS),
-				critical);
+				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_INT, JAVA_FLOAT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS));
 		renderVoice = linker.downcallHandle(find(library, "foley_render_voice"),
-				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_INT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS), critical);
+				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_INT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS));
 		lastError = linker.downcallHandle(find(library, "foley_last_error"),
 				FunctionDescriptor.of(SIZE_T, ADDRESS, SIZE_T));
 	}
@@ -111,7 +111,14 @@ public final class NativeBridge {
 
 	/** Renders the next samples of {@code bed} into {@code out}, which must be native memory, 2 bytes a sample. */
 	public void bedRender(MemorySegment bed, MemorySegment out) {
-		check((int) invoke(bedRender, bed, out, out.byteSize() / 2));
+		int code;
+		try {
+			// Exact, so the stream thread's call boxes and allocates nothing.
+			code = (int) bedRender.invokeExact(bed, out, out.byteSize() / 2);
+		} catch (Throwable t) {
+			throw new IllegalStateException("bad downcall", t);
+		}
+		check(code);
 	}
 
 	public void bedDestroy(MemorySegment bed) {
@@ -152,16 +159,24 @@ public final class NativeBridge {
 	/** Most sounds fit this many samples (8 s), so they're made once; a longer one is made again to fit. */
 	private static final int USUAL = 8 * 48_000;
 
-	/** Renders once into a buffer big enough for nearly every sound, again only if it wasn't. */
+	/**
+	 * Renders once into a buffer big enough for nearly every sound, again only if it wasn't. Into native memory, not a
+	 * Java array: a render can take tens of milliseconds, too long to hold off the garbage collector as a critical
+	 * call on the heap would.
+	 */
 	private short[] render(Render render) {
-		long[] needed = new long[1];
-		short[] out = new short[USUAL];
-		check((int) render.call(MemorySegment.ofArray(out), MemorySegment.ofArray(needed)));
-		if (needed[0] > out.length) {
-			out = new short[Math.toIntExact(needed[0])];
-			check((int) render.call(MemorySegment.ofArray(out), MemorySegment.ofArray(needed)));
+		try (Arena arena = Arena.ofConfined()) {
+			MemorySegment needed = arena.allocate(SIZE_T);
+			MemorySegment out = arena.allocate(JAVA_SHORT, USUAL);
+			check((int) render.call(out, needed));
+			long length = needed.get(SIZE_T, 0);
+			if (length > USUAL) {
+				out = arena.allocate(JAVA_SHORT, length);
+				check((int) render.call(out, needed));
+				length = needed.get(SIZE_T, 0);
+			}
+			return out.asSlice(0, length * 2).toArray(JAVA_SHORT);
 		}
-		return java.util.Arrays.copyOf(out, (int) needed[0]);
 	}
 
 	private void check(int code) {
