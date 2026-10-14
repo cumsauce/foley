@@ -21,7 +21,7 @@ const DAMPING: f32 = 0.045;
 /// liquid-sound model): a sine at the Minnaert frequency, decaying at
 /// π f δ, rising in pitch as it nears the surface (by ξ times the decay rate
 /// over a second, ξ = 0.1), louder the bigger it is.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Bubble {
     frequency: f32,
     damping: f32,

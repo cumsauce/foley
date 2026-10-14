@@ -30,7 +30,7 @@ const SPEED_OF_SOUND: f32 = 343.0;
 
 /// One bursting bubble: the cavity it leaves rings as a Helmholtz resonator
 /// (a mode), under a low thump, with a sizzle of spatter.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Burst {
     /// Each mode as a phasor (re, im, cos, sin) shrunk by its decay.
     modes: [[f32; 4]; 2],

@@ -29,7 +29,7 @@ const MAX_VOICES: usize = 64;
 const MAX_EVENTS: usize = 16;
 
 /// One crackle: a burst of noise as a pocket of resin or steam bursts.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Crackle {
     amplitude: f32,
     step: f32,
@@ -37,7 +37,7 @@ struct Crackle {
 
 /// A ringing: `amplitude` e^(-t/τ) sin(2π f t), as a phasor turned and
 /// shrunk each sample, so it costs a few multiplies and no trigonometry.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 struct Ring {
     re: f32,
     im: f32,
@@ -108,9 +108,22 @@ enum Event {
     Settle {
         knock: Ring,
         ticks: [Tick; MAX_TICKS],
+        count: usize,
+        /// When the last tick has ended.
+        ticks_end: u32,
         at: u32,
         length: u32,
     },
+}
+
+/// For [`Fixed`]'s empty slots.
+impl Default for Event {
+    fn default() -> Self {
+        Event::Snap {
+            ring: Ring::default(),
+            left: 0,
+        }
+    }
 }
 
 impl Event {
@@ -141,16 +154,20 @@ impl Event {
         let knock = Ring::new(0.12, 150.0 + 200.0 * rng.unit(), 30.0);
         let mut ticks = [Tick::default(); MAX_TICKS];
         let count = 10 + (rng.unit() * 15.0) as usize;
+        let mut ticks_end = 0;
         for tick in &mut ticks[..count] {
             *tick = Tick {
                 start: (0.4 * rng.unit().powi(2) * rate) as u32,
                 amplitude: 0.01 + 0.03 * rng.unit(),
                 hz: 2000.0 + 4000.0 * rng.unit(),
             };
+            ticks_end = ticks_end.max(tick.start + TICK_SAMPLES);
         }
         Event::Settle {
             knock,
             ticks,
+            count,
+            ticks_end,
             at: 0,
             length: (0.5 * rate) as u32,
         }
@@ -191,6 +208,8 @@ impl Event {
             Event::Settle {
                 knock,
                 ticks,
+                count,
+                ticks_end,
                 at,
                 length,
             } => {
@@ -198,7 +217,7 @@ impl Event {
                     return None;
                 }
                 let mut s = knock.next();
-                for tick in ticks.iter().filter(|k| k.amplitude > 0.0) {
+                for tick in ticks[..*count].iter().filter(|_| *at < *ticks_end) {
                     if let Some(i) = at.checked_sub(tick.start).filter(|i| *i < TICK_SAMPLES) {
                         let t = i as f32 / rate;
                         s += tick.amplitude * (-1500.0 * t).exp() * (TAU * tick.hz * t).sin();

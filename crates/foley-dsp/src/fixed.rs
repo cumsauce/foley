@@ -1,27 +1,30 @@
 //! A list of at most `N`, kept inline, for a bed's voices.
 
 /// A list of at most `N` items, kept inline: pushing past `N` drops the new
-/// one, and nothing is ever allocated.
+/// one, and nothing is ever allocated. The slots past its length hold
+/// defaults, so the items are a plain slice with no check per item.
 #[derive(Debug)]
 pub struct Fixed<T, const N: usize> {
-    items: [Option<T>; N],
+    items: [T; N],
     len: usize,
 }
 
-impl<T, const N: usize> Default for Fixed<T, N> {
+impl<T: Default, const N: usize> Default for Fixed<T, N> {
     fn default() -> Self {
         Fixed::new()
     }
 }
 
-impl<T, const N: usize> Fixed<T, N> {
+impl<T: Default, const N: usize> Fixed<T, N> {
     pub fn new() -> Self {
         Fixed {
-            items: core::array::from_fn(|_| None),
+            items: core::array::from_fn(|_| T::default()),
             len: 0,
         }
     }
+}
 
+impl<T, const N: usize> Fixed<T, N> {
     pub fn len(&self) -> usize {
         self.len
     }
@@ -39,7 +42,7 @@ impl<T, const N: usize> Fixed<T, N> {
         if self.len == N {
             return false;
         }
-        self.items[self.len] = Some(item);
+        self.items[self.len] = item;
         self.len += 1;
         true
     }
@@ -48,9 +51,8 @@ impl<T, const N: usize> Fixed<T, N> {
     pub fn retain(&mut self, mut keep: impl FnMut(&T) -> bool) {
         let mut kept = 0;
         for i in 0..self.len {
-            let item = self.items[i].take();
-            if item.as_ref().is_some_and(&mut keep) {
-                self.items[kept] = item;
+            if keep(&self.items[i]) {
+                self.items.swap(kept, i);
                 kept += 1;
             }
         }
@@ -58,20 +60,20 @@ impl<T, const N: usize> Fixed<T, N> {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &T> {
-        self.items[..self.len].iter().flatten()
+        self.items[..self.len].iter()
     }
 
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
-        self.items[..self.len].iter_mut().flatten()
+        self.items[..self.len].iter_mut()
     }
 }
 
 impl<'a, T, const N: usize> IntoIterator for &'a mut Fixed<T, N> {
     type Item = &'a mut T;
-    type IntoIter = core::iter::Flatten<core::slice::IterMut<'a, Option<T>>>;
+    type IntoIter = core::slice::IterMut<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.items[..self.len].iter_mut().flatten()
+        self.items[..self.len].iter_mut()
     }
 }
 

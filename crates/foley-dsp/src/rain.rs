@@ -115,8 +115,15 @@ enum Voice {
     Struck(Struck),
 }
 
+/// For [`Fixed`]'s empty slots.
+impl Default for Voice {
+    fn default() -> Self {
+        Voice::Bubble(Bubble::default())
+    }
+}
+
 /// A struck surface: two damped modes and a short noise burst.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Struck {
     /// Each mode as a phasor (re, im) turned by (cos, sin) of its step a
     /// sample and shrunk by its decay, so a mode costs a few multiplies a
