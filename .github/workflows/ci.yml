@@ -35,6 +35,12 @@ jobs:
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo xtask header --check
       - run: cargo test --workspace --locked
+      # Fails on any allocation, lock, sleep or system call on the audio
+      # thread.
+      - name: RealtimeSanitizer
+        env:
+          RTSAN_ENABLE: "1"
+        run: cargo test --locked -p foley-ffi audio_thread
       - name: Synthesis bench
         run: cargo run --release --locked -p foley-synth --example bed_bench
 

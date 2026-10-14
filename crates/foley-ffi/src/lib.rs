@@ -582,7 +582,9 @@ mod tests {
 
     /// Everything the stream thread calls (render, a new scene, a strike)
     /// allocates and frees nothing, for every bed, as scenes change and
-    /// voices come and go.
+    /// voices come and go. With `RTSAN_ENABLE=1` (in CI), RealtimeSanitizer
+    /// also watches those calls for anything else that can block: locks,
+    /// sleeps, system calls.
     #[test]
     fn the_audio_thread_never_allocates() {
         let rain = |rate: f32| [rate, 0.4, 0.2, 0.1, 0.1, 0.1, 0.05, 0.05, 2.0, 4.0];
@@ -650,6 +652,7 @@ mod tests {
                             );
                             heard |= pcm.iter().any(|s| *s != 0);
                         }
+                        rtsan_standalone::realtime_exit();
                     });
                     assert_eq!(made, 0, "bed {kind}, scene {n}: allocated {made} times");
                     // Gives the thunder thread time to make and free.

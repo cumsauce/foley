@@ -13,5 +13,8 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 foley-synth.workspace = true
 
+[dev-dependencies]
+rtsan-standalone.workspace = true
+
 [lints]
 workspace = true
