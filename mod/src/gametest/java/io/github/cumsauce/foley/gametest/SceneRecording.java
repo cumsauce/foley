@@ -31,6 +31,10 @@ public class SceneRecording implements FabricClientGameTest {
 			walk(context);
 			return;
 		}
+		if (mode.equals("idle")) {
+			idle(context);
+			return;
+		}
 		FoleyConfig all = FoleyConfig.ALL;
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			singleplayer.getConnection().waitForChunksRender();
@@ -173,6 +177,45 @@ public class SceneRecording implements FabricClientGameTest {
 					context.waitTicks(10);
 				}
 				FoleyClient.LOGGER.info("SCENE end hit-{} at {} ms", name, System.currentTimeMillis());
+			}
+		}
+	}
+
+	/** Wandering in a forest for minutes, with Earshot and then without: for faults that come with time. */
+	private static void idle(ClientGameTestContext context) {
+		try (TestSingleplayerContext singleplayer = context.worldBuilder().setUseConsistentSettings(false)
+				.adjustSettings(settings -> settings.setSeed("foley")).create()) {
+			var server = singleplayer.getServer();
+			BlockPos forest = server.computeOnServer(game -> {
+				var found = game.overworld().findClosestBiome3d(b -> b.is(Biomes.FOREST), BlockPos.ZERO.atY(64), 3200, 32, 64);
+				return found == null ? BlockPos.ZERO : found.getFirst();
+			});
+			for (String c : new String[] {"gamemode creative @a", "time set noon", "weather clear",
+					"gamerule doDaylightCycle false", "gamerule doWeatherCycle false"}) {
+				server.runCommand(c);
+			}
+			server.runCommand("spreadplayers " + forest.getX() + " " + forest.getZ() + " 0 1 false @a");
+			singleplayer.getConnection().waitForChunksRender();
+			context.runOnClient(mc -> earshotHigh());
+			context.waitTicks(100);
+			for (boolean bypass : new boolean[] {false, true}) {
+				context.runOnClient(mc -> earshot(bypass));
+				String name = bypass ? "idle-bare" : "idle-earshot";
+				FoleyClient.LOGGER.info("SCENE phase {} at {} ms", name, System.currentTimeMillis());
+				long end = System.currentTimeMillis() + 240_000;
+				// Wandering: walking, turning, now and then sprinting and jumping.
+				var input = context.getInput();
+				input.holdKey(options -> options.keyUp);
+				for (int tick = 0; System.currentTimeMillis() < end; tick++) {
+					input.lookAt(tick * 1.5f % 360, 0);
+					if (tick % 40 == 0) input.pressKey(options -> options.keyJump);
+					if (tick % 200 == 0) input.holdKey(options -> options.keySprint);
+					if (tick % 200 == 100) input.releaseKey(options -> options.keySprint);
+					context.waitTick();
+				}
+				input.releaseKey(options -> options.keyUp);
+				input.releaseKey(options -> options.keySprint);
+				FoleyClient.LOGGER.info("SCENE end {} at {} ms", name, System.currentTimeMillis());
 			}
 		}
 	}

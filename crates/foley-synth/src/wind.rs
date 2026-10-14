@@ -56,6 +56,10 @@ pub struct Wind {
     /// Leaves knocking together: each a few ms of bright noise.
     leaf: [BandPass; 2],
     leaf_envelope: f32,
+    /// The envelopes as heard: each tick and swell rises over a fraction of
+    /// a millisecond instead of in one sample, which crackled.
+    leaf_heard: f32,
+    rustle_heard: f32,
     until_leaf: f32,
     flutter: Wobble,
     /// A bough creaking in a strong wind: stick-slip at a wandering rate.
@@ -81,6 +85,8 @@ impl Wind {
             until_rustle: 0.0,
             leaf: [BandPass::new(2500.0, 0.8), BandPass::new(4800.0, 1.2)],
             leaf_envelope: 0.0,
+            leaf_heard: 0.0,
+            rustle_heard: 0.0,
             until_leaf: 0.0,
             flutter: Wobble::new(6.0, 4.0, 0.3, 1.5),
             creak: BandPass::new(900.0, 3.0),
@@ -145,12 +151,14 @@ impl Wind {
             self.until_leaf = self.rng.exponential(rate.min(1500.0));
         }
         self.leaf_envelope *= 0.985;
+        // About 0.4 ms to rise.
+        self.leaf_heard += 0.05 * (self.leaf_envelope.min(1.5) - self.leaf_heard);
         let flutter = self.flutter.next(self.rng.signed());
         let noise = self.rng.signed();
         // Leaves in a breeze are loudest at 2 to 5 kHz, not up in the hiss.
         let leaf = self.leaf[0].process(noise) + 0.4 * self.leaf[1].process(noise);
         let loud = LEAVES * leaves * reach * (0.6 + canopy / 40.0);
-        out += loud * flutter * self.leaf_envelope.min(1.5) * leaf;
+        out += loud * flutter * self.leaf_heard * leaf;
         // Gusts sweeping through the crowns.
         if u > 0.5 {
             self.until_rustle -= dt;
@@ -160,9 +168,10 @@ impl Wind {
                 self.until_rustle = self.rng.exponential(0.3 * canopy * leaves);
             }
             self.rustle_envelope *= 0.99995;
+            // A swell takes some 20 ms to come up through the crowns.
+            self.rustle_heard += 0.001 * (self.rustle_envelope - self.rustle_heard);
             let rustle = self.rustle.process(self.rng.signed());
-            out +=
-                0.006 * self.rustle_envelope * rustle * leaves * reach * (canopy / 10.0).min(2.0);
+            out += 0.006 * self.rustle_heard * rustle * leaves * reach * (canopy / 10.0).min(2.0);
         }
         // Creaks: a bough's fibres sticking and slipping, a few hundred times a
         // second, wandering in pitch, for half a second or so.

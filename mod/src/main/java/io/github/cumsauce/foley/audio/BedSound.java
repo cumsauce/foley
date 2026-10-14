@@ -58,19 +58,32 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 	private float heardWeight = 1;
 
 	/**
-	 * Plays it {@code offset} from the player's ear (in world axes, so it stays put as they turn), following them, at
-	 * {@code weight} times Foley's volume. Client thread.
+	 * Plays it {@code offset} from the player's ear (in world axes, so it stays put as they turn), at {@code weight}
+	 * times Foley's volume. It is head-relative, its offset turned into the head's frame each tick: not a point in the
+	 * world, so Earshot doesn't occlude or reroute it as that point passes through trees and hills, which crackled.
+	 * Client thread.
 	 */
 	public BedSound<S> follow(Vec3 offset, float weight) {
 		this.offset = offset;
 		this.weight = weight;
 		this.heardWeight = weight;
-		relative = false;
+		relative = true;
 		attenuation = SoundInstance.Attenuation.NONE;
 		this.volume = io.github.cumsauce.foley.FoleyClient.gain() * weight;
-		var player = net.minecraft.client.Minecraft.getInstance().player;
-		if (player != null) moveTo(player.getEyePosition().add(offset));
+		turn();
 		return this;
+	}
+
+	/** Sets the head-relative position from the world offset and where the player faces. */
+	private void turn() {
+		var player = net.minecraft.client.Minecraft.getInstance().player;
+		if (player == null || offset == null) return;
+		double yaw = Math.toRadians(player.getYRot());
+		// The player faces (-sin yaw, 0, cos yaw); their right is (-cos yaw, 0, -sin yaw). OpenAL's head frame has
+		// +x to the right and -z ahead.
+		double right = offset.x * -Math.cos(yaw) + offset.z * -Math.sin(yaw);
+		double ahead = offset.x * -Math.sin(yaw) + offset.z * Math.cos(yaw);
+		moveTo(new Vec3(right, offset.y, -ahead));
 	}
 
 	/** Heads for {@code weight} times Foley's volume, over a second or so. Client thread. */
@@ -136,10 +149,7 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 	public void tick() {
 		heardWeight += (weight - heardWeight) * 0.05f;
 		volume = io.github.cumsauce.foley.FoleyClient.gain() * heardWeight;
-		if (offset != null) {
-			var player = net.minecraft.client.Minecraft.getInstance().player;
-			if (player != null) moveTo(player.getEyePosition().add(offset));
-		}
+		if (offset != null) turn();
 	}
 
 	@Override

@@ -21,7 +21,7 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public final class Layers {
 	/** The layer's volume for each contact: tap, place, land, break, step. */
-	private static final float[] VOLUME = {0.5f, 0.6f, 0.8f, 0.9f, 0.3f};
+	private static final float[] VOLUME = {0.5f, 0.6f, 0.8f, 0.9f, 0.18f};
 	public static final String[] CONTACTS = {"tap", "place", "land", "break", "step"};
 
 	private Layers() {}

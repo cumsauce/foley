@@ -46,7 +46,7 @@ public final class Brush {
 		travelled = 0;
 		float speed = (float) (moved * 20);
 		Sounds.play(minecraft, "brush_" + plant, SoundSource.PLAYERS, now.x, now.y + 0.5, now.z,
-				Math.clamp(0.15f + 0.1f * speed, 0.15f, 0.7f), 0.9f + 0.2f * minecraft.player.getRandom().nextFloat());
+				Math.clamp(0.1f + 0.06f * speed, 0.1f, 0.4f), 0.9f + 0.2f * minecraft.player.getRandom().nextFloat());
 	}
 
 	/** 0 grass, 1 leaves, 2 dry stalks, or -1 for nothing to brush through. */
