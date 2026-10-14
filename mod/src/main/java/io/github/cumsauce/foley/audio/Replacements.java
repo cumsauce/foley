@@ -2,6 +2,8 @@ package io.github.cumsauce.foley.audio;
 
 import io.github.cumsauce.foley.FoleyClient;
 import io.github.cumsauce.foley.config.FoleyConfig;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -20,7 +22,9 @@ import net.minecraft.world.level.material.Fluids;
  * <ul>
  *   <li>its rain, while Foley's rain plays;</li>
  *   <li>its thunder (Foley strikes from the bolt itself, so whether Earshot held this back doesn't matter);</li>
- *   <li>its water, lava and fire ambience, from within reach of Foley's {@link Surroundings} (beyond, it stays);</li>
+ *   <li>its water, lava and fire ambience, from within reach of Foley's {@link Surroundings}; beyond, out to the
+ *       game's 32 blocks, at most {@value #MOST_FAR} of each kind play at once, the rest skipped: a fire or a lava
+ *       lake there played one per block, and ran the game out of sources;</li>
  *   <li>dripstone drips, swapped for a generated drip where the drop lands: into water if it lands in water or a
  *       cauldron, on stone otherwise, or a drop of lava.</li>
  * </ul>
@@ -40,6 +44,11 @@ public final class Replacements {
 			SoundEvents.POINTED_DRIPSTONE_DRIP_WATER_INTO_CAULDRON.location();
 	private static final Set<Identifier> DRIP_LAVA = Set.of(SoundEvents.POINTED_DRIPSTONE_DRIP_LAVA.location(),
 			SoundEvents.POINTED_DRIPSTONE_DRIP_LAVA_INTO_CAULDRON.location());
+	/** At most this many of the game's water, lava or fire sounds play at once beyond Foley's reach, each. */
+	static final int MOST_FAR = 6;
+	/** Those playing now: water, lava, fire. Client thread. */
+	private static final List<List<SoundInstance>> FAR = List.of(new ArrayList<>(), new ArrayList<>(),
+			new ArrayList<>());
 	public static final SoundEvent DRIP = event("drip");
 	public static final SoundEvent DRIP_STONE = event("drip_stone");
 	public static final SoundEvent DRIP_LAVA_EVENT = event("drip_lava");
@@ -64,8 +73,16 @@ public final class Replacements {
 		if (ambience) {
 			boolean wanted = WATER.contains(id) ? FoleyClient.wants(FoleyConfig::water)
 					: LAVA.contains(id) ? FoleyClient.wants(FoleyConfig::lava) : FoleyClient.wants(FoleyConfig::fire);
-			return wanted && Surroundings.within(minecraft.player.getEyePosition(), sound.getX(), sound.getY(), sound.getZ())
-					&& counted();
+			if (!wanted) return false;
+			if (Surroundings.within(minecraft.player.getEyePosition(), sound.getX(), sound.getY(), sound.getZ())) {
+				return counted();
+			}
+			// Beyond reach: the game's own, but only so many at once; the rest blend in anyway.
+			List<SoundInstance> far = FAR.get(WATER.contains(id) ? 0 : LAVA.contains(id) ? 1 : 2);
+			far.removeIf(playing -> !minecraft.getSoundManager().isActive(playing));
+			if (far.size() >= MOST_FAR) return counted();
+			far.add(sound);
+			return false;
 		}
 		SoundEvent drip;
 		if (!FoleyClient.wants(FoleyConfig::drips)) {
