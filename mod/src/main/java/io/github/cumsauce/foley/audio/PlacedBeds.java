@@ -133,6 +133,8 @@ public final class PlacedBeds {
 		private final SoundSource source;
 		private final int kind;
 		@Nullable BedSound<S> sound;
+		/** Ticks it's been fading since there was nothing to hear. */
+		private int fading;
 		/** What it was last aimed at: the sound's centre, its gain, and whether Earshot shapes it. */
 		private Vec3 centre = Vec3.ZERO;
 		/** Where it plays from now, gliding to where it's aimed. */
@@ -150,9 +152,17 @@ public final class PlacedBeds {
 		void keep(Minecraft minecraft, @Nullable S scene, boolean heard, Vec3 eye, Vec3 centre, float gain,
 				boolean attenuated) {
 			if (!heard || scene == null) {
-				stop(minecraft);
+				// Fades out over some 3 s rather than cutting off: the scan losing a fall round a cave's corner or
+				// past its reach stopped it dead.
+				if (sound != null) {
+					sound.weigh(0);
+					fading += SAMPLE_EVERY;
+					if (fading > 60) stop(minecraft);
+				}
 				return;
 			}
+			if (sound != null && fading > 0) sound.weigh(1);
+			fading = 0;
 			this.centre = centre;
 			this.gain = gain;
 			this.shaped = attenuated;
@@ -176,6 +186,7 @@ public final class PlacedBeds {
 		void stop(Minecraft minecraft) {
 			if (sound != null) minecraft.getSoundManager().stop(sound);
 			sound = null;
+			fading = 0;
 		}
 	}
 }
