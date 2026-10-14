@@ -54,6 +54,42 @@ pub fn report(samples: &[i16], read: usize) -> String {
     )
 }
 
+/// What's wrong with `samples`, against what every bed must do (not clip)
+/// and, if `smooth`, what wind and water must (no dropouts, no crackle, no
+/// steps at the reads).
+pub fn problems(samples: &[i16], read: usize, smooth: bool) -> Vec<String> {
+    let mut out = Vec::new();
+    let clipped = samples
+        .iter()
+        .filter(|s| s.unsigned_abs() >= 32_000)
+        .count();
+    if clipped > 0 {
+        out.push(format!("{clipped} samples near full scale"));
+    }
+    if smooth {
+        let x: Vec<f32> = samples.iter().map(|s| f32::from(*s) / 32768.0).collect();
+        let level = levels(&x);
+        let gaps = dropouts(&level);
+        if !gaps.is_empty() {
+            out.push(format!("{} dropouts, from {:.2} s", gaps.len(), gaps[0]));
+        }
+        let crackle = median(
+            &x.chunks(RATE)
+                .filter(|s| s.len() == RATE)
+                .map(crackle)
+                .collect::<Vec<_>>(),
+        );
+        if crackle > 6.0 {
+            out.push(format!("crackle {crackle:.1} (smooth noise is 3)"));
+        }
+        let (steps, _) = read_steps(&level, read);
+        if steps > 1.5 {
+            out.push(format!("level steps {steps:.2}x as large at the reads"));
+        }
+    }
+    out
+}
+
 /// Each 10 ms frame's level, dB.
 fn levels(x: &[f32]) -> Vec<f32> {
     x.as_chunks::<FRAME>()

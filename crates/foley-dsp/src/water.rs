@@ -130,6 +130,10 @@ impl Water {
         let glide = BLOCK as f32 * dt / GLIDE;
         let (mut rate, mut boost, mut plunging, mut roar_level, mut rush_level) =
             (0.0, 1.0, 0.0, 0.0, 0.0);
+        // From afar, single bubbles blur into the surface's rush: their share
+        // falls and the rush's grows, so a far stream murmurs on rather than
+        // plinking with silence between. Near (gain 1) as it was.
+        let (mut plinks, mut murmur) = (1.0, 1.0);
         for sample in out {
             if self.samples.is_multiple_of(BLOCK) {
                 let (to, h) = (self.scene, &mut self.heard);
@@ -152,6 +156,9 @@ impl Water {
                 // A river's surface: turbulence heard as a soft, wide rush,
                 // growing slowly with how much of it there is.
                 rush_level = 0.006 * h.flow.min(100.0).sqrt();
+                let far = 1.0 - h.gain.clamp(0.0, 1.0);
+                plinks = 1.0 - 0.6 * far;
+                murmur = 1.0 + 2.0 * far;
                 // Further away, water loses a little of its sparkle (the ground
                 // takes some highs; Earshot adds the air's own absorption).
                 let cutoff = 6000.0 + 14000.0 * h.gain.sqrt();
@@ -179,6 +186,7 @@ impl Water {
             for voice in &mut self.voices {
                 mix += voice.sample();
             }
+            mix *= plinks;
             let noise = self.rng.signed();
             if roar_level > 0.0 {
                 let low = {
@@ -195,7 +203,7 @@ impl Water {
                 let rush = self.rush[0].process(noise)
                     + 0.7 * self.rush[1].process(noise)
                     + 0.35 * self.ripple.process(noise);
-                mix += rush_level * lap * rush;
+                mix += murmur * rush_level * lap * rush;
             }
             let first = self.distance[0].process(mix);
             let near = self.distance[1].process(first);
