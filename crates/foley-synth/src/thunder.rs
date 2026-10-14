@@ -277,7 +277,12 @@ impl Thunder {
                             celsius,
                             humidity,
                         } => {
-                            if made.send(strike(base, seed, celsius, humidity)).is_err() {
+                            // A strike that fails to make comes back silent, so
+                            // it's still counted off and thunder carries on.
+                            let sound =
+                                std::panic::catch_unwind(|| strike(base, seed, celsius, humidity))
+                                    .unwrap_or_default();
+                            if made.send(sound).is_err() {
                                 return;
                             }
                         }

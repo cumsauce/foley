@@ -58,8 +58,15 @@ public final class PlacedBeds {
 			lava.stop(minecraft);
 			return;
 		}
-		if (ticks++ % SAMPLE_EVERY != 0) return;
 		Vec3 eye = minecraft.player.getEyePosition();
+		if (ticks++ % SAMPLE_EVERY != 0) {
+			// Between samples, a bed at its effective distance keeps its bearing from where the ear is now: aimed
+			// only at each sample, walking past it would swing it round twice a second.
+			water.follow(eye);
+			fire.follow(eye);
+			lava.follow(eye);
+			return;
+		}
 		around = Surroundings.sample(minecraft.level, eye);
 		// With Earshot, a bed fades with distance as any sound does, so it also gets the reverb, air and occlusion
 		// a sound that far off would: it plays at its effective distance, in its direction, at full gain.
@@ -71,15 +78,15 @@ public final class PlacedBeds {
 			water.slots[part].keep(minecraft,
 					w != null && shaped ? new Surroundings.Water(w.flow(), w.falls(), w.gain() > 0 ? SHAPED_GAIN : 0, w.at()) : w,
 					w != null && w.heard() && FoleyClient.wants(FoleyConfig::water),
-					w == null ? eye : heardAt(eye, w.at(), w.gain(), shaped), shaped);
+					eye, w == null ? eye : w.at(), w == null ? 0 : w.gain(), shaped);
 			fire.slots[part].keep(minecraft,
 					f != null && shaped ? new Surroundings.Fire(f.size(), f.gain() > 0 ? SHAPED_GAIN : 0, f.at()) : f,
 					f != null && f.heard() && FoleyClient.wants(FoleyConfig::fire),
-					f == null ? eye : heardAt(eye, f.at(), f.gain(), shaped), shaped);
+					eye, f == null ? eye : f.at(), f == null ? 0 : f.gain(), shaped);
 			lava.slots[part].keep(minecraft,
 					l != null && shaped ? new Surroundings.Lava(l.area(), l.gain() > 0 ? SHAPED_GAIN : 0, l.at()) : l,
 					l != null && l.heard() && FoleyClient.wants(FoleyConfig::lava),
-					l == null ? eye : heardAt(eye, l.at(), l.gain(), shaped), shaped);
+					eye, l == null ? eye : l.at(), l == null ? 0 : l.gain(), shaped);
 		}
 	}
 
@@ -113,6 +120,10 @@ public final class PlacedBeds {
 		void stop(Minecraft minecraft) {
 			for (Slot<S> slot : slots) slot.stop(minecraft);
 		}
+
+		void follow(Vec3 eye) {
+			for (Slot<S> slot : slots) slot.follow(eye);
+		}
 	}
 
 	/** One placed bed, started when there's something to hear, moved as that moves, stopped when it's gone. */
@@ -122,6 +133,10 @@ public final class PlacedBeds {
 		private final SoundSource source;
 		private final int kind;
 		@Nullable BedSound<S> sound;
+		/** What it was last aimed at: the sound's centre, its gain, and whether Earshot shapes it. */
+		private Vec3 centre = Vec3.ZERO;
+		private float gain;
+		private boolean shaped;
 
 		Slot(NativeBridge bridge, String name, SoundSource source, int kind) {
 			this.bridge = bridge;
@@ -130,17 +145,27 @@ public final class PlacedBeds {
 			this.kind = kind;
 		}
 
-		void keep(Minecraft minecraft, @Nullable S scene, boolean heard, Vec3 at, boolean attenuated) {
+		void keep(Minecraft minecraft, @Nullable S scene, boolean heard, Vec3 eye, Vec3 centre, float gain,
+				boolean attenuated) {
 			if (!heard || scene == null) {
 				stop(minecraft);
 				return;
 			}
+			this.centre = centre;
+			this.gain = gain;
+			this.shaped = attenuated;
+			Vec3 at = heardAt(eye, centre, gain, attenuated);
 			if (sound == null || !minecraft.getSoundManager().isActive(sound)) {
 				sound = new BedSound<>(name, source, bridge, kind, scene).place(at, attenuated);
 				minecraft.getSoundManager().play(sound);
 			} else {
 				sound.place(at, attenuated).setScene(scene);
 			}
+		}
+
+		/** Re-aims a bed at its effective distance from the ear at {@code eye}. */
+		void follow(Vec3 eye) {
+			if (sound != null && shaped) sound.place(heardAt(eye, centre, gain, true), true);
 		}
 
 		void stop(Minecraft minecraft) {
