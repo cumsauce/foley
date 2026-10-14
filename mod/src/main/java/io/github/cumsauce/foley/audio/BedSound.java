@@ -223,9 +223,16 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 		 */
 		private ByteBuffer scratch = ByteBuffer.allocateDirect(2 * NativeBridge.SAMPLE_RATE).order(ByteOrder.LITTLE_ENDIAN);
 
+		/**
+		 * At most half a second a read. The game asks a second at a time and keeps four queued, so a change in the
+		 * world was heard up to 4 s late; returning less, it queues four of these instead: 2 s at most, still well
+		 * past any hitch it rides out.
+		 */
+		private static final int MOST_BYTES = NativeBridge.SAMPLE_RATE;
+
 		@Override
 		public synchronized ByteBuffer read(int size) {
-			int bytes = size & ~1;
+			int bytes = Math.min(size, MOST_BYTES) & ~1;
 			if (scratch.capacity() < bytes) {
 				scratch = ByteBuffer.allocateDirect(bytes).order(ByteOrder.LITTLE_ENDIAN);
 			}
