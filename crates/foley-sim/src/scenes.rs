@@ -152,5 +152,69 @@ pub fn all() -> Vec<Scene> {
                 },
             ],
         },
+        Scene {
+            name: "long-woods",
+            about: "Ten minutes in a breezy wood by a stream, for faults that come with time",
+            seconds: 600.0,
+            tracks: vec![
+                Track {
+                    name: "wind",
+                    kind: FOLEY_BED_WIND,
+                    every: 5,
+                    params: |t| vec![4.0 + 2.0 * (t / 37.0).sin(), 0.6, 0.85],
+                    strikes: &[],
+                },
+                Track {
+                    name: "water",
+                    kind: FOLEY_BED_WATER,
+                    every: 10,
+                    params: |t| vec![20.0, 2.0, 0.5 + 0.3 * (t / 53.0).sin()],
+                    strikes: &[],
+                },
+            ],
+        },
+        Scene {
+            name: "snaps",
+            about: "Everything jumping in a tick, as on a teleport or a door: calm to gale, outside to in, near to far",
+            seconds: 40.0,
+            tracks: vec![
+                Track {
+                    name: "wind",
+                    kind: FOLEY_BED_WIND,
+                    every: 5,
+                    params: |t| match (t / 5.0) as u32 % 4 {
+                        0 => vec![1.0, 1.0, 0.9],
+                        1 => vec![25.0, 1.0, 0.9],
+                        2 => vec![25.0, 0.0, 0.0],
+                        _ => vec![3.0, 1.0, 0.0],
+                    },
+                    strikes: &[],
+                },
+                Track {
+                    name: "water",
+                    kind: FOLEY_BED_WATER,
+                    every: 10,
+                    params: |t| match (t / 5.0) as u32 % 4 {
+                        0 => vec![2.0, 0.0, 0.2],
+                        1 => vec![100.0, 50.0, 1.0],
+                        2 => vec![100.0, 50.0, 0.05],
+                        _ => vec![0.0, 0.0, 0.0],
+                    },
+                    strikes: &[],
+                },
+                Track {
+                    name: "rain",
+                    kind: FOLEY_BED_RAIN,
+                    every: 10,
+                    params: |t| match (t / 5.0) as u32 % 4 {
+                        0 => rain(0.0, 0.6, 0.3, None),
+                        1 => rain(150.0, 0.6, 0.3, None),
+                        2 => rain(150.0, 0.6, 0.3, Some((5.0, 3.0))),
+                        _ => rain(5.0, 0.0, 0.0, None),
+                    },
+                    strikes: &[],
+                },
+            ],
+        },
     ]
 }

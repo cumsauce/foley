@@ -173,15 +173,21 @@ impl Wind {
         // the harder it blows. (Ticks of a millisecond, as this once made,
         // stood apart in a breeze and crackled.) The steps are scaled so the
         // level is what the ticks gave.
+        let rate = (30.0 + 5.0 * canopy * canopy * leaves).min(1500.0);
         self.until_leaf -= dt;
         if self.until_leaf <= 0.0 {
             self.leaf_envelope += LEAF_STEP * (0.3 + 0.7 * self.rng.unit());
-            let rate = 30.0 + 5.0 * canopy * canopy * leaves;
-            self.until_leaf = self.rng.exponential(rate.min(1500.0));
+            self.until_leaf = self.rng.exponential(rate);
         }
         self.leaf_envelope *= LEAF_DECAY;
+        // So many leaves are in earshot that the hush thins but never stops:
+        // never under a third of its mean (a step of 0.65 on average, at
+        // `rate`, each lasting 1 / (1 - LEAF_DECAY) samples). Chance gaps
+        // between the swishes left 20 ms holes in a light breeze.
+        let mean = rate / SAMPLE_RATE as f32 * 0.65 * LEAF_STEP / (1.0 - LEAF_DECAY);
+        let swishes = self.leaf_envelope.max(mean / 3.0).min(1.5);
         // About 5 ms to rise: no leaf starts with a click.
-        self.leaf_heard += 0.004 * (self.leaf_envelope.min(1.5) - self.leaf_heard);
+        self.leaf_heard += 0.004 * (swishes - self.leaf_heard);
         let flutter = self.flutter.next(self.rng.signed());
         let noise = self.rng.signed();
         // Foliage rustles mostly at 1 to 3 kHz, falling away above.
