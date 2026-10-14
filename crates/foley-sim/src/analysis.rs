@@ -55,8 +55,8 @@ pub fn report(samples: &[i16], read: usize) -> String {
 }
 
 /// What's wrong with `samples`, against what every bed must do (not clip)
-/// and, if `smooth`, what wind and water must (no dropouts, no crackle, no
-/// steps at the reads).
+/// and, if `smooth`, what wind and water must (no clicks, no dropouts, no
+/// crackle, no steps at the reads).
 pub fn problems(samples: &[i16], read: usize, smooth: bool) -> Vec<String> {
     let mut out = Vec::new();
     let clipped = samples
@@ -69,6 +69,10 @@ pub fn problems(samples: &[i16], read: usize, smooth: bool) -> Vec<String> {
     if smooth {
         let x: Vec<f32> = samples.iter().map(|s| f32::from(*s) / 32768.0).collect();
         let level = levels(&x);
+        let ticks = clicks(&x);
+        if ticks > 0 {
+            out.push(format!("{ticks} clicks"));
+        }
         let gaps = dropouts(&level);
         if !gaps.is_empty() {
             out.push(format!("{} dropouts, from {:.2} s", gaps.len(), gaps[0]));

@@ -197,9 +197,11 @@ impl Wind {
         let loud = LEAVES * leaves * reach * (0.6 + canopy / 40.0) * (2.0 - canopy / 20.0);
         out += loud * flutter * self.leaf_heard * leaf;
         // Gusts sweeping through the crowns.
-        if u > 0.5 {
+        // Always played (a swell dies away on its own); only new swells wait
+        // for a breeze. Cut off below one, a swell stopped dead, a click.
+        {
             self.until_rustle -= dt;
-            if self.until_rustle <= 0.0 {
+            if self.until_rustle <= 0.0 && u > 0.5 {
                 self.rustle_envelope =
                     (self.rustle_envelope + 0.5 + 0.5 * self.rng.unit()).min(1.5);
                 self.until_rustle = self.rng.exponential(0.3 * canopy * leaves);
@@ -255,8 +257,9 @@ impl Wind {
             let (u, ear) = (self.speed, self.ear);
             // Amplitude ∝ U³, against a 10 m/s wind; muffled to a tenth indoors.
             // Amplitude ∝ U³, capped for gales and flight; never quite silent outside.
-            let level = (0.06 * (ear / 10.0).powi(3).min(2.5)
-                + if ear > 0.3 { 0.004 } else { 0.0 })
+            // The floor fades in from 0.1 to 0.5 m/s: switched on at a
+            // threshold, it stepped from nothing in a sample, a click.
+            let level = (0.06 * (ear / 10.0).powi(3).min(2.5) + 0.004 * smooth((ear - 0.1) / 0.4))
                 * (0.1 + 0.9 * exposure);
             let roar = self.roar.process(self.rng.signed());
             let whoosh = self.whoosh.process(self.rng.signed());

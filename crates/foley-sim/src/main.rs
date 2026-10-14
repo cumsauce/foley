@@ -193,9 +193,7 @@ fn walks(seeds: u64, read: usize, out: &std::path::Path) -> usize {
             };
             let samples = play_with(name, kind, every, &at, &[], 600.0, read);
             let problems = analysis::problems(&samples, read, true);
-            if !problems.is_empty() {
-                analysis::write_wav(&out.join(format!("walk{seed}-{name}.wav")), &samples);
-            }
+            analysis::write_wav(&out.join(format!("walk{seed}-{name}.wav")), &samples);
             println!(
                 "  seed {seed} {name:6} {} {}",
                 if problems.is_empty() { "ok  " } else { "FAIL" },
