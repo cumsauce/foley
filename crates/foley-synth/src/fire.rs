@@ -123,7 +123,8 @@ impl Fire {
         // The fire's width, m, if its blocks were a disc.
         let across = (4.0 * size / PI).sqrt().max(0.3);
         let puff_hz = 1.5 / across.sqrt();
-        let roar_level = 0.9 * size.sqrt();
+        let root = size.sqrt();
+        let roar_level = 0.9 * root;
         let rate = (CRACKLES * size).min(MAX_CRACKLES);
         for sample in out {
             self.puff = (self.puff + puff_hz * dt * (0.8 + 0.4 * self.rng.unit())) % 1.0;
@@ -171,11 +172,11 @@ impl Fire {
             // The flames' flicker: brighter noise, its level wandering about
             // ten times a second.
             let flicker = self.flicker.next(self.rng.signed());
-            let flame = 0.06 * size.sqrt().min(6.0) * flicker * self.flame.process(noise);
+            let flame = 0.06 * root.min(6.0) * flicker * self.flame.process(noise);
             if size > 0.0 {
                 self.until_hiss -= dt;
                 if self.until_hiss <= 0.0 {
-                    self.until_hiss = self.rng.exponential(HISSES * size.sqrt());
+                    self.until_hiss = self.rng.exponential(HISSES * root);
                     if self.events.len() < MAX_EVENTS {
                         let mut sound = self.spare.pop().unwrap_or_default();
                         hiss(&mut self.rng, &mut sound);
@@ -184,7 +185,7 @@ impl Fire {
                 }
                 self.until_settle -= dt;
                 if self.until_settle <= 0.0 {
-                    self.until_settle = self.rng.exponential(SETTLES * size.sqrt());
+                    self.until_settle = self.rng.exponential(SETTLES * root);
                     if self.events.len() < MAX_EVENTS {
                         let mut sound = self.spare.pop().unwrap_or_default();
                         settle(&mut self.rng, &mut sound);

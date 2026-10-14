@@ -7,7 +7,10 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.sound.sampled.AudioFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractSoundInstance;
@@ -176,21 +179,37 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 		return CompletableFuture.completedFuture(stream);
 	}
 
-	/** The native bed, read a buffer at a time on the game's stream thread. */
+	/**
+	 * The native bed, read a buffer at a time on the game's stream thread. Scenes and strikes are handed over without
+	 * a lock and taken up before the next buffer, so the client thread never waits on a render.
+	 */
 	private final class Stream implements AudioStream {
 		private final MemorySegment bed;
 		private boolean closed;
+		private final AtomicReference<float @Nullable []> pending = new AtomicReference<>();
+		private final Queue<Strike> flashes = new ConcurrentLinkedQueue<>();
 
 		Stream(MemorySegment bed) {
 			this.bed = bed;
 		}
 
-		synchronized void apply(S scene) {
-			if (!closed) bridge.bedSetScene(bed, scene.params());
+		void apply(S scene) {
+			pending.set(scene.params());
 		}
 
-		synchronized void strike(float x, float y, float z, long seed) {
-			if (!closed) bridge.bedStrike(bed, x, y, z, seed);
+		void strike(float x, float y, float z, long seed) {
+			flashes.add(new Strike(x, y, z, seed));
+		}
+
+		/** Takes up the latest scene and any flashes. Stream thread, holding the lock. */
+		private void catchUp() {
+			float[] params = pending.getAndSet(null);
+			try {
+				if (params != null) bridge.bedSetScene(bed, params);
+				for (Strike s; (s = flashes.poll()) != null; ) bridge.bedStrike(bed, s.x(), s.y(), s.z(), s.seed());
+			} catch (RuntimeException e) {
+				FoleyClient.LOGGER.warn("Foley bed rejected its scene", e);
+			}
 		}
 
 		@Override
@@ -212,6 +231,7 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 			}
 			ByteBuffer buffer = scratch.clear().limit(bytes);
 			if (closed) return buffer.limit(0);
+			catchUp();
 			bridge.bedRender(bed, MemorySegment.ofBuffer(buffer));
 			rendered += bytes / 2;
 			return buffer;
