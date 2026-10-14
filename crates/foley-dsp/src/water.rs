@@ -188,7 +188,9 @@ impl Water {
             }
             mix *= plinks;
             let noise = self.rng.signed();
-            if roar_level > 0.0 {
+            // Always run, even silent: skipped and taken up again, their
+            // filters started from stale state, a click as a fall came near.
+            {
                 let low = {
                     let first = self.roar[0].process(noise);
                     self.roar[1].process(first)
@@ -197,7 +199,7 @@ impl Water {
                 let surge = self.surge.next(self.rng.signed());
                 mix += roar_level * (2.0 * low + 0.22 * surge * spray);
             }
-            if rush_level > 0.0 {
+            {
                 // Lapping: the rush swells and ebbs a little, about once a second.
                 let lap = self.lapping.next(self.rng.signed());
                 let rush = self.rush[0].process(noise)
