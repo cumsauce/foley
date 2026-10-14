@@ -1,4 +1,8 @@
-use std::f32::consts::{PI, TAU};
+#[allow(unused_imports)] // Some of these are in core; the rest come from std.
+use foley_math::Float as _;
+
+use crate::Fixed;
+use core::f32::consts::{PI, TAU};
 
 use crate::{LowPass, Rng, SAMPLE_RATE};
 
@@ -100,7 +104,7 @@ pub struct Lava {
     scene: LavaScene,
     rumble: [LowPass; 2],
     until_burst: f32,
-    bursts: Vec<Burst>,
+    bursts: Fixed<Burst, MAX_VOICES>,
 }
 
 impl Lava {
@@ -110,7 +114,7 @@ impl Lava {
             scene: LavaScene::NONE,
             rumble: [LowPass::new(60.0), LowPass::new(60.0)],
             until_burst: 0.0,
-            bursts: Vec::with_capacity(MAX_VOICES),
+            bursts: Fixed::new(),
         }
     }
 
@@ -151,6 +155,8 @@ impl Lava {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[allow(unused_imports)]
+    use std::{vec, vec::Vec};
 
     #[test]
     fn a_cavity_rings_as_a_helmholtz_resonator() {

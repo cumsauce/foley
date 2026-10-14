@@ -10,6 +10,8 @@
 #![allow(unsafe_code)]
 
 mod guard;
+#[cfg(test)]
+mod no_alloc;
 
 use foley_synth::{
     Call, Contact, Fire, FireScene, Lava, LavaScene, Material, Mob, Plant, Rain, RainScene,
@@ -114,6 +116,8 @@ pub const FOLEY_ERR_INVALID_ARGUMENT: i32 = -1;
 pub const FOLEY_ERR_PANIC: i32 = -3;
 
 #[derive(Debug)]
+// Rain's voices are inline, so it's the biggest; a bed is boxed once.
+#[allow(clippy::large_enum_variant)]
 enum Synth {
     Rain(Rain),
     Wind(Wind),
@@ -127,14 +131,18 @@ enum Synth {
 #[derive(Debug)]
 pub struct FoleyBed {
     synth: Synth,
-    scratch: Vec<f32>,
+    /// One glide block, rendered before the level guard: render never
+    /// allocates, however many frames it's asked for.
+    scratch: [f32; GLIDE_BLOCK],
     /// The level guard's envelope and gain.
     envelope: f32,
     guard: f32,
     /// The scene last set, and the one heard now, gliding towards it so a
     /// change (the game samples the world a few times a second) never steps.
-    target: Vec<f32>,
-    heard: Vec<f32>,
+    target: [f32; MAX_PARAMS],
+    heard: [f32; MAX_PARAMS],
+    /// How many params this kind takes; 0 until a scene is set.
+    params: usize,
 }
 
 /// Scenes glide this often, samples, and over about this long, seconds.
@@ -172,13 +180,12 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
         };
         *out = Box::into_raw(Box::new(FoleyBed {
             synth,
-            // The game reads a second at a time; sized now so rendering
-            // never allocates.
-            scratch: Vec::with_capacity(SAMPLE_RATE as usize),
+            scratch: [0.0; GLIDE_BLOCK],
             envelope: 0.0,
             guard: 1.0,
-            target: Vec::with_capacity(MAX_PARAMS),
-            heard: Vec::with_capacity(MAX_PARAMS),
+            target: [0.0; MAX_PARAMS],
+            heard: [0.0; MAX_PARAMS],
+            params: 0,
         }));
         Ok(())
     })
@@ -208,11 +215,11 @@ pub unsafe extern "C" fn foley_bed_set_scene(
         // Checked (and applied) now; from the next render on, it glides there
         // from what's heard.
         apply(&mut bed.synth, p)?;
-        if bed.heard.is_empty() {
-            bed.heard.extend_from_slice(p);
+        if bed.params == 0 {
+            bed.heard[..p.len()].copy_from_slice(p);
         }
-        bed.target.clear();
-        bed.target.extend_from_slice(p);
+        bed.params = p.len();
+        bed.target[..p.len()].copy_from_slice(p);
         Ok(())
     })
 }
@@ -323,11 +330,14 @@ pub unsafe extern "C" fn foley_bed_render(bed: *mut FoleyBed, out: *mut i16, fra
         let bed = unsafe { bed.as_mut() }.ok_or_else(|| FfiError::invalid("bed is null"))?;
         // SAFETY: the caller guarantees `out` is writable for `frames`.
         let out = unsafe { slice_mut_arg(out, frames, "out") }?;
-        bed.scratch.resize(frames, 0.0);
         let step = 1.0 - (-(GLIDE_BLOCK as f32) / (GLIDE_TIME * SAMPLE_RATE as f32)).exp();
-        for block in bed.scratch.chunks_mut(GLIDE_BLOCK) {
-            if bed.heard != bed.target {
-                for (i, (heard, target)) in bed.heard.iter_mut().zip(&bed.target).enumerate() {
+        let n = bed.params;
+        for out in out.chunks_mut(GLIDE_BLOCK) {
+            let block = &mut bed.scratch[..out.len()];
+            if bed.heard[..n] != bed.target[..n] {
+                for (i, (heard, target)) in
+                    bed.heard[..n].iter_mut().zip(&bed.target[..n]).enumerate()
+                {
                     *heard = if is_choice(&bed.synth, i) || (*target - *heard).abs() < 1e-4 {
                         *target
                     } else {
@@ -335,7 +345,7 @@ pub unsafe extern "C" fn foley_bed_render(bed: *mut FoleyBed, out: *mut i16, fra
                     };
                 }
                 // In range: between two scenes that were.
-                apply(&mut bed.synth, &bed.heard)?;
+                apply(&mut bed.synth, &bed.heard[..n])?;
             }
             match &mut bed.synth {
                 Synth::Rain(synth) => synth.render(block),
@@ -345,15 +355,16 @@ pub unsafe extern "C" fn foley_bed_render(bed: *mut FoleyBed, out: *mut i16, fra
                 Synth::Lava(synth) => synth.render(block),
                 Synth::Thunder(synth) => synth.render(block),
             }
-        }
-        // The level guard: the envelope rises at once and falls over about
-        // half a second; the gain follows it down quickly and back up slowly.
-        for (out, sample) in out.iter_mut().zip(&bed.scratch) {
-            bed.envelope = sample.abs().max(bed.envelope * 0.99996);
-            let wanted = (BED_CEILING / bed.envelope.max(1e-6)).min(1.0);
-            let rate = if wanted < bed.guard { 0.01 } else { 0.0001 };
-            bed.guard += (wanted - bed.guard) * rate;
-            *out = to_pcm(sample * bed.guard);
+            // The level guard: the envelope rises at once and falls over
+            // about half a second; the gain follows it down quickly and back
+            // up slowly.
+            for (out, sample) in out.iter_mut().zip(block.iter()) {
+                bed.envelope = sample.abs().max(bed.envelope * 0.99996);
+                let wanted = (BED_CEILING / bed.envelope.max(1e-6)).min(1.0);
+                let rate = if wanted < bed.guard { 0.01 } else { 0.0001 };
+                bed.guard += (wanted - bed.guard) * rate;
+                *out = to_pcm(sample * bed.guard);
+            }
         }
         Ok(())
     })
@@ -567,6 +578,90 @@ pub unsafe extern "C" fn foley_last_error(buf: *mut u8, cap: usize) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::no_alloc::allocations;
+
+    /// Everything the stream thread calls (render, a new scene, a strike)
+    /// allocates and frees nothing, for every bed, as scenes change and
+    /// voices come and go.
+    #[test]
+    fn the_audio_thread_never_allocates() {
+        let rain = |rate: f32| [rate, 0.4, 0.2, 0.1, 0.1, 0.1, 0.05, 0.05, 2.0, 4.0];
+        let beds: [(i32, Vec<Vec<f32>>); 6] = [
+            (
+                FOLEY_BED_RAIN,
+                vec![rain(5.0).to_vec(), rain(150.0).to_vec(), rain(0.0).to_vec()],
+            ),
+            (
+                FOLEY_BED_WIND,
+                vec![
+                    vec![2.0, 1.0, 0.8],
+                    vec![40.0, 0.3, 1.0],
+                    vec![0.0, 0.0, 0.0],
+                ],
+            ),
+            (
+                FOLEY_BED_WATER,
+                vec![
+                    vec![50.0, 8.0, 1.0],
+                    vec![0.0, 200.0, 0.5],
+                    vec![0.0, 0.0, 0.0],
+                ],
+            ),
+            (
+                FOLEY_BED_FIRE,
+                vec![vec![1.0, 1.0], vec![200.0, 1.0], vec![0.0, 0.0]],
+            ),
+            (
+                FOLEY_BED_LAVA,
+                vec![vec![5.0, 1.0], vec![500.0, 1.0], vec![0.0, 0.0]],
+            ),
+            (
+                FOLEY_BED_THUNDER,
+                vec![vec![20.0, 70.0, 1.0], vec![5.0, 30.0, 0.2]],
+            ),
+        ];
+        // The counter itself works.
+        assert!(allocations(|| drop(std::hint::black_box(vec![1u8]))) > 0);
+        // As the game reads it: 0.25 s at a time.
+        let mut pcm = vec![0i16; 12_000];
+        for (kind, scenes) in beds {
+            let mut bed = std::ptr::null_mut();
+            // SAFETY: `bed` is writable, every pointer is valid for its
+            // length, and `bed` is freed last.
+            unsafe {
+                assert_eq!(foley_bed_create(kind, 7, &mut bed), FOLEY_OK);
+                let mut heard = false;
+                for (n, scene) in scenes.iter().cycle().take(3 * scenes.len()).enumerate() {
+                    let made = allocations(|| {
+                        assert_eq!(
+                            foley_bed_set_scene(bed, scene.as_ptr(), scene.len()),
+                            FOLEY_OK
+                        );
+                        if kind == FOLEY_BED_THUNDER && n < 2 {
+                            assert_eq!(
+                                foley_bed_strike(bed, 300.0, 0.0, 400.0, n as u64),
+                                FOLEY_OK
+                            );
+                        }
+                        for _ in 0..40 {
+                            assert_eq!(
+                                foley_bed_render(bed, pcm.as_mut_ptr(), pcm.len()),
+                                FOLEY_OK
+                            );
+                            heard |= pcm.iter().any(|s| *s != 0);
+                        }
+                    });
+                    assert_eq!(made, 0, "bed {kind}, scene {n}: allocated {made} times");
+                    // Gives the thunder thread time to make and free.
+                    if kind == FOLEY_BED_THUNDER {
+                        std::thread::sleep(std::time::Duration::from_millis(500));
+                    }
+                }
+                assert!(heard, "bed {kind} was silent");
+                foley_bed_destroy(bed);
+            }
+        }
+    }
 
     fn render(kind: i32, params: &[f32]) -> Vec<i16> {
         let mut bed = std::ptr::null_mut();

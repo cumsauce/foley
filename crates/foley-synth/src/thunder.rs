@@ -227,15 +227,28 @@ fn n_wave(period: f32, smear: f32, amplitude: f32, cutoff: Option<f32>) -> Vec<f
 #[derive(Debug)]
 pub struct Thunder {
     scene: ThunderScene,
-    made: SyncSender<Vec<f32>>,
+    /// Work for the thread that makes the thunder: strikes, and finished
+    /// thunder to free. Bounded, so sending never allocates.
+    jobs: SyncSender<Job>,
     ready: Receiver<Vec<f32>>,
-    /// Finished thunder, handed back to be freed off the audio thread.
-    spent: SyncSender<Vec<f32>>,
-    to_free: Receiver<Vec<f32>>,
     /// Flashes whose thunder is still being made.
     making: usize,
     playing: Vec<(Vec<f32>, usize)>,
     muffle: [LowPass; 2],
+}
+
+/// What the thunder thread is asked to do.
+#[derive(Debug)]
+enum Job {
+    Strike {
+        base: [f32; 3],
+        seed: u64,
+        celsius: f32,
+        humidity: f32,
+    },
+    /// Thunder that's been heard, freed there rather than on the audio
+    /// thread.
+    Free(Vec<f32>),
 }
 
 impl Default for Thunder {
@@ -245,17 +258,37 @@ impl Default for Thunder {
 }
 
 impl Thunder {
+    /// Starts the bed and its thread, which lasts as long as it does.
     pub fn new() -> Thunder {
         // Bounded, so sending and receiving never allocate: at most
-        // `MAX_STRIKES` are ever in flight.
+        // `MAX_STRIKES` are ever in flight each way.
+        let (jobs, inbox) = sync_channel::<Job>(2 * MAX_STRIKES);
         let (made, ready) = sync_channel(MAX_STRIKES);
-        let (spent, to_free) = sync_channel(MAX_STRIKES);
+        // If it can't start, strikes are dropped: no thunder, no harm.
+        let _ = std::thread::Builder::new()
+            .name("foley-thunder".into())
+            .spawn(move || {
+                // Ends when the bed is let go.
+                for job in inbox {
+                    match job {
+                        Job::Strike {
+                            base,
+                            seed,
+                            celsius,
+                            humidity,
+                        } => {
+                            if made.send(strike(base, seed, celsius, humidity)).is_err() {
+                                return;
+                            }
+                        }
+                        Job::Free(sound) => drop(sound),
+                    }
+                }
+            });
         Thunder {
             scene: ThunderScene::DEFAULT,
-            made,
+            jobs,
             ready,
-            spent,
-            to_free,
             making: 0,
             playing: Vec::with_capacity(MAX_STRIKES),
             muffle: [LowPass::new(20_000.0), LowPass::new(20_000.0)],
@@ -272,22 +305,19 @@ impl Thunder {
     }
 
     /// A flash at `base`, metres from the listener (y up), now. Its thunder
-    /// is made on a thread of its own and joins the mix when it's ready.
+    /// is made on the bed's own thread and joins the mix when it's ready.
+    /// Allocates nothing.
     pub fn strike(&mut self, base: [f32; 3], seed: u64) {
-        // Frees finished thunder here, off the audio thread.
-        while self.to_free.try_recv().is_ok() {}
         if self.making + self.playing.len() >= MAX_STRIKES {
             return;
         }
-        let (made, celsius, humidity) =
-            (self.made.clone(), self.scene.celsius, self.scene.humidity);
-        let spawned = std::thread::Builder::new()
-            .name("foley-thunder".into())
-            .spawn(move || {
-                // Gone if the bed was let go meanwhile.
-                let _ = made.send(strike(base, seed, celsius, humidity));
-            });
-        if spawned.is_ok() {
+        let job = Job::Strike {
+            base,
+            seed,
+            celsius: self.scene.celsius,
+            humidity: self.scene.humidity,
+        };
+        if self.jobs.try_send(job).is_ok() {
             self.making += 1;
         }
     }
@@ -327,8 +357,8 @@ impl Thunder {
                 k += 1;
             } else {
                 let (sound, _) = self.playing.swap_remove(k);
-                // Never full: it holds at most `MAX_STRIKES`.
-                let _ = self.spent.try_send(sound);
+                // If it's somehow full, the sound is freed here instead.
+                let _ = self.jobs.try_send(Job::Free(sound));
             }
         }
         let exposure = self.scene.exposure.clamp(0.0, 1.0);

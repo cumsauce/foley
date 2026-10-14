@@ -1,6 +1,6 @@
 use crate::dsp::add_at;
-use crate::rain::Struck;
 use crate::{Bubble, LowPass, Rng, SAMPLE_RATE, Surface};
+use foley_dsp::Struck;
 
 /// A short click: `seconds` of noise through a low-pass at `cutoff`,
 /// decaying.

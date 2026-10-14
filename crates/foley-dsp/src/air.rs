@@ -1,3 +1,5 @@
+#[allow(unused_imports)] // Some of these are in core; the rest come from std.
+use foley_math::Float as _;
 /// ISO 9613-1 atmospheric absorption at `hz`, in dB a metre, in air at
 /// `celsius` and `humidity` percent, at sea-level pressure. Dry air soaks up
 /// treble faster than humid air. (The same formula as Earshot's.)
@@ -41,6 +43,8 @@ pub fn absorption_cutoff(distance: f32, celsius: f32, humidity: f32) -> Option<f
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[allow(unused_imports)]
+    use std::{vec, vec::Vec};
 
     #[test]
     fn it_matches_iso_9613_1() {

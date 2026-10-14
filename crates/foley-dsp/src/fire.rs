@@ -1,7 +1,9 @@
-use std::f32::consts::{PI, TAU};
+use core::f32::consts::{PI, TAU};
+#[allow(unused_imports)] // Some of these are in core; the rest come from std.
+use foley_math::Float as _;
 
-use crate::dsp::Wobble;
-use crate::{BandPass, LowPass, Rng, SAMPLE_RATE};
+use crate::Wobble;
+use crate::{BandPass, Fixed, LowPass, Rng, SAMPLE_RATE};
 
 /// The fire near the listener.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -33,12 +35,180 @@ struct Crackle {
     step: f32,
 }
 
-/// A sound made whole when it starts, played out sample by sample: a pop, a
-/// hiss of sap, a log settling.
-#[derive(Debug)]
-struct Event {
-    sound: Vec<f32>,
-    at: usize,
+/// A ringing: `amplitude` e^(-t/τ) sin(2π f t), as a phasor turned and
+/// shrunk each sample, so it costs a few multiplies and no trigonometry.
+#[derive(Debug, Clone, Copy)]
+struct Ring {
+    re: f32,
+    im: f32,
+    cos: f32,
+    sin: f32,
+    /// What each sample keeps of the last.
+    decay: f32,
+}
+
+impl Ring {
+    /// Rings at `hz`, losing `per_second` nepers a second.
+    fn new(amplitude: f32, hz: f32, per_second: f32) -> Ring {
+        let step = TAU * hz / SAMPLE_RATE as f32;
+        Ring {
+            re: amplitude,
+            im: 0.0,
+            cos: step.cos(),
+            sin: step.sin(),
+            decay: (-per_second / SAMPLE_RATE as f32).exp(),
+        }
+    }
+
+    fn next(&mut self) -> f32 {
+        let out = self.im;
+        let (re, im) = (
+            self.re * self.cos - self.im * self.sin,
+            self.re * self.sin + self.im * self.cos,
+        );
+        self.re = self.decay * re;
+        self.im = self.decay * im;
+        out
+    }
+}
+
+/// An ember ticking as it crumbles, 3 ms long.
+#[derive(Debug, Clone, Copy, Default)]
+struct Tick {
+    start: u32,
+    amplitude: f32,
+    hz: f32,
+}
+
+const MAX_TICKS: usize = 25;
+const TICK_SAMPLES: u32 = (0.003 * SAMPLE_RATE as f32) as u32;
+
+/// A sound played out sample by sample from a little state: a pop, a hiss
+/// of sap, a log settling.
+// A settle's ticks make it the biggest, a few hundred bytes; inline, it's
+// still allocation-free.
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, Clone)]
+enum Event {
+    /// The burst ringing the wood round it, a few kHz, for a few ms.
+    Snap { ring: Ring, left: u32 },
+    /// Sap or steam escaping from a crack: a hiss for half a second to two,
+    /// swelling and fading; a third of the time it whistles, a wavering tone.
+    Hiss {
+        band: BandPass,
+        wander: LowPass,
+        whistle: bool,
+        hz: f32,
+        phase: f32,
+        at: u32,
+        length: u32,
+    },
+    /// A log burning through and settling: a dull wooden knock, then embers
+    /// crumbling and ticking for a moment.
+    Settle {
+        knock: Ring,
+        ticks: [Tick; MAX_TICKS],
+        at: u32,
+        length: u32,
+    },
+}
+
+impl Event {
+    fn snap(rng: &mut Rng, amplitude: f32) -> Event {
+        let hz = 1500.0 + 3000.0 * rng.unit();
+        let per_second = 300.0 + 400.0 * rng.unit();
+        Event::Snap {
+            ring: Ring::new(amplitude, hz, per_second),
+            left: (6.0 / per_second * SAMPLE_RATE as f32) as u32,
+        }
+    }
+
+    fn hiss(rng: &mut Rng) -> Event {
+        let seconds = 0.5 + 1.5 * rng.unit();
+        Event::Hiss {
+            band: BandPass::new(3000.0 + 3000.0 * rng.unit(), 3.0),
+            wander: LowPass::new(4.0),
+            whistle: rng.unit() < 0.33,
+            hz: 2000.0 + 2000.0 * rng.unit(),
+            phase: 0.0,
+            at: 0,
+            length: (seconds * SAMPLE_RATE as f32) as u32,
+        }
+    }
+
+    fn settle(rng: &mut Rng) -> Event {
+        let rate = SAMPLE_RATE as f32;
+        let knock = Ring::new(0.12, 150.0 + 200.0 * rng.unit(), 30.0);
+        let mut ticks = [Tick::default(); MAX_TICKS];
+        let count = 10 + (rng.unit() * 15.0) as usize;
+        for tick in &mut ticks[..count] {
+            *tick = Tick {
+                start: (0.4 * rng.unit().powi(2) * rate) as u32,
+                amplitude: 0.01 + 0.03 * rng.unit(),
+                hz: 2000.0 + 4000.0 * rng.unit(),
+            };
+        }
+        Event::Settle {
+            knock,
+            ticks,
+            at: 0,
+            length: (0.5 * rate) as u32,
+        }
+    }
+
+    /// The next sample, or None once it's over.
+    fn next(&mut self, rng: &mut Rng) -> Option<f32> {
+        let rate = SAMPLE_RATE as f32;
+        match self {
+            Event::Snap { ring, left } => {
+                *left = left.checked_sub(1)?;
+                Some(ring.next())
+            }
+            Event::Hiss {
+                band,
+                wander,
+                whistle,
+                hz,
+                phase,
+                at,
+                length,
+            } => {
+                if *at >= *length {
+                    return None;
+                }
+                let t = *at as f32 / *length as f32;
+                *at += 1;
+                let envelope = (PI * t).sin().powf(0.7)
+                    * (1.0 + 3.0 * wander.process(rng.signed())).clamp(0.3, 1.7);
+                let mut s = 0.02 * envelope * band.process(rng.signed());
+                if *whistle {
+                    *hz *= 1.0 + 0.0005 * rng.signed();
+                    *phase = (*phase + TAU * *hz / rate) % TAU;
+                    s += 0.008 * envelope * phase.sin();
+                }
+                Some(s)
+            }
+            Event::Settle {
+                knock,
+                ticks,
+                at,
+                length,
+            } => {
+                if *at >= *length {
+                    return None;
+                }
+                let mut s = knock.next();
+                for tick in ticks.iter().filter(|k| k.amplitude > 0.0) {
+                    if let Some(i) = at.checked_sub(tick.start).filter(|i| *i < TICK_SAMPLES) {
+                        let t = i as f32 / rate;
+                        s += tick.amplitude * (-1500.0 * t).exp() * (TAU * tick.hz * t).sin();
+                    }
+                }
+                *at += 1;
+                Some(s)
+            }
+        }
+    }
 }
 
 /// Crackles this energetic or more snap: the burst rings the wood round it.
@@ -71,11 +241,9 @@ pub struct Fire {
     roar: [LowPass; 2],
     puff: f32,
     until_crackle: f32,
-    crackles: Vec<Crackle>,
+    crackles: Fixed<Crackle, MAX_VOICES>,
     last: f32,
-    events: Vec<Event>,
-    /// Buffers of finished events, to reuse.
-    spare: Vec<Vec<f32>>,
+    events: Fixed<Event, MAX_EVENTS>,
     samples: usize,
     flicker: Wobble,
     flame: BandPass,
@@ -91,14 +259,9 @@ impl Fire {
             roar: [LowPass::new(300.0), LowPass::new(300.0)],
             puff: 0.0,
             until_crackle: 0.0,
-            crackles: Vec::with_capacity(MAX_VOICES),
+            crackles: Fixed::new(),
             last: 0.0,
-            events: Vec::with_capacity(MAX_EVENTS),
-            // Each big enough for the longest (a 2 s hiss), so the audio
-            // thread never allocates.
-            spare: (0..MAX_EVENTS)
-                .map(|_| Vec::with_capacity(2 * SAMPLE_RATE as usize + 1))
-                .collect(),
+            events: Fixed::new(),
             samples: 0,
             flicker: Wobble::new(10.0, 4.0, 0.2, 2.0),
             flame: BandPass::new(1500.0, 0.8),
@@ -148,10 +311,9 @@ impl Fire {
                             amplitude: 0.05 * energy.sqrt(),
                             step: (-dt / time).exp(),
                         });
-                        if energy >= SNAP_ENERGY && self.events.len() < MAX_EVENTS {
-                            let mut sound = self.spare.pop().unwrap_or_default();
-                            snap(&mut self.rng, 0.012 * energy.sqrt(), &mut sound);
-                            self.events.push(Event { sound, at: 0 });
+                        if energy >= SNAP_ENERGY && !self.events.is_full() {
+                            let snap = Event::snap(&mut self.rng, 0.012 * energy.sqrt());
+                            self.events.push(snap);
                         }
                     }
                 }
@@ -177,101 +339,37 @@ impl Fire {
                 self.until_hiss -= dt;
                 if self.until_hiss <= 0.0 {
                     self.until_hiss = self.rng.exponential(HISSES * root);
-                    if self.events.len() < MAX_EVENTS {
-                        let mut sound = self.spare.pop().unwrap_or_default();
-                        hiss(&mut self.rng, &mut sound);
-                        self.events.push(Event { sound, at: 0 });
+                    if !self.events.is_full() {
+                        let event = Event::hiss(&mut self.rng);
+                        self.events.push(event);
                     }
                 }
                 self.until_settle -= dt;
                 if self.until_settle <= 0.0 {
                     self.until_settle = self.rng.exponential(SETTLES * root);
-                    if self.events.len() < MAX_EVENTS {
-                        let mut sound = self.spare.pop().unwrap_or_default();
-                        settle(&mut self.rng, &mut sound);
-                        self.events.push(Event { sound, at: 0 });
+                    if !self.events.is_full() {
+                        let event = Event::settle(&mut self.rng);
+                        self.events.push(event);
                     }
                 }
             }
             let mut extra = 0.0;
+            let mut over = false;
             for event in &mut self.events {
-                extra += event.sound[event.at];
-                event.at += 1;
-            }
-            // Finished sounds go back to the spares, so nothing is freed or
-            // (once each spare has grown) allocated on the audio thread.
-            let mut k = 0;
-            while k < self.events.len() {
-                if self.events[k].at < self.events[k].sound.len() {
-                    k += 1;
-                } else {
-                    self.spare.push(self.events.swap_remove(k).sound);
+                match event.next(&mut self.rng) {
+                    Some(s) => extra += s,
+                    None => over = true,
                 }
             }
-            *sample = gain * (roar_level * puffing * roar + bright + flame + extra);
-        }
-    }
-}
-
-/// A snap: the burst rings the wood round it, a few kHz, for a few ms.
-fn snap(rng: &mut Rng, amplitude: f32, out: &mut Vec<f32>) {
-    let rate = SAMPLE_RATE as f32;
-    let f = 1500.0 + 3000.0 * rng.unit();
-    let decay = 300.0 + 400.0 * rng.unit();
-    let n = (6.0 / decay * rate) as usize;
-    out.clear();
-    out.extend((0..n).map(|i| {
-        let t = i as f32 / rate;
-        amplitude * (-decay * t).exp() * (TAU * f * t).sin()
-    }));
-}
-
-/// Sap or steam escaping from a crack: a hiss for half a second to two,
-/// swelling and fading; a third of the time it whistles, a wavering tone.
-fn hiss(rng: &mut Rng, out: &mut Vec<f32>) {
-    let rate = SAMPLE_RATE as f32;
-    let seconds = 0.5 + 1.5 * rng.unit();
-    let n = (seconds * rate) as usize;
-    let mut band = BandPass::new(3000.0 + 3000.0 * rng.unit(), 3.0);
-    let mut wander = LowPass::new(4.0);
-    let whistle = rng.unit() < 0.33;
-    let mut hz = 2000.0 + 2000.0 * rng.unit();
-    let mut phase = 0.0f32;
-    out.clear();
-    out.extend((0..n).map(|i| {
-        let t = i as f32 / n as f32;
-        let envelope =
-            (PI * t).sin().powf(0.7) * (1.0 + 3.0 * wander.process(rng.signed())).clamp(0.3, 1.7);
-        let mut s = 0.02 * envelope * band.process(rng.signed());
-        if whistle {
-            hz *= 1.0 + 0.0005 * rng.signed();
-            phase += TAU * hz / rate;
-            s += 0.008 * envelope * phase.sin();
-        }
-        s
-    }));
-}
-
-/// A log burning through and settling: a dull wooden knock, then embers
-/// crumbling and ticking for a moment.
-fn settle(rng: &mut Rng, out: &mut Vec<f32>) {
-    let rate = SAMPLE_RATE as f32;
-    let n = (0.5 * rate) as usize;
-    let f = 150.0 + 200.0 * rng.unit();
-    out.clear();
-    out.extend((0..n).map(|i| {
-        let t = i as f32 / rate;
-        0.12 * (-30.0 * t).exp() * (TAU * f * t).sin()
-    }));
-    for _ in 0..10 + (rng.unit() * 15.0) as usize {
-        let at = (0.4 * rng.unit().powi(2) * rate) as usize;
-        let tick_f = 2000.0 + 4000.0 * rng.unit();
-        let amplitude = 0.01 + 0.03 * rng.unit();
-        for i in 0..(0.003 * rate) as usize {
-            if let Some(o) = out.get_mut(at + i) {
-                let t = i as f32 / rate;
-                *o += amplitude * (-1500.0 * t).exp() * (TAU * tick_f * t).sin();
+            if over {
+                self.events.retain(|event| match event {
+                    Event::Snap { left, .. } => *left > 0,
+                    Event::Hiss { at, length, .. } | Event::Settle { at, length, .. } => {
+                        at < length
+                    }
+                });
             }
+            *sample = gain * (roar_level * puffing * roar + bright + flame + extra);
         }
     }
 }
@@ -279,6 +377,8 @@ fn settle(rng: &mut Rng, out: &mut Vec<f32>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[allow(unused_imports)]
+    use std::{vec, vec::Vec};
 
     fn rms(scene: FireScene) -> f32 {
         let mut fire = Fire::new(3);

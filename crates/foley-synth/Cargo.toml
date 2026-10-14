@@ -7,5 +7,9 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[dependencies]
+foley-dsp.workspace = true
+foley-math.workspace = true
+
 [lints]
 workspace = true

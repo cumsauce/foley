@@ -1,5 +1,7 @@
-use crate::dsp::Wobble;
+use crate::Wobble;
 use crate::{BandPass, Rng, SAMPLE_RATE};
+#[allow(unused_imports)] // Some of these are in core; the rest come from std.
+use foley_math::Float as _;
 
 /// What the wind round the listener is like.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -31,6 +33,8 @@ const LEAVES: f32 = 0.18;
 const GUST_LEAD: f32 = 0.8;
 /// The speed is updated this often, samples.
 const BLOCK: usize = 64;
+/// Gust blocks the ear lags behind the leaves.
+const LEAD: usize = (GUST_LEAD * SAMPLE_RATE as f32 / BLOCK as f32) as usize;
 
 /// The wind (M1): turbulence heard as band-passed noise, its loudness rising
 /// with speed cubed (aerodynamic noise power goes as U⁶) and its pitch with
@@ -46,7 +50,10 @@ pub struct Wind {
     /// Recent speeds, a block apart: a gust sweeps through the trees upwind
     /// before it reaches the ear, so the leaves hear the speed now and the
     /// ear the speed of [`GUST_LEAD`] ago.
-    history: std::collections::VecDeque<f32>,
+    /// A ring of the last [`LEAD`] speeds, the next written at `next`.
+    history: [f32; LEAD],
+    next: usize,
+    filled: usize,
     ear: f32,
     roar: BandPass,
     whoosh: BandPass,
@@ -76,9 +83,9 @@ impl Wind {
             rng: Rng::new(seed),
             scene: WindScene::CALM,
             speed: 0.0,
-            history: std::collections::VecDeque::with_capacity(
-                (GUST_LEAD * SAMPLE_RATE as f32 / BLOCK as f32) as usize + 1,
-            ),
+            history: [0.0; LEAD],
+            next: 0,
+            filled: 0,
             ear: 0.0,
             roar: BandPass::new(150.0, 0.7),
             whoosh: BandPass::new(600.0, 1.2),
@@ -101,7 +108,7 @@ impl Wind {
 
     pub fn set_scene(&mut self, scene: WindScene) {
         // The wind is already blowing when it's first heard.
-        if self.history.is_empty() {
+        if self.filled == 0 {
             self.speed = scene.speed.max(0.0);
         }
         self.scene = scene;
@@ -121,12 +128,11 @@ impl Wind {
         self.speed +=
             (mean - self.speed) * dt / GUST_TIME + sigma * (2.0 * dt / GUST_TIME).sqrt() * noise;
         self.speed = self.speed.max(0.0);
-        self.history.push_back(self.speed);
-        let lead = (GUST_LEAD * SAMPLE_RATE as f32 / BLOCK as f32) as usize;
-        while self.history.len() > lead {
-            self.history.pop_front();
-        }
-        self.ear = self.history.front().copied().unwrap_or(self.speed);
+        self.history[self.next] = self.speed;
+        self.next = (self.next + 1) % LEAD;
+        self.filled = (self.filled + 1).min(LEAD);
+        // The oldest kept: the first, until the ring has filled.
+        self.ear = self.history[if self.filled < LEAD { 0 } else { self.next }];
         let indoors = 1.0 - self.scene.exposure.clamp(0.0, 1.0);
         // Pitch rises with speed; indoors only the low part gets through.
         let centre = (80.0 + 25.0 * self.ear) * (1.0 - 0.6 * indoors);
@@ -226,6 +232,8 @@ impl Wind {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[allow(unused_imports)]
+    use std::{vec, vec::Vec};
 
     fn listen(scene: WindScene) -> f32 {
         let mut wind = Wind::new(5);

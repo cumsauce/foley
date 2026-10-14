@@ -1,4 +1,8 @@
-use crate::dsp::Wobble;
+#[allow(unused_imports)] // Some of these are in core; the rest come from std.
+use foley_math::Float as _;
+
+use crate::Fixed;
+use crate::Wobble;
 use crate::{BandPass, Bubble, LowPass, Rng, SAMPLE_RATE};
 
 /// The moving water near the listener.
@@ -74,7 +78,7 @@ pub struct Water {
     heard: WaterScene,
     fresh: bool,
     until_next: f32,
-    voices: Vec<Bubble>,
+    voices: Fixed<Bubble, MAX_VOICES>,
     roar: [LowPass; 2],
     spray: LowPass,
     /// Sheets of falling water breaking up: the spray surges a few times a
@@ -101,7 +105,7 @@ impl Water {
             heard: WaterScene::STILL,
             fresh: true,
             until_next: 0.0,
-            voices: Vec::with_capacity(MAX_VOICES),
+            voices: Fixed::new(),
             roar: [LowPass::new(500.0), LowPass::new(500.0)],
             spray: LowPass::new(9000.0),
             surge: Wobble::new(3.0, 5.0, 0.3, 1.8),
@@ -204,6 +208,8 @@ impl Water {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[allow(unused_imports)]
+    use std::{vec, vec::Vec};
 
     fn rms(scene: WaterScene) -> f32 {
         let mut water = Water::new(3);

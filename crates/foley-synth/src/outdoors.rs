@@ -4,8 +4,8 @@
 use std::f32::consts::TAU;
 
 use crate::dsp::{Wobble, add_at, normalize};
-use crate::water::plunge_radius;
 use crate::{BandPass, Bubble, Contact, LowPass, Material, Rng, SAMPLE_RATE, contact};
+use foley_dsp::plunge_radius;
 
 /// One wave breaking on a shore, `height` metres high (0.2 to 3), about
 /// 7 s from its rise to the end of its backwash. As it steepens, a low roar

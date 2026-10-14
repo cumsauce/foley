@@ -1,4 +1,6 @@
-use std::f32::consts::TAU;
+use core::f32::consts::TAU;
+#[allow(unused_imports)] // Some of these are in core; the rest come from std.
+use foley_math::Float as _;
 
 use crate::SAMPLE_RATE;
 
@@ -41,7 +43,7 @@ const REFRESH: u32 = 32;
 impl Bubble {
     pub fn new(radius: f32, loudness: f32) -> Bubble {
         let frequency = minnaert_hz(radius);
-        let damping = std::f32::consts::PI * frequency * DAMPING;
+        let damping = core::f32::consts::PI * frequency * DAMPING;
         Bubble {
             frequency,
             damping,
@@ -96,6 +98,8 @@ impl Bubble {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[allow(unused_imports)]
+    use std::{vec, vec::Vec};
 
     #[test]
     fn a_millimetre_bubble_rings_at_minnaerts_frequency() {

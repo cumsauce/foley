@@ -1,0 +1,11 @@
+[package]
+name = "foley-math"
+description = "The float functions Foley's no_std synthesis needs, from std"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

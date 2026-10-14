@@ -1,4 +1,8 @@
-use std::f32::consts::TAU;
+#[allow(unused_imports)] // Some of these are in core; the rest come from std.
+use foley_math::Float as _;
+
+use crate::Fixed;
+use core::f32::consts::TAU;
 
 use crate::{BandPass, Bubble, Rng, SAMPLE_RATE};
 
@@ -113,7 +117,7 @@ enum Voice {
 
 /// A struck surface: two damped modes and a short noise burst.
 #[derive(Debug)]
-pub(crate) struct Struck {
+pub struct Struck {
     /// Each mode as a phasor (re, im) turned by (cos, sin) of its step a
     /// sample and shrunk by its decay, so a mode costs a few multiplies a
     /// sample and no trigonometry.
@@ -125,7 +129,7 @@ pub(crate) struct Struck {
 }
 
 impl Struck {
-    pub(crate) fn new(rng: &mut Rng, surface: Surface, amplitude: f32) -> Struck {
+    pub fn new(rng: &mut Rng, surface: Surface, amplitude: f32) -> Struck {
         // Modes (frequency range, decay per second) for each surface.
         let (low, high, decay, click): (f32, f32, f32, f32) = match surface {
             Surface::Stone => (3000.0, 7000.0, 900.0, 0.8),
@@ -156,7 +160,7 @@ impl Struck {
         }
     }
 
-    pub(crate) fn sample(&mut self, noise: f32) -> f32 {
+    pub fn sample(&mut self, noise: f32) -> f32 {
         let dt = 1.0 / SAMPLE_RATE as f32;
         // Decays as running products: the same curve as e^(-dt), far cheaper.
         self.click *= self.click_step;
@@ -171,7 +175,7 @@ impl Struck {
         out
     }
 
-    pub(crate) fn done(&self) -> bool {
+    pub fn done(&self) -> bool {
         self.decay * self.age > 7.0
     }
 }
@@ -192,7 +196,7 @@ pub struct Rain {
     rng: Rng,
     scene: RainScene,
     until_next: f32,
-    voices: Vec<Voice>,
+    voices: Fixed<Voice, MAX_VOICES>,
     hiss: f32,
     hiss_low: f32,
     /// The sizzle of the whole surface of water round about, near 14 kHz.
@@ -206,7 +210,7 @@ impl Rain {
             rng: Rng::new(seed),
             scene: RainScene::DRY,
             until_next: 0.0,
-            voices: Vec::with_capacity(MAX_VOICES),
+            voices: Fixed::new(),
             hiss: 0.0,
             hiss_low: 0.0,
             sizzle: BandPass::new(13_500.0, 1.2),
@@ -374,6 +378,8 @@ impl Rain {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[allow(unused_imports)]
+    use std::{vec, vec::Vec};
 
     fn scene(rate: f32, surface: Surface) -> RainScene {
         let mut surfaces = [0.0; 7];

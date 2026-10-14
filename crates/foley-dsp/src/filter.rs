@@ -1,4 +1,6 @@
-use std::f32::consts::TAU;
+use core::f32::consts::TAU;
+#[allow(unused_imports)] // Some of these are in core; the rest come from std.
+use foley_math::Float as _;
 
 use crate::SAMPLE_RATE;
 
@@ -75,6 +77,8 @@ fn flush(y: f32) -> f32 {
 mod tests {
     use super::*;
     use crate::Rng;
+    #[allow(unused_imports)]
+    use std::{vec, vec::Vec};
 
     #[test]
     fn it_passes_its_band_and_not_far_from_it() {
