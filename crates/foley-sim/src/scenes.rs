@@ -34,6 +34,14 @@ fn during(t: f32, from: f32, to: f32) -> f32 {
     ((t - from) / (to - from)).clamp(0.0, 1.0)
 }
 
+/// Rain on a lakeside: half on water, the rest on grass, under `roof` if any.
+fn rain_on_water(rate: f32, roof: Option<(f32, f32)>) -> Vec<f32> {
+    let mut p = rain(rate, 0.5, 0.0, roof);
+    p[1] = 0.5;
+    p[1 + 1] = 0.0;
+    p
+}
+
 /// Rain's params: `rate` mm/h falling on `soft` ground (grass, soil) and
 /// `leaves`, the rest on stone, under a wooden `roof` this high if any.
 fn rain(rate: f32, soft: f32, leaves: f32, roof: Option<(f32, f32)>) -> Vec<f32> {
@@ -82,7 +90,7 @@ pub fn all() -> Vec<Scene> {
                     params: |t| {
                         let rate = ease(0.0, 60.0, during(t, 2.0, 32.0));
                         let roof = (t > 50.0).then_some((3.0, 4.0));
-                        rain(rate, 0.6, 0.3, roof)
+                        rain_on_water(rate, roof)
                     },
                     strikes: &[],
                 },

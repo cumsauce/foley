@@ -1,6 +1,6 @@
 //! Plays Foley's beds through scripted scenes as the game would, without the
 //! game: each bed is created, told its scene every few ticks as Foley's
-//! controllers do, and read in the game's stream buffers (1 s each, by
+//! controllers do, and read in the game's stream buffers (half a second each, as Foley returns them, by
 //! default), all through the same C ABI the mod calls. Writes a WAV per bed
 //! and reports what would be heard as wrong: dropouts, clicks, crackle, and
 //! level steps in time with the reads.
@@ -27,7 +27,7 @@ const TICK: usize = RATE / 20;
 
 fn main() {
     let mut which = String::from("all");
-    let mut read_seconds = 1.0f32;
+    let mut read_seconds = 0.5f32;
     let mut out = PathBuf::from("target/foley-sim");
     let mut baseline: Option<PathBuf> = None;
     let mut args = std::env::args().skip(1);

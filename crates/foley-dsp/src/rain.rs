@@ -206,6 +206,10 @@ pub struct Rain {
     voices: Fixed<Voice, MAX_VOICES>,
     hiss: f32,
     hiss_low: f32,
+    /// How far under the roof the ear is, 0 to 1, gliding over some 0.3 s:
+    /// a roof is a choice, so it comes and goes in a tick, and the far hiss
+    /// and sizzle cut in or out at once clicked at every doorway.
+    shelter: f32,
     /// The sizzle of the whole surface of water round about, near 14 kHz.
     sizzle: BandPass,
     samples: u64,
@@ -220,6 +224,7 @@ impl Rain {
             voices: Fixed::new(),
             hiss: 0.0,
             hiss_low: 0.0,
+            shelter: 0.0,
             sizzle: BandPass::new(13_500.0, 1.2),
             samples: 0,
         }
@@ -329,23 +334,24 @@ impl Rain {
         };
         // The far drops' hiss: noise low-passed from 1 to 8 kHz by brightness,
         // and to 600 Hz through a roof; louder with the rain rate.
-        let cutoff = if self.scene.roof.is_some() {
-            600.0
-        } else {
-            1000.0 + 7000.0 * brightness
+        let open_cutoff = 1000.0 + 7000.0 * brightness;
+        let roofed = if self.scene.roof.is_some() { 1.0 } else { 0.0 };
+        let smoothing_at = |shelter: f32| {
+            let cutoff = open_cutoff + (600.0 - open_cutoff) * shelter;
+            1.0 - (-TAU * cutoff / SAMPLE_RATE as f32).exp()
         };
-        let smoothing = 1.0 - (-TAU * cutoff / SAMPLE_RATE as f32).exp();
+        let mut smoothing = smoothing_at(self.shelter);
         let level = 0.012 * (self.scene.rate / 10.0).sqrt() * (0.3 + brightness);
         // The far drops on water: a lake or the sea round about sizzles as a
         // whole, not just where the near drops fall. Not through a roof.
         let water = self.scene.surfaces[Surface::Water as usize]
             / self.scene.surfaces.iter().sum::<f32>().max(1e-6);
-        let sizzle = if self.scene.roof.is_some() {
-            0.0
-        } else {
-            0.07 * (self.scene.rate / 10.0).sqrt() * water
-        };
+        let sizzle = 0.07 * (self.scene.rate / 10.0).sqrt() * water;
         for sample in out {
+            if self.samples.is_multiple_of(64) {
+                self.shelter += (roofed - self.shelter) * (64.0 / (0.3 * SAMPLE_RATE as f32));
+                smoothing = smoothing_at(self.shelter);
+            }
             if rate > 0.0 {
                 self.until_next -= dt;
                 while self.until_next <= 0.0 {
@@ -372,11 +378,7 @@ impl Rain {
             }
             self.hiss += smoothing * (self.rng.signed() - self.hiss);
             self.hiss_low += smoothing * (self.hiss - self.hiss_low);
-            let far = if sizzle > 0.0 {
-                sizzle * self.sizzle.process(self.rng.signed())
-            } else {
-                0.0
-            };
+            let far = (1.0 - self.shelter) * sizzle * self.sizzle.process(self.rng.signed());
             *sample = mix + level * self.hiss_low * 3.0 + far;
         }
     }
