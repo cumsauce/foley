@@ -209,10 +209,11 @@ public final class Life {
 		}
 		if (ticks % 20 == 0) {
 			boolean woods = biome.is(BiomeTags.IS_FOREST) || biome.is(BiomeTags.IS_TAIGA) || biome.is(BiomeTags.IS_JUNGLE);
-			// A woodpecker every minute or so in the woods by day.
-			if (FoleyClient.wants(FoleyConfig::birds) && woods && !night && !raining && random.nextFloat() < 0.02f) {
-				BlockPos tree = find(level, eye, 24, state -> state.is(BlockTags.LEAVES));
-				if (tree != null) call(minecraft, "woodpecker_0", tree.below(2), 0.6f);
+			// A woodpecker every two minutes or so in the woods by day, soft and off among the trees: its drumming is
+			// sharp up close.
+			if (FoleyClient.wants(FoleyConfig::birds) && woods && !night && !raining && random.nextFloat() < 0.008f) {
+				BlockPos tree = find(level, eye, 32, state -> state.is(BlockTags.LEAVES));
+				if (tree != null) call(minecraft, "woodpecker_0", tree.below(2), 0.35f);
 			}
 			// Owls in the woods at night, from farther off.
 			if (FoleyClient.wants(FoleyConfig::birds) && night && !raining
@@ -247,7 +248,9 @@ public final class Life {
 		}
 		// Cicadas through the heat of the day: one chorus after another.
 		boolean hot = biome.is(BiomeTags.IS_JUNGLE) || biome.is(BiomeTags.IS_SAVANNA) || biome.is(BiomeTags.IS_BADLANDS);
-		if (FoleyClient.wants(FoleyConfig::crickets) && hot && !night && !raining && ticks >= nextCicadas) {
+		// Cicadas sing in the heat of the afternoon (noon to 5 pm), and from the trees, not over everything.
+		boolean afternoon = time >= 6000 && time < 11000;
+		if (FoleyClient.wants(FoleyConfig::crickets) && hot && afternoon && !raining && ticks >= nextCicadas) {
 			nextCicadas = ticks + 110 + random.nextInt(40);
 			BlockPos tree = find(level, eye, 20, state -> state.is(BlockTags.LEAVES));
 			if (tree != null) {
@@ -256,7 +259,7 @@ public final class Life {
 				for (int i = 1; i < CICADA_CELSIUS.length; i++) {
 					if (Math.abs(CICADA_CELSIUS[i] - warm) < Math.abs(CICADA_CELSIUS[band] - warm)) band = i;
 				}
-				call(minecraft, "cicadas_" + band, tree, 0.45f);
+				call(minecraft, "cicadas_" + band, tree, 0.3f);
 			}
 		}
 		// After rain, the leaves drip for a while: often at first, then now and then. Not where it never rains, or

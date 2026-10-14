@@ -23,10 +23,11 @@ impl WindScene {
 }
 
 /// Gusts: the speed wanders round its mean as an Ornstein–Uhlenbeck process,
-/// with this turbulence intensity (standard deviation over mean)...
-const TURBULENCE: f32 = 0.25;
-/// ...and this time scale, seconds.
-const GUST_TIME: f32 = 4.0;
+/// with this turbulence intensity (standard deviation over mean: low over
+/// sheltered ground, 0.15 to 0.25)...
+const TURBULENCE: f32 = 0.18;
+/// ...and this time scale, seconds: slow swells, restful rather than restless.
+const GUST_TIME: f32 = 6.0;
 /// How loud the leaves' patter is.
 const LEAVES: f32 = 0.18;
 /// What each sample keeps of a leaf's swish: about 25 ms.
@@ -226,7 +227,9 @@ impl Wind {
             };
             let fade = (self.creak_left * 8.0).min(1.0);
             out += 0.05 * leaves * reach * fade * self.creak.process(slip);
-        } else if canopy > 7.0 && self.rng.unit() < dt * 0.05 * leaves * (canopy - 7.0) / 10.0 {
+        } else if canopy > 17.5 && self.rng.unit() < dt * 0.05 * leaves * (canopy - 17.5) / 2.5 {
+            // Only in a strong wind (7 m/s and up at the crowns): a creak in a
+            // gentle one is eerie, not restful.
             self.creak_left = 0.3 + 0.6 * self.rng.unit();
             self.creak_hz = 120.0 + 200.0 * self.rng.unit();
             self.creak.tune(500.0 + 900.0 * self.rng.unit(), 3.0);
