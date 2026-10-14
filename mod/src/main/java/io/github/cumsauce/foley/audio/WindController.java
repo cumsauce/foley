@@ -49,7 +49,7 @@ public final class WindController {
 		WindScene sampled = WindScene.sample(minecraft);
 		if (forced != null) sampled = sampled.withSpeed(forced);
 		// Among trees there's always a little air moving in the leaves: never quite still.
-		if (sampled.leaves() > 0.1f && sampled.speed() < 1.2f) sampled = sampled.withSpeed(1.2f);
+		if (sampled.leaves() > 0.3f && sampled.speed() < 1.2f) sampled = sampled.withSpeed(1.2f);
 		scene = sampled;
 		if (!io.github.cumsauce.foley.FoleyClient.wants(io.github.cumsauce.foley.config.FoleyConfig::wind)
 				|| scene.speed() < STILL || (scene.exposure() < SHUT_IN && scene.leaves() < 0.05f)) {

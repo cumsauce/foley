@@ -1,5 +1,5 @@
-use crate::Wobble;
 use crate::{BandPass, Rng, SAMPLE_RATE};
+use crate::{LowPass, Wobble, smooth};
 #[allow(unused_imports)] // Some of these are in core; the rest come from std.
 use foley_math::Float as _;
 
@@ -73,6 +73,12 @@ pub struct Wind {
     rustle_heard: f32,
     until_leaf: f32,
     flutter: Wobble,
+    /// The air between the ear and the leaves: dull from afar, opening as a
+    /// gust sweeps the near crowns.
+    leaf_air: LowPass,
+    /// How near the gust in the crowns is, 0 to 1, following its swell over
+    /// some 0.6 s: the sweep from afar.
+    leaf_near: f32,
     /// A bough creaking in a strong wind: stick-slip at a wandering rate.
     creak: BandPass,
     creak_left: f32,
@@ -93,10 +99,12 @@ impl Wind {
             ear: 0.0,
             roar: BandPass::new(150.0, 0.7),
             whoosh: BandPass::new(600.0, 1.2),
-            rustle: BandPass::new(4000.0, 1.5),
+            rustle: BandPass::new(1800.0, 1.0),
             rustle_envelope: 0.0,
             until_rustle: 0.0,
-            leaf: [BandPass::new(2500.0, 0.8), BandPass::new(4800.0, 1.2)],
+            leaf: [BandPass::new(1300.0, 0.7), BandPass::new(2600.0, 1.0)],
+            leaf_air: LowPass::new(2000.0),
+            leaf_near: 0.0,
             leaf_envelope: 0.0,
             leaf_heard: 0.0,
             rustle_heard: 0.0,
@@ -151,6 +159,11 @@ impl Wind {
     /// strong wind, boughs creak.
     fn leaves(&mut self, u: f32, exposure: f32, dt: f32) -> f32 {
         let leaves = self.scene.leaves.clamp(0.0, 1.0);
+        // Only real woods: a stray bush or two adds nothing.
+        let leaves = leaves * smooth((leaves - 0.1) / 0.2);
+        if leaves <= 0.0 {
+            return 0.0;
+        }
         let reach = 0.4 + 0.6 * exposure;
         let canopy = (2.5 * u).clamp(2.5, 20.0);
         let mut out = 0.0;
@@ -170,8 +183,8 @@ impl Wind {
         self.leaf_heard += 0.004 * (self.leaf_envelope.min(1.5) - self.leaf_heard);
         let flutter = self.flutter.next(self.rng.signed());
         let noise = self.rng.signed();
-        // Leaves in a breeze are loudest at 2 to 5 kHz, not up in the hiss.
-        let leaf = self.leaf[0].process(noise) + 0.4 * self.leaf[1].process(noise);
+        // Foliage rustles mostly at 1 to 3 kHz, falling away above.
+        let leaf = self.leaf[0].process(noise) + 0.35 * self.leaf[1].process(noise);
         // A smooth hush sounds quieter than ticks of the same power: lifted in
         // a light breeze, as much as before by a strong one.
         let loud = LEAVES * leaves * reach * (0.6 + canopy / 40.0) * (2.0 - canopy / 20.0);
@@ -190,6 +203,15 @@ impl Wind {
             let rustle = self.rustle.process(self.rng.signed());
             out += 0.006 * self.rustle_heard * rustle * leaves * reach * (canopy / 10.0).min(2.0);
         }
+        // From afar the leaves are dull; a gust sweeping in through the near
+        // crowns brings their highs with it.
+        if self.samples.is_multiple_of(BLOCK) {
+            self.leaf_near += (self.rustle_heard.min(1.0) - self.leaf_near)
+                * (BLOCK as f32 / (0.6 * SAMPLE_RATE as f32));
+            self.leaf_air.tune(1500.0 + 3500.0 * self.leaf_near);
+        }
+        // Darker, so a little more: the same presence as the bright leaves had.
+        out = 1.4 * self.leaf_air.process(out);
         // Creaks: a bough's fibres sticking and slipping, a few hundred times a
         // second, wandering in pitch, for half a second or so.
         if self.creak_left > 0.0 {
@@ -283,7 +305,9 @@ mod tests {
             exposure: 0.0,
             leaves: 0.0,
         });
-        assert!(under > 4.0 * bare && under > 0.3, "{under} vs {bare}");
+        // Energy over 4 s; the leaves are dark (1 to 3 kHz), so less of it
+        // than their presence suggests.
+        assert!(under > 4.0 * bare && under > 0.12, "{under} vs {bare}");
         let mut wind = Wind::new(2);
         wind.set_scene(WindScene {
             speed: 12.0,
