@@ -40,7 +40,14 @@ jobs:
       - name: RealtimeSanitizer
         env:
           RTSAN_ENABLE: "1"
-        run: cargo test --locked -p foley-ffi audio_thread
+        run: |
+          cargo test --locked -p foley-ffi audio_thread
+          # And it's really on: a deliberate allocation must be caught.
+          if out=$(cargo test --locked -p foley-ffi realtime_sanitizer_catches -- --ignored 2>&1); then
+            echo "$out"; echo "RealtimeSanitizer is not active"; exit 1
+          fi
+          grep -q "RealtimeSanitizer" <<<"$out" || { echo "$out"; exit 1; }
+          echo "RealtimeSanitizer caught the deliberate allocation"
       - name: Synthesis bench
         run: cargo run --release --locked -p foley-synth --example bed_bench
 

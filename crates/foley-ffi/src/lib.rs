@@ -580,6 +580,17 @@ mod tests {
     use super::*;
     use crate::no_alloc::allocations;
 
+    /// Allocates on a real-time thread on purpose. CI runs it under
+    /// RealtimeSanitizer expecting it to be stopped: proof the sanitizer is
+    /// on, so its pass on the test below means something.
+    #[test]
+    #[ignore = "fails by design under RealtimeSanitizer"]
+    fn realtime_sanitizer_catches_an_allocation() {
+        rtsan_standalone::realtime_enter();
+        drop(std::hint::black_box(vec![1u8; 16]));
+        rtsan_standalone::realtime_exit();
+    }
+
     /// Everything the stream thread calls (render, a new scene, a strike)
     /// allocates and frees nothing, for every bed, as scenes change and
     /// voices come and go. With `RTSAN_ENABLE=1` (in CI), RealtimeSanitizer
