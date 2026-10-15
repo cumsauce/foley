@@ -40,6 +40,11 @@ const GUST_LEAD: f32 = 0.8;
 const BLOCK: usize = 64;
 /// Gust blocks the ear lags behind the leaves.
 const LEAD: usize = (GUST_LEAD * SAMPLE_RATE as f32 / BLOCK as f32) as usize;
+/// Rendered and thrown away when a fresh bed takes its first scene, so the
+/// filters and the leaves' slow envelopes reach their steady state before the
+/// first sample is heard: a bed started fresh (a cave left, a setting switched
+/// on) swelled in over a tenth of a second, a dip under the sound before it.
+const WARM_UP: usize = 8192;
 
 /// The wind (M1): turbulence heard as band-passed noise, its loudness rising
 /// with speed cubed (aerodynamic noise power goes as U⁶) and its pitch with
@@ -120,9 +125,13 @@ impl Wind {
     }
 
     pub fn set_scene(&mut self, scene: WindScene) {
-        // The wind is already blowing when it's first heard.
+        // The wind is already blowing when it's first heard: take the speed at
+        // once, and warm the render up to it before anything is heard.
         if self.filled == 0 {
+            self.scene = scene;
             self.speed = scene.speed.max(0.0);
+            self.render(&mut [0.0; WARM_UP]);
+            return;
         }
         self.scene = scene;
     }
