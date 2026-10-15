@@ -395,7 +395,14 @@ pub fn all() -> Vec<Scene> {
                 name: "rain",
                 kind: FOLEY_BED_RAIN,
                 every: 10,
-                params: |t| rain(10.0, 0.5, 0.0, Some((3.0, 16.0 - 15.5 * during(t, 5.0, 55.0)))),
+                params: |t| {
+                    rain(
+                        10.0,
+                        0.5,
+                        0.0,
+                        Some((3.0, 16.0 - 15.5 * during(t, 5.0, 55.0))),
+                    )
+                },
                 strikes: &[],
                 expect: Some(NO_STEP),
             }],
@@ -422,7 +429,8 @@ pub fn all() -> Vec<Scene> {
                 kind: FOLEY_BED_RAIN,
                 every: 10,
                 params: |t| {
-                    let roof = [(2.0, 4.0), (1.0, 3.0), (6.0, 2.0), (4.0, 3.0)][((t / 15.0) as usize) % 4];
+                    let roof =
+                        [(2.0, 4.0), (1.0, 3.0), (6.0, 2.0), (4.0, 3.0)][((t / 15.0) as usize) % 4];
                     rain(12.0, 0.4, 0.3, Some(roof))
                 },
                 strikes: &[],
@@ -456,7 +464,13 @@ pub fn all() -> Vec<Scene> {
                 name: "thunder",
                 kind: FOLEY_BED_THUNDER,
                 every: 5,
-                params: |t| vec![30.0 - 30.0 * during(t, 1.0, 12.0), 95.0 - 35.0 * during(t, 4.0, 11.0), 1.0],
+                params: |t| {
+                    vec![
+                        30.0 - 30.0 * during(t, 1.0, 12.0),
+                        95.0 - 35.0 * during(t, 4.0, 11.0),
+                        1.0,
+                    ]
+                },
                 strikes: &[(2.0, 900.0, 0.0, 0.0)],
                 expect: Some(NO_JUMP),
             }],
@@ -469,7 +483,13 @@ pub fn all() -> Vec<Scene> {
                 name: "thunder",
                 kind: FOLEY_BED_THUNDER,
                 every: 5,
-                params: |t| vec![15.0, 90.0, (1.0 - during(t, 4.0, 5.0)) + during(t, 8.0, 9.0)],
+                params: |t| {
+                    vec![
+                        15.0,
+                        90.0,
+                        (1.0 - during(t, 4.0, 5.0)) + during(t, 8.0, 9.0),
+                    ]
+                },
                 strikes: &[(2.0, 900.0, 0.0, 0.0)],
                 expect: Some(NO_JUMP),
             }],
@@ -499,11 +519,13 @@ pub fn all() -> Vec<Scene> {
                 name: "wind",
                 kind: FOLEY_BED_WIND,
                 every: 5,
-                params: |t| vec![
-                    ease(8.0, 50.0, during(t, 2.0, 18.0)) - 45.0 * during(t, 25.0, 38.0),
-                    ease(1.0, 0.2, during(t, 30.0, 40.0)),
-                    ease(0.0, 0.9, during(t, 32.0, 42.0)),
-                ],
+                params: |t| {
+                    vec![
+                        ease(8.0, 50.0, during(t, 2.0, 18.0)) - 45.0 * during(t, 25.0, 38.0),
+                        ease(1.0, 0.2, during(t, 30.0, 40.0)),
+                        ease(0.0, 0.9, during(t, 32.0, 42.0)),
+                    ]
+                },
                 strikes: &[],
                 expect: Some(NO_STEP),
             }],
@@ -518,11 +540,13 @@ pub fn all() -> Vec<Scene> {
                 name: "water",
                 kind: FOLEY_BED_WATER,
                 every: 10,
-                params: |t| vec![
-                    ease(20.0, 300.0, during(t, 5.0, 30.0)) - 180.0 * during(t, 45.0, 58.0),
-                    ease(0.0, 20.0, during(t, 10.0, 25.0)),
-                    ease(0.08, 1.0, during(t, 5.0, 30.0)),
-                ],
+                params: |t| {
+                    vec![
+                        ease(20.0, 300.0, during(t, 5.0, 30.0)) - 180.0 * during(t, 45.0, 58.0),
+                        ease(0.0, 20.0, during(t, 10.0, 25.0)),
+                        ease(0.08, 1.0, during(t, 5.0, 30.0)),
+                    ]
+                },
                 strikes: &[],
                 expect: Some(NO_STEP),
             }],
@@ -558,7 +582,12 @@ pub fn all() -> Vec<Scene> {
                 name: "lava",
                 kind: FOLEY_BED_LAVA,
                 every: 5,
-                params: |t| vec![ease(1.0, 200.0, during(t, 5.0, 25.0)), ease(1.0, 0.6, during(t, 25.0, 40.0))],
+                params: |t| {
+                    vec![
+                        ease(1.0, 200.0, during(t, 5.0, 25.0)),
+                        ease(1.0, 0.6, during(t, 25.0, 40.0)),
+                    ]
+                },
                 strikes: &[],
                 expect: Some(NO_JUMP),
             }],

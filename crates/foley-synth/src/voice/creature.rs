@@ -11,10 +11,10 @@ use crate::Rng;
 
 /// Another mod's creature's voice. `length` is its vocal tract's (m) and
 /// `f0` its usual pitch (Hz); formant spacing follows the tract (ΔF = c/2L),
-/// and listeners read the body's size from both (Fitch 1997). `rough` (0 to
-/// 1) is how far it goes into the nonlinear phenomena — chaos, subharmonics,
-/// creak, the 30–150 Hz roughness of alarm — and `breathy` how breathy it
-/// is, where 1 is as far as Foley's own go.
+/// and listeners read the body's size from both (Fitch 1997). `rough`
+/// (0 to 1) is how far it goes into the nonlinear phenomena — chaos,
+/// subharmonics, creak, the 30–150 Hz roughness of alarm — and `breathy` how
+/// breathy it is, where 1 is as far as Foley's own go.
 #[derive(Debug, Clone, Copy)]
 pub struct CreatureSpec {
     pub length: f32,
@@ -68,17 +68,26 @@ pub fn creature_voice(rng: &mut Rng, spec: &CreatureSpec, call: CreatureCall) ->
 fn ambient(rng: &mut Rng, spec: &CreatureSpec) -> Vec<Seg> {
     let mut segments = Vec::new();
     for _ in 0..1 + (rng.unit() * 2.0) as usize {
-        let mut g = Seg::new(vary(rng, 1.1, 0.25))
-            .vowels(&[(0.0, UH), (0.4, SCHWA), (0.8, OH), (1.0, UH)]);
+        let mut g =
+            Seg::new(vary(rng, 1.1, 0.25)).vowels(&[(0.0, UH), (0.4, SCHWA), (0.8, OH), (1.0, UH)]);
         g.f0 = k(&[(0.0, 1.05), (0.5, 0.95), (1.0, 0.75)]);
         g.rd = c(1.6 + 0.6 * spec.breathy);
         g.loud = k(&[(0.0, 0.0), (0.2, 0.8), (0.5, 1.0), (0.85, 0.7), (1.0, 0.0)]);
         g.sub = c(0.35 * spec.rough);
-        g.chaos = k(&[(0.0, 0.1 * spec.rough), (0.4, 0.35 * spec.rough), (1.0, 0.15 * spec.rough)]);
+        g.chaos = k(&[
+            (0.0, 0.1 * spec.rough),
+            (0.4, 0.35 * spec.rough),
+            (1.0, 0.15 * spec.rough),
+        ]);
         g.sidebands = c(0.15 * spec.rough);
         g.sideband_hz = 40.0 + 40.0 * rng.unit();
         g.breath = c(0.3 + 0.25 * spec.breathy);
-        g.creak = k(&[(0.0, 0.4 * spec.rough), (0.15, 0.0), (0.75, 0.0), (1.0, 0.7 * spec.rough)]);
+        g.creak = k(&[
+            (0.0, 0.4 * spec.rough),
+            (0.15, 0.0),
+            (0.75, 0.0),
+            (1.0, 0.7 * spec.rough),
+        ]);
         g.jitter = 0.02 * (1.0 + spec.rough);
         g.tremolo = (vary(rng, 4.5, 0.2), 0.1 + 0.1 * spec.rough);
         g.gap = vary(rng, 0.5, 0.3);
@@ -93,7 +102,11 @@ fn hurt(rng: &mut Rng, spec: &CreatureSpec) -> Vec<Seg> {
     cry.f0 = k(&[(0.0, 1.4), (0.25, 1.8), (1.0, 1.2)]);
     cry.rd = c(0.7);
     cry.loud = k(&[(0.0, 0.0), (0.06, 1.0), (0.5, 0.8), (1.0, 0.0)]);
-    cry.chaos = k(&[(0.0, 0.5 * spec.rough), (0.5, 0.3 * spec.rough), (1.0, 0.05)]);
+    cry.chaos = k(&[
+        (0.0, 0.5 * spec.rough),
+        (0.5, 0.3 * spec.rough),
+        (1.0, 0.05),
+    ]);
     cry.sub = c(0.25 * spec.rough);
     cry.sidebands = c(0.2 + 0.2 * spec.rough);
     cry.sideband_hz = 60.0 + 50.0 * rng.unit();
@@ -108,9 +121,16 @@ fn death(rng: &mut Rng, spec: &CreatureSpec) -> Vec<Seg> {
     d.f0 = k(&[(0.0, 1.3), (0.4, 0.9), (1.0, 0.5)]);
     d.rd = k(&[(0.0, 1.2), (1.0, 2.7)]);
     d.loud = k(&[(0.0, 0.0), (0.15, 0.9), (0.6, 0.5), (1.0, 0.0)]);
-    d.chaos = k(&[(0.0, 0.3 * spec.rough), (0.6, 0.45 * spec.rough), (1.0, 0.2 * spec.rough)]);
+    d.chaos = k(&[
+        (0.0, 0.3 * spec.rough),
+        (0.6, 0.45 * spec.rough),
+        (1.0, 0.2 * spec.rough),
+    ]);
     d.sub = c(0.4 * spec.rough);
-    d.breath = k(&[(0.0, 0.2 + 0.2 * spec.breathy), (1.0, 0.5 + 0.3 * spec.breathy)]);
+    d.breath = k(&[
+        (0.0, 0.2 + 0.2 * spec.breathy),
+        (1.0, 0.5 + 0.3 * spec.breathy),
+    ]);
     d.creak = k(&[(0.5, 0.0), (1.0, 0.8 * spec.rough)]);
     d.gap = 0.0;
     let mut catch = Seg::new(vary(rng, 0.3, 0.2)).vowels(&[(0.0, SCHWA)]);
@@ -131,7 +151,11 @@ fn growl(rng: &mut Rng, spec: &CreatureSpec) -> Vec<Seg> {
     g.sub = c(0.45 + 0.25 * spec.rough);
     g.sidebands = c(0.2 + 0.3 * spec.rough);
     g.sideband_hz = 30.0 + 60.0 * spec.rough;
-    g.chaos = k(&[(0.0, 0.15 * spec.rough), (0.5, 0.3 * spec.rough), (1.0, 0.2 * spec.rough)]);
+    g.chaos = k(&[
+        (0.0, 0.15 * spec.rough),
+        (0.5, 0.3 * spec.rough),
+        (1.0, 0.2 * spec.rough),
+    ]);
     g.breath = c(0.25 + 0.25 * spec.breathy);
     g.jitter = 0.03 * (1.0 + spec.rough);
     vec![g]
@@ -166,10 +190,42 @@ mod tests {
     #[test]
     fn every_call_of_every_kind_of_creature_renders() {
         for (what, spec) in [
-            ("small bird", CreatureSpec { length: 0.04, f0: 1200.0, rough: 0.2, breathy: 0.4 }),
-            ("human-like", CreatureSpec { length: 0.17, f0: 120.0, rough: 0.5, breathy: 0.5 }),
-            ("huge hostile", CreatureSpec { length: 0.7, f0: 60.0, rough: 1.0, breathy: 0.3 }),
-            ("clean breathy", CreatureSpec { length: 0.3, f0: 300.0, rough: 0.0, breathy: 1.0 }),
+            (
+                "small bird",
+                CreatureSpec {
+                    length: 0.04,
+                    f0: 1200.0,
+                    rough: 0.2,
+                    breathy: 0.4,
+                },
+            ),
+            (
+                "human-like",
+                CreatureSpec {
+                    length: 0.17,
+                    f0: 120.0,
+                    rough: 0.5,
+                    breathy: 0.5,
+                },
+            ),
+            (
+                "huge hostile",
+                CreatureSpec {
+                    length: 0.7,
+                    f0: 60.0,
+                    rough: 1.0,
+                    breathy: 0.3,
+                },
+            ),
+            (
+                "clean breathy",
+                CreatureSpec {
+                    length: 0.3,
+                    f0: 300.0,
+                    rough: 0.0,
+                    breathy: 1.0,
+                },
+            ),
         ] {
             for call in [
                 CreatureCall::Ambient,
@@ -196,22 +252,65 @@ mod tests {
     #[test]
     fn size_reads_from_the_tract_and_roughness_reads_as_roughness() {
         let mut rng = Rng::new(3);
-        let big = creature_voice(&mut rng, &CreatureSpec { length: 0.6, f0: 70.0, rough: 0.5, breathy: 0.4 },
-            CreatureCall::Ambient);
-        let small = creature_voice(&mut rng, &CreatureSpec { length: 0.05, f0: 900.0, rough: 0.5, breathy: 0.4 },
-            CreatureCall::Ambient);
-        assert!(crossings(&small) > crossings(&big), "the bigger creature sounds lower");
-        let rough = creature_voice(&mut rng, &CreatureSpec { length: 0.17, f0: 120.0, rough: 1.0, breathy: 0.4 },
-            CreatureCall::Growl);
-        let clean = creature_voice(&mut rng, &CreatureSpec { length: 0.17, f0: 120.0, rough: 0.0, breathy: 0.4 },
-            CreatureCall::Growl);
+        let big = creature_voice(
+            &mut rng,
+            &CreatureSpec {
+                length: 0.6,
+                f0: 70.0,
+                rough: 0.5,
+                breathy: 0.4,
+            },
+            CreatureCall::Ambient,
+        );
+        let small = creature_voice(
+            &mut rng,
+            &CreatureSpec {
+                length: 0.05,
+                f0: 900.0,
+                rough: 0.5,
+                breathy: 0.4,
+            },
+            CreatureCall::Ambient,
+        );
+        assert!(
+            crossings(&small) > crossings(&big),
+            "the bigger creature sounds lower"
+        );
+        let rough = creature_voice(
+            &mut rng,
+            &CreatureSpec {
+                length: 0.17,
+                f0: 120.0,
+                rough: 1.0,
+                breathy: 0.4,
+            },
+            CreatureCall::Growl,
+        );
+        let clean = creature_voice(
+            &mut rng,
+            &CreatureSpec {
+                length: 0.17,
+                f0: 120.0,
+                rough: 0.0,
+                breathy: 0.4,
+            },
+            CreatureCall::Growl,
+        );
         // Roughness modulates at 30–150 Hz: more crossings through zero.
-        assert!(crossings(&rough) > crossings(&clean), "rough reads as rough");
+        assert!(
+            crossings(&rough) > crossings(&clean),
+            "rough reads as rough"
+        );
     }
 
     #[test]
     fn a_hurt_call_is_higher_than_the_ambient_one() {
-        let spec = CreatureSpec { length: 0.2, f0: 150.0, rough: 0.5, breathy: 0.5 };
+        let spec = CreatureSpec {
+            length: 0.2,
+            f0: 150.0,
+            rough: 0.5,
+            breathy: 0.5,
+        };
         let mut rng = Rng::new(9);
         let hurt = creature_voice(&mut rng, &spec, CreatureCall::Hurt);
         let ambient = creature_voice(&mut rng, &spec, CreatureCall::Ambient);

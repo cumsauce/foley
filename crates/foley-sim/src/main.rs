@@ -181,7 +181,10 @@ fn stops(read: usize, out: &std::path::Path) -> usize {
         unsafe {
             for (part, chunk) in pcm.chunks_mut(half).enumerate() {
                 let mut bed: *mut FoleyBed = std::ptr::null_mut();
-                assert_eq!(foley_bed_create(*kind, 11 + part as u64, &mut bed), FOLEY_OK);
+                assert_eq!(
+                    foley_bed_create(*kind, 11 + part as u64, &mut bed),
+                    FOLEY_OK
+                );
                 assert_eq!(
                     foley_bed_set_scene(bed, params.as_ptr(), params.len()),
                     FOLEY_OK,
@@ -212,14 +215,13 @@ fn stops(read: usize, out: &std::path::Path) -> usize {
                 .map(|k| (level[k] - level[k - 1]).abs())
                 .collect();
             v.sort_by(f32::total_cmp);
-            if v.is_empty() {
-                0.0
-            } else {
-                v[v.len() / 2]
-            }
+            if v.is_empty() { 0.0 } else { v[v.len() / 2] }
         };
         let step = (level[seam] - level[seam - 1]).abs();
-        let before = level[seam - around..seam].iter().copied().fold(f32::MIN, f32::max);
+        let before = level[seam - around..seam]
+            .iter()
+            .copied()
+            .fold(f32::MIN, f32::max);
         let after = level[seam..(seam + around).min(level.len())]
             .iter()
             .copied()
@@ -237,7 +239,10 @@ fn stops(read: usize, out: &std::path::Path) -> usize {
             println!("           a {step:.1} dB jump at the join, against {typical:.1} dB within");
         }
         if fell {
-            println!("           the fresh bed is {:.1} dB quieter than the one before", before - after);
+            println!(
+                "           the fresh bed is {:.1} dB quieter than the one before",
+                before - after
+            );
         }
         failures += usize::from(!ok);
     }
@@ -333,10 +338,14 @@ fn mix(read: usize, out: &std::path::Path) -> usize {
         }
     }
     let clipped = mixed.iter().filter(|s| **s >= 32_000.0 / 32768.0).count();
-    let pcm: Vec<i16> = mixed.iter().map(|s| (s.clamp(-1.0, 0.9999) * 32768.0) as i16).collect();
+    let pcm: Vec<i16> = mixed
+        .iter()
+        .map(|s| (s.clamp(-1.0, 0.9999) * 32768.0) as i16)
+        .collect();
     analysis::write_wav(&out.join("mix-storm.wav"), &pcm);
     let metrics = analysis::Metrics::of(&pcm, read);
-    println!("  {:8} {} | peak {:5.1} dBFS | {:.1} LUFS",
+    println!(
+        "  {:8} {} | peak {:5.1} dBFS | {:.1} LUFS",
         "storm",
         if clipped == 0 { "ok  " } else { "FAIL" },
         20.0 * (mixed.iter().map(|s| s.abs()).fold(1e-9f32, f32::max)).log10(),

@@ -14,12 +14,12 @@ mod guard;
 mod no_alloc;
 
 use foley_synth::{
-    Call, Contact, Fire, FireScene, Lava, LavaScene, Material, MaterialProps, Mob, Plant, Rain,
-    RainScene, SAMPLE_RATE, Surface, Thunder, ThunderScene, Water, WaterScene, Wind, WindScene,
-    CreatureCall, CreatureSpec, birdsong, brush, bubble, buzz, cicadas, contact, contact_with,
-    crickets, creature_voice, drip_into_water, drip_on_stone, flush, fracture, fracture_with,
-    frog, gust, howl, ice_singing, lava_drip, noise_burst, owl, settling_stone, surf, to_pcm,
-    tone, voice, woodpecker,
+    Call, Contact, CreatureCall, CreatureSpec, Fire, FireScene, Lava, LavaScene, Material,
+    MaterialProps, Mob, Plant, Rain, RainScene, SAMPLE_RATE, Surface, Thunder, ThunderScene, Water,
+    WaterScene, Wind, WindScene, birdsong, brush, bubble, buzz, cicadas, contact, contact_with,
+    creature_voice, crickets, drip_into_water, drip_on_stone, flush, fracture, fracture_with, frog,
+    gust, howl, ice_singing, lava_drip, noise_burst, owl, settling_stone, surf, to_pcm, tone,
+    voice, woodpecker,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -597,7 +597,9 @@ pub unsafe extern "C" fn foley_render_contact_custom(
         // SAFETY: the caller guarantees `props` points to `count` floats.
         let p = unsafe { slice_arg(props, count, "props") }?;
         if p.len() != FOLEY_CUSTOM_MATERIAL_FLOATS {
-            return Err(FfiError::invalid("wrong number of floats for a custom material"));
+            return Err(FfiError::invalid(
+                "wrong number of floats for a custom material",
+            ));
         }
         let behaviour = usize::try_from(p[0].round() as i64)
             .ok()
@@ -671,10 +673,14 @@ pub unsafe extern "C" fn foley_render_primitive(
         // SAFETY: the caller guarantees `params` points to `count` floats.
         let p = unsafe { slice_arg(params, count, "params") }?;
         if p.len() > FOLEY_PRIMITIVE_MAX_FLOATS || !p.iter().all(|x| x.is_finite()) {
-            return Err(FfiError::invalid("wrong number of floats, or a non-finite one"));
+            return Err(FfiError::invalid(
+                "wrong number of floats, or a non-finite one",
+            ));
         }
         let given = |i: usize| -> Result<f32, FfiError> {
-            p.get(i).copied().ok_or_else(|| FfiError::invalid("too few floats for this primitive"))
+            p.get(i)
+                .copied()
+                .ok_or_else(|| FfiError::invalid("too few floats for this primitive"))
         };
         let range = |what: &str, x: f32, lo: f32, hi: f32| -> Result<f32, FfiError> {
             (lo..=hi)
@@ -743,7 +749,9 @@ pub unsafe extern "C" fn foley_render_creature(
         // SAFETY: the caller guarantees `spec` points to `count` floats.
         let p = unsafe { slice_arg(spec, count, "spec") }?;
         if p.len() != FOLEY_CREATURE_FLOATS || !p.iter().all(|x| x.is_finite()) {
-            return Err(FfiError::invalid("wrong number of floats for a creature, or a non-finite one"));
+            return Err(FfiError::invalid(
+                "wrong number of floats for a creature, or a non-finite one",
+            ));
         }
         let range = |what: &str, x: f32, lo: f32, hi: f32| -> Result<f32, FfiError> {
             (lo..=hi)
@@ -1305,9 +1313,8 @@ mod tests {
     fn a_custom_material_renders_and_is_checked() {
         // Wood's physics as a custom material would send them: behaviour
         // wood, E, ρ, ν, η, plate, fragments, restitution, shard.
-        let props = |fragments: f32| {
-            vec![1.0, 10e9, 500.0, 0.3, 0.025, 0.025, fragments, 0.4, 0.01]
-        };
+        let props =
+            |fragments: f32| vec![1.0, 10e9, 500.0, 0.3, 0.025, 0.025, fragments, 0.4, 0.01];
         for kind in 0..=4 {
             let mut needed = 0;
             // SAFETY: a null buffer with capacity 0 is not written; `props`

@@ -59,7 +59,8 @@ pub fn tone(centre_hz: f32, target_hz: f32, seconds: f32, gain: f32, seed: u64) 
     for (i, sample) in out.iter_mut().enumerate() {
         let t = i as f32 / length as f32;
         // Exponential glide, so the pitch's interval moves evenly.
-        let hz = centre_hz * (target_hz / centre_hz).powf(t)
+        let hz = centre_hz
+            * (target_hz / centre_hz).powf(t)
             * (1.0 + vibrato * (std::f32::consts::TAU * vibrato_hz * i as f32 / rate).sin());
         phase += std::f32::consts::TAU * hz / rate;
         let envelope = ((i as f32 / attack as f32).min(1.0)
@@ -83,7 +84,9 @@ pub fn gust(speed_m_s: f32, seconds: f32, gain: f32, seed: u64) -> Vec<f32> {
     let surges = 3;
     for surge in 0..surges {
         let at = (length as f32 * surge as f32 / surges as f32 * 0.9) as usize;
-        let span = (length / surges).max((0.3 * rate) as usize).min(length - at);
+        let span = (length / surges)
+            .max((0.3 * rate) as usize)
+            .min(length - at);
         let centre = (80.0 + 40.0 * speed_m_s) * (0.85 + 0.3 * rng.unit());
         let mut band = BandPass::new(centre, 0.7);
         let decay = (-2.0 / span as f32).exp();

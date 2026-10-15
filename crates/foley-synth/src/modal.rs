@@ -50,16 +50,18 @@ impl Material {
         // factor η as built in (more than the bare material's: blocks are
         // held by their neighbours), the vibrating plate (thickness, sides,
         // m), and how it breaks.
-        let p = |young, density, poisson, loss, thickness, fragments, restitution, shard| MaterialProps {
-            behavior: self,
-            young,
-            density,
-            poisson,
-            loss,
-            thickness,
-            fragments,
-            restitution,
-            shard,
+        let p = |young, density, poisson, loss, thickness, fragments, restitution, shard| {
+            MaterialProps {
+                behavior: self,
+                young,
+                density,
+                poisson,
+                loss,
+                thickness,
+                fragments,
+                restitution,
+                shard,
+            }
         };
         match self {
             // Granite-like, a slab 25 cm thick: rings faintly above 1 kHz.
@@ -484,12 +486,7 @@ fn settle_in(rng: &mut Rng, out: &mut Vec<f32>, props: &MaterialProps, speed: f3
 
 /// One strike of `contact` on `material` at `speed`: the surface's modes,
 /// the contact's click, and what the material does besides (grains, crunch).
-fn strike(
-    rng: &mut Rng,
-    contact: Contact,
-    props: &MaterialProps,
-    speed: f32,
-) -> Vec<f32> {
+fn strike(rng: &mut Rng, contact: Contact, props: &MaterialProps, speed: f32) -> Vec<f32> {
     let material = props.behavior;
     let target = (props.young, props.poisson);
     let (mass, radius, striker) = match contact {
@@ -597,7 +594,7 @@ pub fn fracture_with(props: &MaterialProps, seed: u64) -> Vec<f32> {
         let size = (0.02 * (1.0 - rng.unit()).powf(-0.5)).min(0.3);
         let amplitude = 0.15 * (size / 0.05).sqrt();
         // It rings as it breaks free...
-        let mut bank = fragment_modes(&mut rng, &props, size, amplitude);
+        let mut bank = fragment_modes(&mut rng, props, size, amplitude);
         bank.render_into(&mut out, (0.01 * rng.unit() * rate) as usize);
         // ...then lands and bounces.
         let drop = 0.2 + 0.6 * rng.unit();
@@ -606,11 +603,11 @@ pub fn fracture_with(props: &MaterialProps, seed: u64) -> Vec<f32> {
         let mut at = landing;
         let mut loud = amplitude;
         while loud > 0.02 * amplitude && at < 1.5 {
-            let mut bank = fragment_modes(&mut rng, &props, size, loud);
+            let mut bank = fragment_modes(&mut rng, props, size, loud);
             bank.render_into(&mut out, (at * rate) as usize);
             // The landing's own click: all there is of the smallest chips,
             // whose modes ring above hearing.
-            let ring = fragment_frequency(&props, size).min(8000.0);
+            let ring = fragment_frequency(props, size).min(8000.0);
             noise_burst(
                 &mut rng,
                 &mut out,
@@ -624,7 +621,7 @@ pub fn fracture_with(props: &MaterialProps, seed: u64) -> Vec<f32> {
             loud *= props.restitution.sqrt();
         }
     }
-    normalize(&mut out, 0.8 * loudness(&props).max(0.5));
+    normalize(&mut out, 0.8 * loudness(props).max(0.5));
     out
 }
 
@@ -747,10 +744,12 @@ mod tests {
         // not snow's heavily damped one.
         let tap = contact_with(Contact::Tap, &props, 3.0, 1);
         let stone_tap = contact(Contact::Tap, Material::Stone, 3.0, 1);
-        assert!((tap.len() as f32 / stone_tap.len() as f32 - 1.0).abs() < 0.3,
+        assert!(
+            (tap.len() as f32 / stone_tap.len() as f32 - 1.0).abs() < 0.3,
             "stone's ring: {} against {}",
             tap.len(),
-            stone_tap.len());
+            stone_tap.len()
+        );
         // And a custom break stays bounded and finite.
         let broken = fracture_with(&props, 3);
         assert!(
