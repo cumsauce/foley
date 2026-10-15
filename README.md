@@ -57,6 +57,8 @@ cargo run --release -p foley-synth --example bed_bench  # what synthesis costs
 cd mod && ./gradlew runClientGameTest                   # the real game: rain, wind and drips
 ```
 
+CI runs everything but that last line: launching the game there is slow and can hang on a loaded runner, so it is run locally, or from the Actions tab (Run workflow), which builds and runs it too.
+
 In a VM building from a VirtioFS shared folder, set `CARGO_TARGET_DIR` to a local disk and pass `-Pfoley.runDir=<local dir>` to game runs. Foley needs `--enable-native-access=ALL-UNNAMED` in the launcher's JVM arguments, like Earshot and Yak VC.
 
 ## License
