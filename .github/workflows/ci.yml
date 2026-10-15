@@ -119,6 +119,28 @@ jobs:
             grep -q " $entry\$" contents || { echo "$jar has no $entry" >&2; exit 1; }
           done
           unzip -p "$jar" META-INF/MANIFEST.MF | grep -q '^Enable-Native-Access: ALL-UNNAMED'
+          # A nested jar the mod depends on must be declared in its
+          # fabric.mod.json: the loader unpacks only the jars it is told about,
+          # so one nested but undeclared makes the game refuse to start
+          # (foley-api went out that way once). Every declared jar must be
+          # there, and the API's own version must satisfy the depends.
+          python3 - "$jar" <<'PY'
+          import json, sys, zipfile
+          jar = sys.argv[1]
+          with zipfile.ZipFile(jar) as z:
+              mod = json.loads(z.read("fabric.mod.json"))
+              want = mod["depends"]["foley-api"].lstrip(">=")
+              names = [e["file"] for e in mod.get("jars", [])]
+              api = [n for n in names if "foley-api-" in n]
+              assert len(api) == 1, f"declares {len(api)} api jars: {names}"
+              for name in names:
+                  assert name in z.namelist(), f"declared nested jar {name} is missing"
+              with zipfile.ZipFile(z.open(api[0])) as inner:
+                  nested = json.loads(inner.read("fabric.mod.json"))
+              assert nested["id"] == "foley-api", nested["id"]
+              assert nested["version"] == want, f"nested api {nested['version']} against depends {want}"
+              print(f"jars {names} declared and present; foley-api {nested['version']} for depends {want}")
+          PY
       - uses: actions/upload-artifact@v7
         with:
           name: foley-mod

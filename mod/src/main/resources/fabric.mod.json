@@ -33,5 +33,10 @@
 	"suggests": {
 		"earshot": "*",
 		"yakvc": "*"
-	}
+	},
+	"jars": [
+		{
+			"file": "META-INF/jars/foley-api-${version}.jar"
+		}
+	]
 }
