@@ -1,0 +1,19 @@
+{
+	"schemaVersion": 1,
+	"id": "foley-api",
+	"version": "${version}",
+	"name": "Foley API",
+	"description": "The types other mods compile against to use Foley's synthesis. Has no code of its own; Foley implements it.",
+	"license": "MIT OR Apache-2.0",
+	"contact": {
+		"homepage": "https://github.com/cumsauce/foley",
+		"sources": "https://github.com/cumsauce/foley",
+		"issues": "https://github.com/cumsauce/foley/issues"
+	},
+	"environment": "*",
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25"
+	}
+}

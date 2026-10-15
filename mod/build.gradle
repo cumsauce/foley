@@ -24,6 +24,10 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// The API jar other mods compile against. Plain implementation, as the rest (the game is unobfuscated, so there
+	// is nothing to remap), and nested by hand: Loom's `include` only nests through remapJar, which this setup
+	// doesn't run.
+	implementation project(':api')
 	// Unpacks the xz-compressed natives (CompressNatives below). 0BSD licence, bundled in the jar.
 	implementation "org.tukaani:xz:${project.xz_version}"
 	include "org.tukaani:xz:${project.xz_version}"
@@ -142,7 +146,16 @@ test {
 	jvmArgs '--enable-native-access=ALL-UNNAMED'
 }
 
+// The API jar, nested for the loader to unpack (JiJ). Loom's `include` nests only through remapJar, which this
+// unobfuscated setup doesn't run, so the jar task does it directly: its path is a provider, resolved (like the
+// dependsOn) only once the api project exists.
+def apiJarFile = project(':api').layout.buildDirectory.file("libs/foley-api-${project.version}.jar")
+
 jar {
+	dependsOn ':api:jar'
+	from(apiJarFile) {
+		into 'META-INF/jars'
+	}
 	from(rootProject.file('../LICENSE-MIT'))
 	from(rootProject.file('../LICENSE-APACHE'))
 	// JEP 472: lets FFM load the natives without a warning where the jar is the launched application. Minecraft

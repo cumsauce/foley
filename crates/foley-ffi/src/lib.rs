@@ -14,10 +14,12 @@ mod guard;
 mod no_alloc;
 
 use foley_synth::{
-    Call, Contact, Fire, FireScene, Lava, LavaScene, Material, Mob, Plant, Rain, RainScene,
-    SAMPLE_RATE, Surface, Thunder, ThunderScene, Water, WaterScene, Wind, WindScene, birdsong,
-    brush, buzz, cicadas, contact, crickets, drip_into_water, drip_on_stone, flush, fracture, frog,
-    howl, ice_singing, lava_drip, owl, settling_stone, surf, to_pcm, voice, woodpecker,
+    Call, Contact, Fire, FireScene, Lava, LavaScene, Material, MaterialProps, Mob, Plant, Rain,
+    RainScene, SAMPLE_RATE, Surface, Thunder, ThunderScene, Water, WaterScene, Wind, WindScene,
+    CreatureCall, CreatureSpec, birdsong, brush, bubble, buzz, cicadas, contact, contact_with,
+    crickets, creature_voice, drip_into_water, drip_on_stone, flush, fracture, fracture_with,
+    frog, gust, howl, ice_singing, lava_drip, noise_burst, owl, settling_stone, surf, to_pcm,
+    tone, voice, woodpecker,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -40,7 +42,13 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 /// 13: brushing through plants, lake ice singing, stones settling in caves.
 /// 14: more birds (gull, loon, jay, warbler), a bird flushed, insects
 ///     buzzing.
-pub const FOLEY_ABI_VERSION: u32 = 14;
+/// 15: custom materials for contacts and breaks,
+///     `foley_render_contact_custom` (the integration API, F1).
+/// 16: primitives to compose new one-shots from, `foley_render_primitive`
+///     (the integration API, F2).
+/// 17: other mods' creatures, `foley_render_creature` (the integration API,
+///     F3).
+pub const FOLEY_ABI_VERSION: u32 = 17;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -91,9 +99,50 @@ pub const FOLEY_SHOT_FLUSH: i32 = 14;
 /// An insect buzzing: `size` 0 a bee, 1 a fly.
 pub const FOLEY_SHOT_BUZZ: i32 = 15;
 
+/// Primitives for `foley_render_primitive`, and the floats each takes, in
+/// order:
+///
+/// - bubble: the radius in mm (0.05 to 20) — a Minnaert ring;
+/// - noise: the band's centre (Hz, 20 to 20000), its width (Q, 0.5 to 20),
+///   the seconds (0.005 to 5) and the peak's gain (0 to 1);
+/// - tone: the pitch (Hz, 20 to 10000), where it glides to (Hz, 20 to
+///   20000), the seconds (0.01 to 5) and the gain (0 to 1);
+/// - gust: the wind's speed (m/s, 0 to 60), the seconds (0.2 to 10) and the
+///   gain (0 to 1).
+pub const FOLEY_PRIMITIVE_BUBBLE: i32 = 0;
+pub const FOLEY_PRIMITIVE_NOISE: i32 = 1;
+pub const FOLEY_PRIMITIVE_TONE: i32 = 2;
+pub const FOLEY_PRIMITIVE_GUST: i32 = 3;
+
+/// The most floats any primitive takes.
+pub const FOLEY_PRIMITIVE_MAX_FLOATS: usize = 4;
+
+/// Calls of another mod's creature, for `foley_render_creature`: ambient,
+/// hurt, death, growl, breath.
+pub const FOLEY_CREATURE_AMBIENT: i32 = 0;
+pub const FOLEY_CREATURE_HURT: i32 = 1;
+pub const FOLEY_CREATURE_DEATH: i32 = 2;
+pub const FOLEY_CREATURE_GROWL: i32 = 3;
+pub const FOLEY_CREATURE_BREATH: i32 = 4;
+
+/// Another mod's creature's voice, the floats `foley_render_creature` takes,
+/// in order: its vocal tract's length (m, 0.03 to 1), its usual pitch (Hz,
+/// 30 to 4000), how rough it goes (0 to 1), how breathy (0 to 1).
+pub const FOLEY_CREATURE_FLOATS: usize = 4;
+
 /// Materials for `foley_render_contact`: stone, wood, metal, glass, ice,
 /// earth, granular (sand, gravel), plant, soft (wool), snow.
 pub const FOLEY_MATERIALS: usize = 10;
+
+/// A custom material's physics, the floats `foley_render_contact_custom`
+/// takes, in order: which built-in behaviour it follows (an index below
+/// [`FOLEY_MATERIALS`], whose grains, scuff, crunch and crack it keeps),
+/// Young's modulus (Pa, 1e8 to 5e11), density (kg/m³, 1 to 20000), Poisson's
+/// ratio (0 to 0.49), loss factor η (0.0005 to 2), the vibrating plate's
+/// thickness (m, 0.001 to 1), fragments it shatters into (0 to 200),
+/// restitution (0 to 0.95), and shards' thickness (m, 0 for chunks or
+/// 0.0005 to 0.2).
+pub const FOLEY_CUSTOM_MATERIAL_FLOATS: usize = 9;
 /// Contacts for `foley_render_contact`: a tool tapping, a block set down, a
 /// body landing, the block breaking, and a footstep.
 pub const FOLEY_CONTACT_TAP: i32 = 0;
@@ -520,6 +569,214 @@ pub unsafe extern "C" fn foley_render_contact(
     })
 }
 
+/// Renders a `contact` (`FOLEY_CONTACT_*`) on a custom material's physics
+/// (the integration API): `props` is [`FOLEY_CUSTOM_MATERIAL_FLOATS`] floats
+/// (see it for the order and ranges), `speed` as in
+/// [`foley_render_contact`]. Writes it to `out` if `cap` samples are enough,
+/// and how many it needs to `*needed` either way.
+///
+/// # Safety
+/// `props` must point to `count` floats; `out` must be writable for `cap`
+/// samples; `needed` must be writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foley_render_contact_custom(
+    props: *const f32,
+    count: usize,
+    kind: i32,
+    speed: f32,
+    seed: u64,
+    out: *mut i16,
+    cap: usize,
+    needed: *mut usize,
+) -> i32 {
+    guard(|| {
+        // SAFETY: the caller guarantees `needed` is writable.
+        let needed = unsafe { out_arg(needed, "needed") }?;
+        // SAFETY: the caller guarantees `out` is writable for `cap` samples.
+        let out = unsafe { slice_mut_arg(out, cap, "out") }?;
+        // SAFETY: the caller guarantees `props` points to `count` floats.
+        let p = unsafe { slice_arg(props, count, "props") }?;
+        if p.len() != FOLEY_CUSTOM_MATERIAL_FLOATS {
+            return Err(FfiError::invalid("wrong number of floats for a custom material"));
+        }
+        let behaviour = usize::try_from(p[0].round() as i64)
+            .ok()
+            .and_then(Material::from_index)
+            .ok_or_else(|| FfiError::invalid("unknown behaviour material"))?;
+        let range = |what: &str, x: f32, lo: f32, hi: f32| -> Result<f32, FfiError> {
+            (lo..=hi)
+                .contains(&x)
+                .then_some(x)
+                .ok_or_else(|| FfiError::invalid(format!("{what} out of range")))
+        };
+        let material = MaterialProps {
+            behavior: behaviour,
+            young: range("Young's modulus", p[1], 1e8, 5e11)?,
+            density: range("density", p[2], 1.0, 20_000.0)?,
+            poisson: range("Poisson's ratio", p[3], 0.0, 0.49)?,
+            loss: range("loss factor", p[4], 0.0005, 2.0)?,
+            thickness: range("plate thickness", p[5], 0.001, 1.0)?,
+            fragments: range("fragments", p[6], 0.0, 200.0)? as usize,
+            restitution: range("restitution", p[7], 0.0, 0.95)?,
+            shard: if p[8] == 0.0 {
+                0.0
+            } else {
+                range("shard thickness", p[8], 0.0005, 0.2)?
+            },
+        };
+        if !(0.1..=30.0).contains(&speed) {
+            return Err(FfiError::invalid("speed out of range"));
+        }
+        let sound = match kind {
+            FOLEY_CONTACT_BREAK => fracture_with(&material, seed),
+            FOLEY_CONTACT_TAP => contact_with(Contact::Tap, &material, speed, seed),
+            FOLEY_CONTACT_PLACE => contact_with(Contact::Place, &material, speed, seed),
+            FOLEY_CONTACT_LAND => contact_with(Contact::Land, &material, speed, seed),
+            FOLEY_CONTACT_STEP => contact_with(Contact::Step, &material, speed, seed),
+            _ => return Err(FfiError::invalid("unknown contact")),
+        };
+        if let Some(dest) = out.get_mut(..sound.len()) {
+            for (out, sample) in dest.iter_mut().zip(&sound) {
+                *out = to_pcm(*sample);
+            }
+        }
+        *needed = sound.len();
+        Ok(())
+    })
+}
+
+/// Renders a primitive of `kind` (`FOLEY_PRIMITIVE_*`) from `seed`:
+/// `params` are its floats (see the kinds for the order and ranges). Writes
+/// it to `out` if `cap` samples are enough, and how many it needs to
+/// `*needed` either way.
+///
+/// # Safety
+/// `params` must point to `count` floats; `out` must be writable for `cap`
+/// samples; `needed` must be writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foley_render_primitive(
+    kind: i32,
+    params: *const f32,
+    count: usize,
+    seed: u64,
+    out: *mut i16,
+    cap: usize,
+    needed: *mut usize,
+) -> i32 {
+    guard(|| {
+        // SAFETY: the caller guarantees `needed` is writable.
+        let needed = unsafe { out_arg(needed, "needed") }?;
+        // SAFETY: the caller guarantees `out` is writable for `cap` samples.
+        let out = unsafe { slice_mut_arg(out, cap, "out") }?;
+        // SAFETY: the caller guarantees `params` points to `count` floats.
+        let p = unsafe { slice_arg(params, count, "params") }?;
+        if p.len() > FOLEY_PRIMITIVE_MAX_FLOATS || !p.iter().all(|x| x.is_finite()) {
+            return Err(FfiError::invalid("wrong number of floats, or a non-finite one"));
+        }
+        let given = |i: usize| -> Result<f32, FfiError> {
+            p.get(i).copied().ok_or_else(|| FfiError::invalid("too few floats for this primitive"))
+        };
+        let range = |what: &str, x: f32, lo: f32, hi: f32| -> Result<f32, FfiError> {
+            (lo..=hi)
+                .contains(&x)
+                .then_some(x)
+                .ok_or_else(|| FfiError::invalid(format!("{what} out of range")))
+        };
+        let gain = |i: usize| -> Result<f32, FfiError> { range("gain", given(i)?, 0.0, 1.0) };
+        let sound = match kind {
+            FOLEY_PRIMITIVE_BUBBLE => bubble(range("radius_mm", given(0)?, 0.05, 20.0)?, seed),
+            FOLEY_PRIMITIVE_NOISE => noise_burst(
+                range("centre", given(0)?, 20.0, 20_000.0)?,
+                range("q", given(1)?, 0.5, 20.0)?,
+                range("seconds", given(2)?, 0.005, 5.0)?,
+                gain(3)?,
+                seed,
+            ),
+            FOLEY_PRIMITIVE_TONE => tone(
+                range("centre", given(0)?, 20.0, 10_000.0)?,
+                range("target", given(1)?, 20.0, 20_000.0)?,
+                range("seconds", given(2)?, 0.01, 5.0)?,
+                gain(3)?,
+                seed,
+            ),
+            FOLEY_PRIMITIVE_GUST => gust(
+                range("speed", given(0)?, 0.0, 60.0)?,
+                range("seconds", given(1)?, 0.2, 10.0)?,
+                gain(2)?,
+                seed,
+            ),
+            _ => return Err(FfiError::invalid("unknown primitive")),
+        };
+        if let Some(dest) = out.get_mut(..sound.len()) {
+            for (out, sample) in dest.iter_mut().zip(&sound) {
+                *out = to_pcm(*sample);
+            }
+        }
+        *needed = sound.len();
+        Ok(())
+    })
+}
+
+/// Renders a `call` (`FOLEY_CREATURE_*`) of another mod's creature: `spec`
+/// is its voice ([`FOLEY_CREATURE_FLOATS`] floats, see them for the order
+/// and ranges), made up from `seed`. Writes it to `out` if `cap` samples are
+/// enough, and how many it needs to `*needed` either way.
+///
+/// # Safety
+/// `spec` must point to `count` floats; `out` must be writable for `cap`
+/// samples; `needed` must be writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foley_render_creature(
+    spec: *const f32,
+    count: usize,
+    call: i32,
+    seed: u64,
+    out: *mut i16,
+    cap: usize,
+    needed: *mut usize,
+) -> i32 {
+    guard(|| {
+        // SAFETY: the caller guarantees `needed` is writable.
+        let needed = unsafe { out_arg(needed, "needed") }?;
+        // SAFETY: the caller guarantees `out` is writable for `cap` samples.
+        let out = unsafe { slice_mut_arg(out, cap, "out") }?;
+        // SAFETY: the caller guarantees `spec` points to `count` floats.
+        let p = unsafe { slice_arg(spec, count, "spec") }?;
+        if p.len() != FOLEY_CREATURE_FLOATS || !p.iter().all(|x| x.is_finite()) {
+            return Err(FfiError::invalid("wrong number of floats for a creature, or a non-finite one"));
+        }
+        let range = |what: &str, x: f32, lo: f32, hi: f32| -> Result<f32, FfiError> {
+            (lo..=hi)
+                .contains(&x)
+                .then_some(x)
+                .ok_or_else(|| FfiError::invalid(format!("{what} out of range")))
+        };
+        let creature = CreatureSpec {
+            length: range("tract length", p[0], 0.03, 1.0)?,
+            f0: range("pitch", p[1], 30.0, 4000.0)?,
+            rough: range("rough", p[2], 0.0, 1.0)?,
+            breathy: range("breathy", p[3], 0.0, 1.0)?,
+        };
+        let call = match call {
+            FOLEY_CREATURE_AMBIENT => CreatureCall::Ambient,
+            FOLEY_CREATURE_HURT => CreatureCall::Hurt,
+            FOLEY_CREATURE_DEATH => CreatureCall::Death,
+            FOLEY_CREATURE_GROWL => CreatureCall::Growl,
+            FOLEY_CREATURE_BREATH => CreatureCall::Breath,
+            _ => return Err(FfiError::invalid("unknown creature call")),
+        };
+        let mut rng = foley_synth::Rng::new(seed);
+        let sound = creature_voice(&mut rng, &creature, call);
+        if let Some(dest) = out.get_mut(..sound.len()) {
+            for (out, sample) in dest.iter_mut().zip(&sound) {
+                *out = to_pcm(*sample);
+            }
+        }
+        *needed = sound.len();
+        Ok(())
+    })
+}
+
 /// Renders a `call` (`FOLEY_CALL_*`) of `mob` (an index below
 /// [`FOLEY_MOBS`]), made up from `seed`. Writes it to `out` if `cap` samples
 /// are enough, and how many it needs to `*needed` either way.
@@ -822,6 +1079,349 @@ mod tests {
             );
             assert_eq!(
                 foley_render_contact(7, 0, 3.0, 1, std::ptr::null_mut(), 0, &mut needed),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+        }
+    }
+
+    #[test]
+    fn creatures_speak_and_are_checked() {
+        // A human-like creature: tract, pitch, rough, breathy.
+        let spec = [0.17f32, 120.0, 0.5, 0.5];
+        for call in 0..=4 {
+            let mut needed = 0;
+            // SAFETY: a null buffer with capacity 0 is not written; `spec`
+            // and `needed` are valid.
+            unsafe {
+                assert_eq!(
+                    foley_render_creature(
+                        spec.as_ptr(),
+                        FOLEY_CREATURE_FLOATS,
+                        call,
+                        7,
+                        std::ptr::null_mut(),
+                        0,
+                        &mut needed
+                    ),
+                    FOLEY_OK
+                );
+            }
+            assert!(needed > 100, "{call}: {needed}");
+            let mut pcm = vec![0i16; needed];
+            // SAFETY: `pcm` is writable for `needed` samples.
+            unsafe {
+                assert_eq!(
+                    foley_render_creature(
+                        spec.as_ptr(),
+                        FOLEY_CREATURE_FLOATS,
+                        call,
+                        7,
+                        pcm.as_mut_ptr(),
+                        needed,
+                        &mut needed
+                    ),
+                    FOLEY_OK
+                );
+            }
+            assert!(pcm.iter().any(|&s| s.abs() > 500), "{call}");
+        }
+        let mut needed = 0;
+        // SAFETY: the checks refuse before writing; every pointer is valid.
+        unsafe {
+            let too_long = [2.0f32, 120.0, 0.5, 0.5];
+            assert_eq!(
+                foley_render_creature(
+                    too_long.as_ptr(),
+                    FOLEY_CREATURE_FLOATS,
+                    0,
+                    7,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed
+                ),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+            let too_rough = [0.17f32, 120.0, 1.5, 0.5];
+            assert_eq!(
+                foley_render_creature(
+                    too_rough.as_ptr(),
+                    FOLEY_CREATURE_FLOATS,
+                    0,
+                    7,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed
+                ),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+            assert_eq!(
+                foley_render_creature(
+                    spec.as_ptr(),
+                    FOLEY_CREATURE_FLOATS - 1,
+                    0,
+                    7,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed
+                ),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+            assert_eq!(
+                foley_render_creature(
+                    spec.as_ptr(),
+                    FOLEY_CREATURE_FLOATS,
+                    9,
+                    7,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed
+                ),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+        }
+    }
+
+    #[test]
+    fn primitives_render_and_are_checked() {
+        let cases: [(i32, Vec<f32>); 4] = [
+            (FOLEY_PRIMITIVE_BUBBLE, vec![1.0]),
+            (FOLEY_PRIMITIVE_NOISE, vec![2000.0, 1.2, 0.3, 0.8]),
+            (FOLEY_PRIMITIVE_TONE, vec![440.0, 880.0, 0.5, 0.6]),
+            (FOLEY_PRIMITIVE_GUST, vec![15.0, 3.0, 1.0]),
+        ];
+        for (kind, params) in &cases {
+            let mut needed = 0;
+            // SAFETY: a null buffer with capacity 0 is not written; `params`
+            // and `needed` are valid.
+            unsafe {
+                assert_eq!(
+                    foley_render_primitive(
+                        *kind,
+                        params.as_ptr(),
+                        params.len(),
+                        7,
+                        std::ptr::null_mut(),
+                        0,
+                        &mut needed
+                    ),
+                    FOLEY_OK
+                );
+            }
+            assert!(needed > 100, "{kind}: {needed}");
+            let mut pcm = vec![0i16; needed];
+            // SAFETY: `pcm` is writable for `needed` samples.
+            unsafe {
+                assert_eq!(
+                    foley_render_primitive(
+                        *kind,
+                        params.as_ptr(),
+                        params.len(),
+                        7,
+                        pcm.as_mut_ptr(),
+                        needed,
+                        &mut needed
+                    ),
+                    FOLEY_OK
+                );
+            }
+            assert!(pcm.iter().any(|&s| s.abs() > 500), "{kind}");
+            // The primitives repeat themselves from the same seed.
+            let mut again = vec![0i16; needed];
+            // SAFETY: `again` is writable for `needed` samples.
+            unsafe {
+                assert_eq!(
+                    foley_render_primitive(
+                        *kind,
+                        params.as_ptr(),
+                        params.len(),
+                        7,
+                        again.as_mut_ptr(),
+                        needed,
+                        &mut needed
+                    ),
+                    FOLEY_OK
+                );
+            }
+            assert_eq!(pcm, again);
+        }
+        let mut needed = 0;
+        // SAFETY: the checks refuse before writing; every pointer is valid.
+        unsafe {
+            let too_few = [2000.0f32, 1.2];
+            assert_eq!(
+                foley_render_primitive(
+                    FOLEY_PRIMITIVE_NOISE,
+                    too_few.as_ptr(),
+                    too_few.len(),
+                    7,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed
+                ),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+            let loud = [2000.0f32, 1.2, 0.3, 2.0];
+            assert_eq!(
+                foley_render_primitive(
+                    FOLEY_PRIMITIVE_NOISE,
+                    loud.as_ptr(),
+                    loud.len(),
+                    7,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed
+                ),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+            let huge = [1.0f32, 1.0, 1.0, 1.0, 1.0];
+            assert_eq!(
+                foley_render_primitive(
+                    FOLEY_PRIMITIVE_BUBBLE,
+                    huge.as_ptr(),
+                    huge.len(),
+                    7,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed
+                ),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+            assert_eq!(
+                foley_render_primitive(
+                    9,
+                    [1.0f32].as_ptr(),
+                    1,
+                    7,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed
+                ),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+        }
+    }
+
+    #[test]
+    fn a_custom_material_renders_and_is_checked() {
+        // Wood's physics as a custom material would send them: behaviour
+        // wood, E, ρ, ν, η, plate, fragments, restitution, shard.
+        let props = |fragments: f32| {
+            vec![1.0, 10e9, 500.0, 0.3, 0.025, 0.025, fragments, 0.4, 0.01]
+        };
+        for kind in 0..=4 {
+            let mut needed = 0;
+            // SAFETY: a null buffer with capacity 0 is not written; `props`
+            // and `needed` are valid.
+            unsafe {
+                assert_eq!(
+                    foley_render_contact_custom(
+                        props(6.0).as_ptr(),
+                        FOLEY_CUSTOM_MATERIAL_FLOATS,
+                        kind,
+                        3.0,
+                        1,
+                        std::ptr::null_mut(),
+                        0,
+                        &mut needed
+                    ),
+                    FOLEY_OK
+                );
+            }
+            assert!(needed > 100, "{kind}: {needed}");
+            let mut pcm = vec![0i16; needed];
+            // SAFETY: `pcm` is writable for `needed` samples.
+            unsafe {
+                assert_eq!(
+                    foley_render_contact_custom(
+                        props(6.0).as_ptr(),
+                        FOLEY_CUSTOM_MATERIAL_FLOATS,
+                        kind,
+                        3.0,
+                        1,
+                        pcm.as_mut_ptr(),
+                        needed,
+                        &mut needed
+                    ),
+                    FOLEY_OK
+                );
+            }
+            assert!(pcm.iter().any(|&s| s.abs() > 1000), "{kind}");
+        }
+        let mut needed = 0;
+        // SAFETY: the checks refuse before writing; every pointer is valid.
+        unsafe {
+            // Too few floats.
+            assert_eq!(
+                foley_render_contact_custom(
+                    props(6.0).as_ptr(),
+                    FOLEY_CUSTOM_MATERIAL_FLOATS - 1,
+                    0,
+                    3.0,
+                    1,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed
+                ),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+            // Unknown behaviour, Young's modulus out of range, too many
+            // fragments, an unknown contact.
+            let mut behaviour = props(6.0);
+            behaviour[0] = FOLEY_MATERIALS as f32 + 1.0;
+            assert_eq!(
+                foley_render_contact_custom(
+                    behaviour.as_ptr(),
+                    FOLEY_CUSTOM_MATERIAL_FLOATS,
+                    0,
+                    3.0,
+                    1,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed
+                ),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+            let mut young = props(6.0);
+            young[1] = 1e12;
+            assert_eq!(
+                foley_render_contact_custom(
+                    young.as_ptr(),
+                    FOLEY_CUSTOM_MATERIAL_FLOATS,
+                    0,
+                    3.0,
+                    1,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed
+                ),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+            let mut fragments = props(6.0);
+            fragments[6] = 300.0;
+            assert_eq!(
+                foley_render_contact_custom(
+                    fragments.as_ptr(),
+                    FOLEY_CUSTOM_MATERIAL_FLOATS,
+                    0,
+                    3.0,
+                    1,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed
+                ),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+            assert_eq!(
+                foley_render_contact_custom(
+                    props(6.0).as_ptr(),
+                    FOLEY_CUSTOM_MATERIAL_FLOATS,
+                    7,
+                    3.0,
+                    1,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed
+                ),
                 FOLEY_ERR_INVALID_ARGUMENT
             );
         }

@@ -1,0 +1,38 @@
+// The API other mods compile against. It holds only the stable types (models, codecs, the entrypoint);
+// the implementation lives in the main mod, which bundles this jar. The game being unobfuscated, no
+// mappings are configured, as in the root project.
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+base {
+	archivesName = 'foley-api'
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+processResources {
+	def version = project.version
+	inputs.property 'version', version
+	filesMatching('fabric.mod.json') {
+		expand 'version': version
+	}
+}
+
+jar {
+	from(rootProject.file('../LICENSE-MIT'))
+	from(rootProject.file('../LICENSE-APACHE'))
+}

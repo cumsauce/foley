@@ -201,6 +201,47 @@ Fabric mod (Java)                                   foley-ffi (Rust cdylib, FFM)
 - The client gametest checks a sheep isn't voiced by default, and is once the sheep is switched to Foley's. The settings test covers the per-mob switches.
 - Released as **0.1.0-beta.2**.
 
+## F0 results: the integration API (2026-10-15)
+
+Other mods can now use Foley's synthesis. The structural pieces are laid so the rest (materials, primitives, voices) only ever adds to them:
+
+- **A separate `foley-api` artifact** (`mod/api`, mod id `foley-api`): the stable types other mods compile against — `Foley` (a static facade), `FoleyEntrypoint`, `FoleyApi`, `FoleySounds`, and `SoundModel`, the whole catalogue as a sealed interface of records with the parameters each model takes, checked where they are built. The main mod implements it and bundles it (JiJ); Loom's `include` nests only through remapJar, which the unobfuscated setup doesn't run, so the jar task nests it directly. The API is found through a ServiceLoader provider, so the jar needs no implementation classes and a missing Foley simply reports `Foley.available()` false.
+- **A `foley` entrypoint** other mods declare, called one by one once the synthesis and settings are up; a failing addon is logged with its mod id and skipped. Registration closes when the last returns, and each registration names its addon: a sound's namespace is its owner's.
+- **The same sound in code or in a pack**: `SoundCodecs` reads and writes every model from one `"model"` field (a hand-rolled dispatch, so the JSON shape is exactly `{"model": "drip_into_water", "radius_mm": 1.2}`); `assets/<ns>/foley/sounds.json` is read at every resource reload, its errors logged per entry, and a code definition wins over a pack's for the same id.
+- **Delivery is M0's, generalized past `foley:`**: a registered sound's variants live at `<ns>:foley/<name>_<n>`, served by the `SoundBufferLibrary` mixin (rendered off-thread, cached as any buffer) and kept through the game's sounds.json file check by shape. Playing needs no sounds.json of the addon's own: the played instance resolves itself from the registry. Playback follows Foley's volume and bypass and shares its six-one-shots-a-tick share.
+- **Checked in the real game**: the gametest mod is the reference addon — two sounds from its entrypoint, two from its pack — all four render and play, and registering after the entrypoint throws. Unit tests cover every model's round-trip and the registry's rules.
+- **Not yet**: publishing the api jar to the Modrinth maven (its coordinates are left as a TODO in docs/INTEGRATING.md); materials, primitives and voices are F1–F3.
+
+## F1 results: custom materials (2026-10-15)
+
+Other mods' blocks can now have their own physics for Foley's strikes, breaks and footsteps.
+
+- **The physics became a value.** `Material::props()`'s private `Props` is now the public `MaterialProps`, with a `behavior` field naming the built-in whose habits it keeps (how it grains, scuffs, crunches, cracks — the branches that read `material` now read `props.behavior`). `contact_with` and `fracture_with` render from one; the old enum entry points delegate. ABI 15 adds `foley_render_contact_custom(props, count, kind, speed, seed, …)`, nine floats (behaviour index, E, ρ, ν, η, plate thickness, fragments, restitution, shard) in documented ranges, checked like every argument.
+- **The Java API grew `FoleyMaterials`** (and `MaterialDescriptor` in the api artifact, with its own codec): register a material, map blocks by exact block, tag or `SoundType`. `Layers` asks the custom registry first — by block where the block can be asked (tap, place, land, step), by sound group for a break, whose block is already gone. Custom layers are named `foley:generated/custom_<index>_<contact>` (8 variants), rendered through the same generated-buffer path, and play through a self-resolving instance, needing no sounds.json.
+- **Packs**: `assets/<ns>/foley/materials.json` — `materials` (name to descriptor), `blocks` and `tags` (block or tag id to material name), read at each resource reload; code definitions win for the same name, and the pack's mappings replace the last reload's.
+- **Checked in the real game**: the gametest's own material ("crystal": glassy physics, Young's modulus 90 GPa) has the amethyst sound type and block mapped onto it; the game's amethyst break layers Foley's custom layer. Unit tests cover the descriptor's checks, its JSON round-trip (Young's modulus read in GPa, stored in Pa), the floats' order against the natives, and the registry's namespace rules.
+- **In the engine**: a custom material keeps its own ring (the modes come from its physics) and borrows its behaviour's manners (stone's physics with snow's habits crunches on after the heel).
+
+## F2 results: primitives and beds (2026-10-15)
+
+Mods can now build sounds of their own from primitives, and run beds of Foley's streaming models under their own ids.
+
+- **Four primitives** (`crates/foley-synth/src/primitives.rs`), each rendered to a one-shot, bounded and peak-normalized: a bubble's Minnaert ring (radius 0.05–20 mm, wavering with the seed); a burst of band-passed noise (centre 20–20000 Hz, Q 0.5–20, 5 ms–5 s, gain); a tone gliding to a target with light vibrato; a gust of three staggered surges whose pitch and level rise with the wind (level ∝ U³, against 20 m/s). ABI 16 adds `foley_render_primitive(kind, params, count, seed, …)`, ranges checked like every argument; a test renders each, checks it ends in silence, and confirms same seed → same sound.
+- **The API grew**: `SoundModel` gains `Bubble`, `NoiseBurst`, `Tone` and `Gust` (with codecs, checked where built, named `bubble`/`noise`/`tone`/`gust` in packs), rendered through the same generated-buffer path as the catalogue.
+- **Beds**: `FoleyBeds` — an addon starts Foley's rain, wind, water, fire, lava or thunder under its own id, tells its scene (which glides, as Foley's own do), places it in the world, weighs it, and retires it. Unlike the API's registrations, beds come and go whenever the addon likes. **At most 2 run at once**: the game's 8 streams are nearly spent between the game's music and Foley's own beds. `BedSound` gained a self-resolving mode (an addon's bed has no sounds.json entry: it resolves itself to a streaming sound), a retire flag (the game retires it on its next tick), and the bypass now silences addons' beds too.
+- **Checked in the real game**: the gametest plays a tone primitive as a registered sound; starts a water bed and a second (a third is refused), hears it render, retires both. Unit tests cover the primitives' codecs and ranges.
+- **Deferred deliberately**: render-level mixing (several primitives under one sound name) — composition stays at playback level until an addon asks for more.
+
+## F3 results: creatures of other mods (2026-10-15)
+
+Mods can now have their creatures voiced by Foley's synthesis.
+
+- **The voice became a spec** (`crates/foley-synth/src/voice/creature.rs`): a `CreatureSpec` — tract length, usual pitch, and ceilings for roughness and breath — and five archetypes any creature needs (ambient, hurt, death, growl, breath), each written from the same `Seg` vocabulary as Foley's own calls with the spec scaling the nonlinear phenomena: rough sets chaos, subharmonics, sideband depth (30–150 Hz, the roughness of alarm) and creak; breathy sets Rd, breath noise and frication; the brief holds — no shrieks, nothing louder than the game's. ABI 17 adds `foley_render_creature(spec, call, seed, …)`, four floats in checked ranges.
+- **The API grew `FoleyVoices`** (and `VoiceDescriptor` with its codec): register an entity type with a call map (game call name → archetype), and `Voices` speaks for those entities' sound events — variant suffixes and `_baby` pitches handled as the game's own are, the game's volume and pitch kept, delivered as generated one-shots under `foley:generated/voice_custom_<index>_<archetype>`. Off until players switch the group on: the settings gained a 37th group, "Addons' Creatures" (the 64-bit mask had room).
+- **Packs**: `assets/<ns>/foley/voices.json` — entity id to voice and call map, read at each resource reload, code registrations winning for the same entity.
+- **Checked in the real game**: the gametest's dolphin (a 30 cm tract at 300 Hz, a little rough and breathy) is voiced once "Addons' Creatures" is on and not before. Unit tests cover the descriptor's checks and codec, the floats' order, and the archetype names.
+- **Deliberate limits**: the archetypes are generic — a creature whose calls are recognisably *it* (not just its size and temper) is Foley's hand-built mobs' craft, not yet shareable; per-creature renditions (`Individuals`) are the vanilla mobs' and don't yet carry to addons.
+
 ## Milestones
 
 0. **M0 Groundwork.** Repo, Rust workspace, FFM bridge, CI and natives packaging, all copied from Earshot. Spike: one procedural `FabricSoundInstance` stream (a sine, then filtered noise), and one generated buffer through the `SoundBufferLibrary` mixin. Measure CPU on the M3. **Exit:** both paths play in game, and Earshot shapes them.

@@ -44,6 +44,8 @@ Status: **0.1.0-beta.4 (M8, M9).** Mob voices are being remade, most-heard mobs 
 
 Commands: `/foley rain <mm/h>|auto`, `/foley wind <m/s>|auto`, `/foley scene` (what Foley hears round you), `/foley drip`. [docs/PLAN.md](docs/PLAN.md) has the design and results.
 
+**Other mods can use it too:** [docs/INTEGRATING.md](docs/INTEGRATING.md) is the API — a `foley` entrypoint, sound models shared by code and resource packs, and playback through Foley's own synthesized-buffer path.
+
 ## Development
 
 You need JDK 25 and rustup (which reads `rust-toolchain.toml`). The layout follows Earshot's:

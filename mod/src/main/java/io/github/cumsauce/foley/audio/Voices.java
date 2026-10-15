@@ -26,11 +26,19 @@ import org.jspecify.annotations.Nullable;
  * parrot imitating a mob does it in Foley's voice for that mob.
  */
 public final class Voices {
-	public static final List<String> GROUPS = VoiceTable.GROUPS;
+	public static final List<String> GROUPS = withAddon(VoiceTable.GROUPS);
 	public static final List<String> MOBS = VoiceTable.MOBS;
 	public static final List<String> CALLS = VoiceTable.CALLS;
+	/** The settings group the custom creatures share, appended after the game mobs'. */
+	public static final int ADDON_GROUP = VoiceTable.GROUPS.size();
+
+	private static List<String> withAddon(List<String> base) {
+		List<String> groups = new java.util.ArrayList<>(base);
+		groups.add("addon");
+		return List.copyOf(groups);
+	}
 	/** Variants and how much higher they are. */
-	private static final Map<String, Float> VARIANTS = Map.ofEntries(Map.entry("moody", 0.95f),
+	static final Map<String, Float> VARIANTS = Map.ofEntries(Map.entry("moody", 0.95f),
 			Map.entry("big", 0.85f), Map.entry("mini", 1.25f), Map.entry("picky", 1.05f), Map.entry("angry", 0.95f),
 			Map.entry("cute", 1.15f), Map.entry("grumpy", 0.9f), Map.entry("puglin", 1.1f), Map.entry("sad", 1.05f),
 			Map.entry("royal", 0.95f));
@@ -111,6 +119,15 @@ public final class Voices {
 	public static boolean replace(SoundInstance sound) {
 		Identifier id = sound.getIdentifier();
 		if (id.getPath().startsWith("entity.parrot.imitate.")) return imitate(sound, id);
+		// Another mod's creature first: its sounds aren't in the game's voice table.
+		if (id.getNamespace().equals("minecraft") && id.getPath().startsWith("entity.")) {
+			String path = id.getPath().substring("entity.".length());
+			int dot = path.indexOf('.');
+			if (dot > 0) {
+				CustomVoices.Parsed creature = CustomVoices.parse(path.substring(0, dot), path.substring(dot + 1));
+				if (creature != null) return replaceCustom(sound, creature);
+			}
+		}
 		Parsed parsed = parse(id);
 		if (parsed == null || parsed.call.startsWith("loop") || !voiced(parsed.mob)) return false;
 		// Past the cap, the game's own call plays.
@@ -136,6 +153,26 @@ public final class Voices {
 		}
 		play(minecraft, parsed.mob, call, sound.getSource(), volume, pitch, sound.getX(), sound.getY(), sound.getZ(),
 				own);
+		FoleyClient.countReplaced();
+		return true;
+	}
+
+	/** A custom creature's game sound, spoken by Foley's creature synthesis: the game's volume and pitch kept. */
+	private static boolean replaceCustom(SoundInstance sound, CustomVoices.Parsed creature) {
+		if (!FoleyClient.wants(config -> config.voice(ADDON_GROUP)) || !FoleyClient.oneShot()) return false;
+		float volume = 1f;
+		float pitch = 1f;
+		if (sound instanceof AbstractSoundInstanceAccessor own) {
+			volume = own.foley$volume();
+			pitch = own.foley$pitch();
+		}
+		String name = CustomVoices.eventName(creature.creature().index(), creature.archetype());
+		int variant = RANDOM.nextInt(8);
+		Minecraft.getInstance().getSoundManager().play(AddonSounds.instance(
+				Sounds.event(name).location(),
+				Identifier.fromNamespaceAndPath("foley", GeneratedSounds.PREFIX + name + "_" + variant),
+				sound.getSource(), volume * FoleyClient.gain(), Math.clamp(pitch * creature.pitch(), 0.5f, 2f),
+				sound.getX(), sound.getY(), sound.getZ()));
 		FoleyClient.countReplaced();
 		return true;
 	}

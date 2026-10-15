@@ -22,7 +22,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class NativeBridge {
 	/** Must equal {@code FOLEY_ABI_VERSION} in {@code foley.h}. */
-	public static final int ABI_VERSION = 14;
+	public static final int ABI_VERSION = 17;
 	/** Surfaces rain lands on, in the order its scene takes them. */
 	public static final int SURFACES = 7;
 	public static final int SAMPLE_RATE = 48_000;
@@ -57,6 +57,12 @@ public final class NativeBridge {
 	public static final int CONTACT_BREAK = 3;
 	public static final int CONTACT_STEP = 4;
 
+	/** Primitive kinds ({@code FOLEY_PRIMITIVE_*}), the floats each takes in {@code foley.h}. */
+	public static final int PRIMITIVE_BUBBLE = 0;
+	public static final int PRIMITIVE_NOISE = 1;
+	public static final int PRIMITIVE_TONE = 2;
+	public static final int PRIMITIVE_GUST = 3;
+
 	private static final ValueLayout.OfLong SIZE_T = JAVA_LONG;
 
 	private final MethodHandle abiVersion;
@@ -67,6 +73,9 @@ public final class NativeBridge {
 	private final MethodHandle bedStrike;
 	private final MethodHandle renderOneShot;
 	private final MethodHandle renderContact;
+	private final MethodHandle renderContactCustom;
+	private final MethodHandle renderPrimitive;
+	private final MethodHandle renderCreature;
 	private final MethodHandle renderVoice;
 	private final MethodHandle lastError;
 
@@ -87,6 +96,13 @@ public final class NativeBridge {
 				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_FLOAT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS));
 		renderContact = linker.downcallHandle(find(library, "foley_render_contact"),
 				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_INT, JAVA_FLOAT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS));
+		renderContactCustom = linker.downcallHandle(find(library, "foley_render_contact_custom"),
+				FunctionDescriptor.of(JAVA_INT, ADDRESS, SIZE_T, JAVA_INT, JAVA_FLOAT, JAVA_LONG, ADDRESS, SIZE_T,
+						ADDRESS));
+		renderPrimitive = linker.downcallHandle(find(library, "foley_render_primitive"),
+				FunctionDescriptor.of(JAVA_INT, JAVA_INT, ADDRESS, SIZE_T, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS));
+		renderCreature = linker.downcallHandle(find(library, "foley_render_creature"),
+				FunctionDescriptor.of(JAVA_INT, ADDRESS, SIZE_T, JAVA_INT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS));
 		renderVoice = linker.downcallHandle(find(library, "foley_render_voice"),
 				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_INT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS));
 		lastError = linker.downcallHandle(find(library, "foley_last_error"),
@@ -145,6 +161,52 @@ public final class NativeBridge {
 	public short[] renderContact(int contact, int material, float speed, long seed) {
 		return render((out, needed) -> invoke(renderContact, contact, material, speed, seed, out, (long) (out.byteSize() / 2), needed));
 	}
+
+	/**
+	 * A {@code contact} ({@code CONTACT_*}) on a custom material's physics: {@code props} is the descriptor's floats
+	 * (behaviour, E, ρ, ν, η, plate, fragments, restitution, shard), as 16-bit PCM.
+	 */
+	public short[] renderContactCustom(float[] props, int contact, float speed, long seed) {
+		// The props are handed over in native memory: only critical downcalls (bedSetScene's) take heap segments.
+		try (Arena arena = Arena.ofConfined()) {
+			MemorySegment nativeProps = arena.allocate(JAVA_FLOAT, props.length);
+			MemorySegment.copy(props, 0, nativeProps, JAVA_FLOAT, 0, props.length);
+			return render((out, needed) -> invoke(renderContactCustom, nativeProps, (long) props.length, contact,
+					speed, seed, out, (long) (out.byteSize() / 2), needed));
+		}
+	}
+
+	/**
+	 * A primitive ({@code PRIMITIVE_*}) built from {@code params} (its floats, as {@code foley.h} orders them), as
+	 * 16-bit PCM.
+	 */
+	public short[] renderPrimitive(int kind, float[] params, long seed) {
+		// The params go in native memory: only critical downcalls (bedSetScene's) take heap segments.
+		try (Arena arena = Arena.ofConfined()) {
+			MemorySegment nativeParams = arena.allocate(JAVA_FLOAT, params.length);
+			MemorySegment.copy(params, 0, nativeParams, JAVA_FLOAT, 0, params.length);
+			return render((out, needed) -> invoke(renderPrimitive, kind, nativeParams, (long) params.length, seed,
+					out, (long) (out.byteSize() / 2), needed));
+		}
+	}
+
+	/** A creature call ({@code CREATURE_*}) of a custom creature from its {@code spec} floats, as 16-bit PCM. */
+	public short[] renderCreature(float[] spec, int call, long seed) {
+		// The spec goes in native memory: only critical downcalls (bedSetScene's) take heap segments.
+		try (Arena arena = Arena.ofConfined()) {
+			MemorySegment nativeSpec = arena.allocate(JAVA_FLOAT, spec.length);
+			MemorySegment.copy(spec, 0, nativeSpec, JAVA_FLOAT, 0, spec.length);
+			return render((out, needed) -> invoke(renderCreature, nativeSpec, (long) spec.length, call, seed, out,
+					(long) (out.byteSize() / 2), needed));
+		}
+	}
+
+	/** Creature calls ({@code FOLEY_CREATURE_*}). */
+	public static final int CREATURE_AMBIENT = 0;
+	public static final int CREATURE_HURT = 1;
+	public static final int CREATURE_DEATH = 2;
+	public static final int CREATURE_GROWL = 3;
+	public static final int CREATURE_BREATH = 4;
 
 	/** A {@code call} ({@code Voices.CALLS}) of {@code mob} ({@code Voices.MOBS}), as 16-bit PCM. */
 	public short[] renderVoice(int mob, int call, long seed) {

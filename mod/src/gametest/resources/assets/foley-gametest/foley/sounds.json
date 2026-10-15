@@ -1,0 +1,4 @@
+{
+	"pack_drip": { "model": "drip_on_stone", "radius_mm": 2.2 },
+	"pack_howl": { "model": "howl", "variants": 2 }
+}

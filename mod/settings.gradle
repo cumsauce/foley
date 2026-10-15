@@ -10,3 +10,6 @@ pluginManagement {
 }
 
 rootProject.name = 'foley'
+
+// The API other mods compile against; the main mod bundles it (JiJ) and depends on it.
+include 'api'

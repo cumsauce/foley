@@ -4,3 +4,6 @@
 /mod/run
 .DS_Store
 samples/
+/.zcode
+/mod/logs
+/mod/api/build

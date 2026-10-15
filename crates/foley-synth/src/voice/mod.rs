@@ -4,6 +4,7 @@
 //! nasal branch and frication, sized by each mob's anatomy; and, for mobs with
 //! no voice, what they are made of. docs/PLAN.md has the research behind it.
 
+mod creature;
 mod creatures;
 mod lf;
 mod mobs2;
@@ -16,6 +17,7 @@ use score::{AA, AE, EE, EH, K, OH, OO, Seg, UH, Voice, c, finish, k, perform};
 
 use crate::Rng;
 
+pub use creature::{CreatureCall, CreatureSpec, creature_voice};
 pub use lf::{Pulse, lf_pulse};
 
 /// The mobs Foley can voice. The order is the C ABI's.

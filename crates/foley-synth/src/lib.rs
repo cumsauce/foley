@@ -8,6 +8,7 @@ mod modal;
 mod oneshot;
 mod outdoors;
 mod plants;
+mod primitives;
 mod thunder;
 mod voice;
 
@@ -19,9 +20,12 @@ pub use foley_dsp::{
 
 pub use crate::birds::{Bird, bird_call};
 pub use crate::life::{birdsong, crickets, dolbear_chirps_per_minute, frog};
-pub use crate::modal::{Contact, Material, contact, fracture, hertz_time};
+pub use crate::modal::{Contact, Material, MaterialProps, contact, contact_with, fracture,
+    fracture_with, hertz_time};
 pub use crate::oneshot::{drip_into_water, drip_on_stone, lava_drip};
 pub use crate::outdoors::{cicadas, owl, surf, woodpecker};
 pub use crate::plants::{Plant, brush, buzz, flush, ice_singing, settling_stone};
+pub use crate::primitives::{bubble, gust, noise_burst, tone};
 pub use crate::thunder::{Segment, Thunder, ThunderScene, channel, strike};
-pub use crate::voice::{Call, Mob, Pulse, howl, lf_pulse, voice};
+pub use crate::voice::{Call, CreatureCall, CreatureSpec, Mob, Pulse, creature_voice, howl, lf_pulse,
+    voice};

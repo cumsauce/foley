@@ -18,6 +18,8 @@ import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.resources.sounds.TickableSoundInstance;
 import net.minecraft.client.sounds.AudioStream;
 import net.minecraft.client.sounds.SoundBufferLibrary;
+import net.minecraft.client.sounds.SoundManager;
+import net.minecraft.client.sounds.WeighedSoundEvents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.phys.Vec3;
@@ -40,6 +42,10 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 	private volatile S scene;
 	private volatile long rendered;
 	private Stream stream;
+	/** Set on an addon's bed, which has no sounds.json entry and resolves itself. */
+	private boolean selfResolving;
+	/** Set on an addon's bed told to stop; the game retires it on its next tick. */
+	private boolean stopped;
 	/** A flash made before the game opened the stream. */
 	private record Strike(float x, float y, float z, long seed) {}
 
@@ -58,6 +64,24 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 		this.relative = true;
 		this.attenuation = SoundInstance.Attenuation.NONE;
 		this.volume = FoleyClient.gain();
+	}
+
+	/** An addon's bed: it has no sounds.json entry, so it resolves itself to a streaming sound (F2). */
+	static BedSound<AddonBeds.AddonScene> addon(String name, NativeBridge bridge, int kind, float[] scene) {
+		BedSound<AddonBeds.AddonScene> sound = new BedSound<>(name, SoundSource.AMBIENT, bridge, kind,
+				new AddonBeds.AddonScene(scene));
+		sound.selfResolving = true;
+		return sound;
+	}
+
+	/** The native kind this bed renders. */
+	int nativeKind() {
+		return kind;
+	}
+
+	/** Tells the game to retire the bed; an addon's only. */
+	void retire() {
+		stopped = true;
 	}
 
 	/** Where it plays from relative to the ear (world axes), following the player, or null. */
@@ -156,15 +180,31 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 
 	@Override
 	public boolean isStopped() {
-		return false;
+		return stopped;
 	}
 
-	/** Follows Foley's volume setting, its weight, and the player if it follows them. */
+	/** The bypass silences everything Foley makes, addons' beds too, till it's off again. */
 	@Override
 	public void tick() {
 		heardWeight += (weight - heardWeight) * 0.05f;
-		volume = FoleyClient.gain() * heardWeight;
+		volume = FoleyClient.gain() * heardWeight * (FoleyClient.bypassed() ? 0f : 1f);
 		if (offset != null) turn();
+	}
+
+	@Override
+	public WeighedSoundEvents getOrResolve(SoundManager manager) {
+		if (!selfResolving) return super.getOrResolve(manager);
+		if (this.soundEvent == null) {
+			// Any location: the stream comes from the bed itself, never from a file.
+			WeighedSoundEvents events = new WeighedSoundEvents(this.identifier, null);
+			events.addSound(new net.minecraft.client.resources.sounds.Sound(this.identifier,
+					net.minecraft.util.valueproviders.ConstantFloat.of(1f),
+					net.minecraft.util.valueproviders.ConstantFloat.of(1f), 1,
+					net.minecraft.client.resources.sounds.Sound.Type.FILE, true, false, 16));
+			this.soundEvent = events;
+			this.sound = events.getSound(this.random);
+		}
+		return this.soundEvent;
 	}
 
 	@Override

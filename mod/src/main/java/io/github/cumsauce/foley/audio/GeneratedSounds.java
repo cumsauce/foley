@@ -105,6 +105,34 @@ public final class GeneratedSounds {
 		int split = name.lastIndexOf('_');
 		String model = name.substring(0, split);
 		int variant = Integer.parseInt(name.substring(split + 1));
+		// Another mod's voiced creature: voice_custom_<index>_<archetype>_<variant>.
+		if (model.startsWith("voice_custom_")) {
+			String[] parts = model.substring("voice_custom_".length()).split("_");
+			if (parts.length == 2) {
+				int archetype = CustomVoices.archetype(parts[1]);
+				if (archetype < 0) return null;
+				try {
+					return AddonSounds.toBuffer(BedSound.FORMAT, CustomVoices.render(bridge,
+							Integer.parseInt(parts[0]), archetype, variant));
+				} catch (NumberFormatException e) {
+					return null;
+				}
+			}
+			return null;
+		}
+		// Another mod's material: custom_<index>_<contact>_<variant>.
+		if (model.startsWith("custom_")) {
+			String[] parts = model.substring("custom_".length()).split("_");
+			if (parts.length == 2) {
+				try {
+					return AddonSounds.toBuffer(BedSound.FORMAT, CustomMaterials.render(bridge,
+							Integer.parseInt(parts[0]), Integer.parseInt(parts[1]), variant));
+				} catch (NumberFormatException e) {
+					return null;
+				}
+			}
+			return null;
+		}
 		short[] pcm = switch (model) {
 			// Drips into water trap bubbles of about 0.6 to 3 mm, spread over the variants.
 			case "drip" -> bridge.renderOneShot(NativeBridge.SHOT_DRIP_INTO_WATER,

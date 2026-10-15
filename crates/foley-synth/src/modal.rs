@@ -45,12 +45,13 @@ impl Material {
         Material::ALL.get(index).copied()
     }
 
-    fn props(self) -> Props {
+    pub fn props(self) -> MaterialProps {
         // Young's modulus (Pa), density (kg/m³), Poisson's ratio, loss
         // factor η as built in (more than the bare material's: blocks are
         // held by their neighbours), the vibrating plate (thickness, sides,
         // m), and how it breaks.
-        let p = |young, density, poisson, loss, thickness, fragments, restitution, shard| Props {
+        let p = |young, density, poisson, loss, thickness, fragments, restitution, shard| MaterialProps {
+            behavior: self,
             young,
             density,
             poisson,
@@ -80,22 +81,35 @@ impl Material {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-struct Props {
-    young: f32,
-    density: f32,
-    poisson: f32,
-    loss: f32,
-    thickness: f32,
+/// What a block is made of, as far as striking and breaking it goes — the
+/// physics (`young`…`shard`) and, in `behavior`, which of [`Material`]'s
+/// habits it keeps besides: how it grains, scuffs, crunches, cracks and what
+/// a footstep does on it. A mod's own material is one of these: its constants
+/// and a behaviour to follow.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MaterialProps {
+    /// Whose grains, scuff and crack it follows (its modes come from the
+    /// physics here).
+    pub behavior: Material,
+    /// Young's modulus, Pa.
+    pub young: f32,
+    /// Density, kg/m³.
+    pub density: f32,
+    /// Poisson's ratio.
+    pub poisson: f32,
+    /// Loss factor η, as held by its neighbours.
+    pub loss: f32,
+    /// The vibrating plate's thickness, m.
+    pub thickness: f32,
     /// Fragments it shatters into (0: it doesn't shatter).
-    fragments: usize,
+    pub fragments: usize,
     /// Coefficient of restitution of a fragment bouncing.
-    restitution: f32,
+    pub restitution: f32,
     /// Shards' thickness, m; 0 for chunks (as thick as half their size).
-    shard: f32,
+    pub shard: f32,
 }
 
-impl Props {
+impl MaterialProps {
     /// The plate's speed of longitudinal waves, √(E / ρ(1 − ν²)).
     fn wave_speed(&self) -> f32 {
         (self.young / (self.density * (1.0 - self.poisson * self.poisson))).sqrt()
@@ -210,7 +224,7 @@ impl Modes {
 /// the strike excites each (sin(mπx₀/a)·sin(nπy₀/b) for a simply supported
 /// plate), the contact's force spectrum, and how well each radiates
 /// (√(f / (f + f_c))). The 48 strongest under 16 kHz.
-fn struck_modes(rng: &mut Rng, props: &Props, tau: f32, amplitude: f32) -> Modes {
+fn struck_modes(rng: &mut Rng, props: &MaterialProps, tau: f32, amplitude: f32) -> Modes {
     let (a, b) = (1.0, 1.0);
     let (x0, y0) = (0.1 + 0.8 * rng.unit(), 0.1 + 0.8 * rng.unit());
     let coincidence = props.coincidence();
@@ -244,7 +258,7 @@ fn struck_modes(rng: &mut Rng, props: &Props, tau: f32, amplitude: f32) -> Modes
 }
 
 /// A fragment's lowest mode: 0.453·c_L·t / L² for one `size` m across.
-fn fragment_frequency(props: &Props, size: f32) -> f32 {
+fn fragment_frequency(props: &MaterialProps, size: f32) -> f32 {
     let thickness = if props.shard > 0.0 {
         props.shard.min(size)
     } else {
@@ -256,7 +270,7 @@ fn fragment_frequency(props: &Props, size: f32) -> f32 {
 /// A small fragment's modes: a shard or chunk `size` m across rings at
 /// f = 0.453·c_L·t / L² (a free plate's), with overtones at 1.6, 2.3, 3.1
 /// times that.
-fn fragment_modes(rng: &mut Rng, props: &Props, size: f32, amplitude: f32) -> Modes {
+fn fragment_modes(rng: &mut Rng, props: &MaterialProps, size: f32, amplitude: f32) -> Modes {
     let f1 = fragment_frequency(props, size);
     let mut bank = Modes::default();
     for (ratio, gain) in [(1.0, 1.0), (1.6, 0.7), (2.3, 0.5), (3.1, 0.35)] {
@@ -327,7 +341,7 @@ fn normalize(out: &mut [f32], peak: f32) {
 
 /// How loud a material sounds struck, against stone: by its mechanical
 /// impedance ρc, as soft stuff takes the blow without ringing.
-fn loudness(props: &Props) -> f32 {
+fn loudness(props: &MaterialProps) -> f32 {
     let stone = Material::Stone.props();
     ((props.density * props.wave_speed()) / (stone.density * stone.wave_speed()))
         .powf(0.25)
@@ -338,21 +352,26 @@ fn loudness(props: &Props) -> f32 {
 /// excited through the Hertz contact of what strikes it at `speed` m/s, and
 /// the click of the contact itself. Grainy materials crunch too.
 pub fn contact(contact: Contact, material: Material, speed: f32, seed: u64) -> Vec<f32> {
+    contact_with(contact, &material.props(), speed, seed)
+}
+
+/// The same strike on a material's own physics (the integration API's custom
+/// materials): the behaviour followed is `props.behavior`'s.
+pub fn contact_with(contact: Contact, props: &MaterialProps, speed: f32, seed: u64) -> Vec<f32> {
     let mut rng = Rng::new(seed);
-    let props = material.props();
     let peak = match contact {
         Contact::Tap => 0.35,
         Contact::Place => 0.5,
         Contact::Land => 0.7,
         Contact::Step => 0.4,
     };
-    let mut out = strike(&mut rng, contact, material, &props, speed);
+    let mut out = strike(&mut rng, contact, props, speed);
     match contact {
-        Contact::Step => step_through(&mut rng, &mut out, material, &props, speed),
-        Contact::Place => settle_in(&mut rng, &mut out, material, &props, speed),
+        Contact::Step => step_through(&mut rng, &mut out, props, speed),
+        Contact::Place => settle_in(&mut rng, &mut out, props, speed),
         _ => {}
     }
-    normalize(&mut out, peak * loudness(&props));
+    normalize(&mut out, peak * loudness(props));
     out
 }
 
@@ -360,7 +379,8 @@ pub fn contact(contact: Contact, material: Material, speed: f32, seed: u64) -> V
 /// forward, then the ball of the foot coming down 60 to 120 ms later, softer;
 /// grass swishes round the shoe, and a wooden floor now and then creaks
 /// under the weight.
-fn step_through(rng: &mut Rng, out: &mut Vec<f32>, material: Material, props: &Props, speed: f32) {
+fn step_through(rng: &mut Rng, out: &mut Vec<f32>, props: &MaterialProps, speed: f32) {
+    let material = props.behavior;
     let rate = SAMPLE_RATE as f32;
     let roll = 0.06 + 0.06 * rng.unit();
     // The scuff: the sole sliding a little on the surface, grittier on stone
@@ -378,7 +398,7 @@ fn step_through(rng: &mut Rng, out: &mut Vec<f32>, material: Material, props: &P
         noise_burst(rng, out, at, roll, centre, grit);
     }
     // The ball of the foot.
-    let mut toe = strike(rng, Contact::Step, material, props, 0.6 * speed);
+    let mut toe = strike(rng, Contact::Step, props, 0.6 * speed);
     let gain = 0.45 + 0.25 * rng.unit();
     toe.iter_mut().for_each(|x| *x *= gain);
     let at = (roll * rate) as usize;
@@ -433,7 +453,8 @@ fn step_through(rng: &mut Rng, out: &mut Vec<f32>, material: Material, props: &P
 /// on what's under it (gritty on stone and gravel, a brush of leaves), then
 /// rocks and settles with a second, softer knock 15 to 40 ms after; sand and
 /// gravel trickle after it.
-fn settle_in(rng: &mut Rng, out: &mut Vec<f32>, material: Material, props: &Props, speed: f32) {
+fn settle_in(rng: &mut Rng, out: &mut Vec<f32>, props: &MaterialProps, speed: f32) {
+    let material = props.behavior;
     let rate = SAMPLE_RATE as f32;
     let (rub, centre, seconds) = match material {
         Material::Stone | Material::Granular => (0.08, 3000.0, 0.04),
@@ -446,7 +467,7 @@ fn settle_in(rng: &mut Rng, out: &mut Vec<f32>, material: Material, props: &Prop
     let start = (0.004 * rate) as usize;
     let centre = centre * (0.8 + 0.4 * rng.unit());
     noise_burst(rng, out, start, seconds, centre, rub);
-    let mut bump = strike(rng, Contact::Place, material, props, 0.3 * speed);
+    let mut bump = strike(rng, Contact::Place, props, 0.3 * speed);
     let gain = 0.25 + 0.2 * rng.unit();
     bump.iter_mut().for_each(|x| *x *= gain);
     let at = ((0.015 + 0.025 * rng.unit()) * rate) as usize;
@@ -466,10 +487,10 @@ fn settle_in(rng: &mut Rng, out: &mut Vec<f32>, material: Material, props: &Prop
 fn strike(
     rng: &mut Rng,
     contact: Contact,
-    material: Material,
-    props: &Props,
+    props: &MaterialProps,
     speed: f32,
 ) -> Vec<f32> {
+    let material = props.behavior;
     let target = (props.young, props.poisson);
     let (mass, radius, striker) = match contact {
         Contact::Tap => (0.5, 0.01, (200e9, 0.3)),
@@ -528,8 +549,14 @@ fn strike(
 /// few splinters; earth and gravel crumble in grains; plants snap and
 /// rustle; metal and soft stuff just give a dull blow.
 pub fn fracture(material: Material, seed: u64) -> Vec<f32> {
+    fracture_with(&material.props(), seed)
+}
+
+/// The same break on a material's own physics (the integration API's custom
+/// materials): the behaviour followed is `props.behavior`'s.
+pub fn fracture_with(props: &MaterialProps, seed: u64) -> Vec<f32> {
+    let material = props.behavior;
     let mut rng = Rng::new(seed);
-    let props = material.props();
     let rate = SAMPLE_RATE as f32;
     let mut out = Vec::new();
     // The crack: a burst of broadband noise as the block gives way.
@@ -556,9 +583,9 @@ pub fn fracture(material: Material, seed: u64) -> Vec<f32> {
         Material::Snow => grains(&mut rng, &mut out, 80, 0.2, 0.1, 0.4),
         Material::Metal | Material::Soft => {
             // Coming apart, it's no longer held to ring: five times the damping.
-            let loose = Props {
+            let loose = MaterialProps {
                 loss: props.loss * 5.0,
-                ..props
+                ..*props
             };
             let mut bank = struck_modes(&mut rng, &loose, 0.004, 0.8);
             bank.render_into(&mut out, 0);
@@ -694,6 +721,44 @@ mod tests {
         let snow = contact(Contact::Step, Material::Snow, 1.0, 1);
         assert!(snow.len() > SAMPLE_RATE as usize / 20);
         assert!(peak(&snow[SAMPLE_RATE as usize / 50..]) > 0.3 * peak(&snow));
+    }
+
+    #[test]
+    fn a_custom_material_keeps_its_physics_and_borrows_its_behaviour() {
+        let peak = |s: &[f32]| s.iter().fold(0f32, |p, x| p.max(x.abs()));
+        // How much of the sound comes after the heel lands.
+        let late = |s: &[f32]| {
+            let at = SAMPLE_RATE as usize / 50;
+            peak(&s[at..]) / peak(s)
+        };
+        // Stone's physics, snow's habits: its step crunches on like snow's,
+        // where stone's own dies with the heel.
+        let props = MaterialProps {
+            behavior: Material::Snow,
+            ..Material::Stone.props()
+        };
+        let step = contact_with(Contact::Step, &props, 1.0, 1);
+        assert!(late(&step) > 0.3, "the crunch carries on: {}", late(&step));
+        assert!(
+            late(&step) > 1.5 * late(&contact(Contact::Step, Material::Stone, 1.0, 1)),
+            "stone's own step dies with the heel"
+        );
+        // Its modes are still stone's: the same ring length as stone's tap,
+        // not snow's heavily damped one.
+        let tap = contact_with(Contact::Tap, &props, 3.0, 1);
+        let stone_tap = contact(Contact::Tap, Material::Stone, 3.0, 1);
+        assert!((tap.len() as f32 / stone_tap.len() as f32 - 1.0).abs() < 0.3,
+            "stone's ring: {} against {}",
+            tap.len(),
+            stone_tap.len());
+        // And a custom break stays bounded and finite.
+        let broken = fracture_with(&props, 3);
+        assert!(
+            !broken.is_empty() && broken.len() < 3 * SAMPLE_RATE as usize,
+            "{} samples",
+            broken.len()
+        );
+        assert!(broken.iter().all(|x| x.is_finite()));
     }
 
     #[test]

@@ -1,6 +1,13 @@
 package io.github.cumsauce.foley.gametest;
 
 import io.github.cumsauce.foley.FoleyClient;
+import io.github.cumsauce.foley.api.Foley;
+import io.github.cumsauce.foley.api.FoleyBeds;
+import io.github.cumsauce.foley.api.FoleySounds;
+import io.github.cumsauce.foley.api.SoundModel;
+import io.github.cumsauce.foley.audio.AddonBeds;
+import io.github.cumsauce.foley.audio.AddonSounds;
+import io.github.cumsauce.foley.audio.CustomMaterials;
 import io.github.cumsauce.foley.audio.Surfaces;
 import io.github.cumsauce.foley.natives.NativeBridge;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
@@ -13,6 +20,7 @@ import net.minecraft.client.gui.screens.options.SoundOptionsScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 
@@ -26,7 +34,8 @@ import net.minecraft.sounds.SoundSource;
  * the bypass gives the game its sounds back, and the settings open from Music &amp; Sounds (M5); a sheep switched to
  * Foley's voice is voiced by it (M6), a nearby zombie breathes and a creeper's fuse hisses (M7), horses, goats, witches
  * and bees are Foley's (M8, M9); and a generated
- * one-shot (a drip) plays from the game's static sounds (M0). CI has no sound card, so it runs with OpenAL Soft's null
+ * one-shot (a drip) plays from the game's static sounds (M0), as do sounds the gametest itself defines through the
+ * integration API, in code and in a resource pack (F0). CI has no sound card, so it runs with OpenAL Soft's null
  * backend.
  */
 @SuppressWarnings("UnstableApiUsage")
@@ -38,6 +47,91 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 		if (FoleyClient.bridge() == null) throw new AssertionError("the native synthesis didn't load");
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			singleplayer.getConnection().waitForChunksRender();
+
+			// The integration API (F0): sounds this gametest mod defines — from its foley entrypoint in code, and
+			// from its resource pack — render as generated buffers and play, and registration has closed behind them.
+			FoleySounds sounds = Foley.api().sounds();
+			int beforeAddons = AddonSounds.rendered();
+			try {
+				context.waitFor(mc -> mc.player != null
+						&& sounds.play(Identifier.fromNamespaceAndPath("foley-gametest", "code_drip"), mc.player.getX(),
+								mc.player.getEyeY(), mc.player.getZ(), SoundSource.AMBIENT, 1f, 1f)
+						&& sounds.play(Identifier.fromNamespaceAndPath("foley-gametest", "code_step"), mc.player.getX(),
+								mc.player.getEyeY(), mc.player.getZ(), SoundSource.NEUTRAL, 1f, 1f)
+						&& sounds.play(Identifier.fromNamespaceAndPath("foley-gametest", "code_chime"), mc.player.getX(),
+								mc.player.getEyeY(), mc.player.getZ(), SoundSource.AMBIENT, 1f, 1f)
+						&& sounds.play(Identifier.fromNamespaceAndPath("foley-gametest", "pack_drip"), mc.player.getX(),
+								mc.player.getEyeY(), mc.player.getZ(), SoundSource.AMBIENT, 1f, 1f)
+						&& sounds.play(Identifier.fromNamespaceAndPath("foley-gametest", "pack_howl"), mc.player.getX(),
+								mc.player.getEyeY(), mc.player.getZ(), SoundSource.AMBIENT, 1f, 1f)
+						&& AddonSounds.rendered() >= beforeAddons + 5, 20 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("an addon sound never rendered (rendered " + AddonSounds.rendered() + ")", e);
+			}
+			try {
+				sounds.register(Identifier.fromNamespaceAndPath("foley-gametest", "late"), new SoundModel.LavaDrip());
+				throw new AssertionError("registering after the entrypoint should have thrown");
+			} catch (IllegalStateException expected) {
+				// Registration closed when the entrypoints returned.
+			}
+
+			// The gametest's own material (F1): the amethyst's sound type and block mapped onto its crystal, so the
+			// game's amethyst sounds layer Foley's physics for it.
+			int beforeCustom = CustomMaterials.rendered();
+			int beforeLayered = FoleyClient.layered();
+			singleplayer.getServer().runCommand("setblock ~2 ~ ~ amethyst_block");
+			try {
+				context.waitFor(mc -> {
+					if (mc.player != null) {
+						double x = mc.player.getX() + 2, y = mc.player.getY(), z = mc.player.getZ();
+						mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.AMETHYST_BLOCK_BREAK,
+								SoundSource.BLOCKS, 1f, 1f, SoundInstance.createUnseededRandom(), x, y, z));
+					}
+					return FoleyClient.layered() > beforeLayered;
+				}, 10 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("the game's amethyst break never got Foley's layer (layered "
+						+ FoleyClient.layered() + ")", e);
+			}
+			try {
+				context.waitFor(mc -> CustomMaterials.rendered() > beforeCustom, 10 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				// The layer fired; where did it stop? Rendering the layer's buffer by hand says whether it's the
+				// bridge or the delivery.
+				var byHand = context.computeOnClient(mc -> io.github.cumsauce.foley.audio.GeneratedSounds.render(
+						Identifier.fromNamespaceAndPath("foley", "sounds/generated/custom_0_3_0.ogg")));
+				throw new AssertionError("the custom layer never rendered (layered " + FoleyClient.layered()
+						+ ", rendered " + CustomMaterials.rendered() + ", by hand "
+						+ (byHand == null ? "nothing" : byHand.size() / 2 + " samples") + ")", e);
+			}
+
+			// The gametest's own beds (F2): a water bed, told its scene, playing; a second starts, a third is
+			// refused (at most two run), and the first retires.
+			FoleyBeds beds = Foley.api().beds();
+			Identifier brook = Identifier.fromNamespaceAndPath("foley-gametest", "brook");
+			Identifier falls = Identifier.fromNamespaceAndPath("foley-gametest", "falls");
+			boolean[] started = {false, false, false};
+			context.runOnClient(mc -> {
+				started[0] = beds.start(brook, FoleyBeds.BedKind.WATER, new float[] {20f, 0f, 1f});
+				started[1] = beds.start(falls, FoleyBeds.BedKind.WATER, new float[] {0f, 40f, 1f});
+				started[2] = beds.start(Identifier.fromNamespaceAndPath("foley-gametest", "third"),
+						FoleyBeds.BedKind.WIND, new float[] {10f, 1f, 0.5f});
+				beds.place(brook, mc.player.getX() + 3, mc.player.getY(), mc.player.getZ());
+			});
+			if (!started[0] || !started[1]) throw new AssertionError("the addon beds didn't start");
+			if (started[2]) throw new AssertionError("a third bed started past the budget");
+			try {
+				context.waitFor(mc -> AddonBeds.rendered(brook) > NativeBridge.SAMPLE_RATE / 2, 10 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("the addon bed never rendered ("
+						+ AddonBeds.rendered(brook) + " samples)", e);
+			}
+			context.runOnClient(mc -> {
+				beds.scene(brook, new float[] {60f, 0f, 1f});
+				beds.stop(brook);
+				beds.stop(falls);
+			});
+			if (beds.playing(brook)) throw new AssertionError("the addon bed didn't retire");
 
 			// The wind: out on a superflat, a breeze in the open.
 			try {
@@ -184,6 +278,28 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 				FoleyClient.apply(settings);
 			});
 			if (FoleyClient.replaced() != beforeVoice + 1) throw new AssertionError("the sheep wasn't voiced by Foley");
+
+			// The gametest's own creature (F3): the dolphin, voiced by its descriptor, once "Addons' Creatures" is
+			// switched on; off by default like every voice group.
+			int beforeDolphin = FoleyClient.replaced();
+			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.DOLPHIN_AMBIENT,
+					SoundSource.NEUTRAL, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX(),
+					mc.player.getY(), mc.player.getZ())));
+			if (FoleyClient.replaced() != beforeDolphin)
+				throw new AssertionError("an addon creature was voiced by default");
+			context.runOnClient(mc -> {
+				FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(settings.volume(), settings.rain(),
+						settings.wind(), settings.thunder(), settings.water(), settings.fire(), settings.lava(),
+						settings.drips(), settings.strikes(), settings.footsteps(), settings.birds(),
+						settings.crickets(), settings.frogs(),
+						1L << io.github.cumsauce.foley.audio.Voices.ADDON_GROUP));
+				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.DOLPHIN_AMBIENT, SoundSource.NEUTRAL,
+						1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),
+						mc.player.getZ()));
+				FoleyClient.apply(settings);
+			});
+			if (FoleyClient.replaced() != beforeDolphin + 1)
+				throw new AssertionError("the dolphin wasn't voiced by Foley");
 
 			// Voice engine 2 (M7): with zombies and creepers voiced, a zombie three blocks off breathes, and a creeper's
 			// fuse is Foley's.

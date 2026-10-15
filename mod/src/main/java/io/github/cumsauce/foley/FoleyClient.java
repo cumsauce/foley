@@ -1,6 +1,7 @@
 package io.github.cumsauce.foley;
 
 import com.mojang.brigadier.arguments.FloatArgumentType;
+import io.github.cumsauce.foley.audio.AddonSounds;
 import io.github.cumsauce.foley.audio.Breathing;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
 import io.github.cumsauce.foley.config.FoleyConfig;
@@ -172,6 +173,7 @@ public final class FoleyClient implements ClientModInitializer {
 		BypassKey.register();
 		GeneratedSounds.use(loaded);
 		LOGGER.info("Started Foley's native synthesis (ABI {})", NativeBridge.ABI_VERSION);
+		AddonSounds.start(loaded);
 		RainController controller = new RainController(loaded);
 		rain = controller;
 		ClientTickEvents.END_CLIENT_TICK.register(controller::tick);

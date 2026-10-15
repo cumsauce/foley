@@ -26,8 +26,14 @@
  * 13: brushing through plants, lake ice singing, stones settling in caves.
  * 14: more birds (gull, loon, jay, warbler), a bird flushed, insects
  *     buzzing.
+ * 15: custom materials for contacts and breaks,
+ *     `foley_render_contact_custom` (the integration API, F1).
+ * 16: primitives to compose new one-shots from, `foley_render_primitive`
+ *     (the integration API, F2).
+ * 17: other mods' creatures, `foley_render_creature` (the integration API,
+ *     F3).
  */
-#define FOLEY_ABI_VERSION 14
+#define FOLEY_ABI_VERSION 17
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -109,10 +115,68 @@
 #define FOLEY_SHOT_BUZZ 15
 
 /**
+ * Primitives for `foley_render_primitive`, and the floats each takes, in
+ * order:
+ *
+ * - bubble: the radius in mm (0.05 to 20) — a Minnaert ring;
+ * - noise: the band's centre (Hz, 20 to 20000), its width (Q, 0.5 to 20),
+ *   the seconds (0.005 to 5) and the peak's gain (0 to 1);
+ * - tone: the pitch (Hz, 20 to 10000), where it glides to (Hz, 20 to
+ *   20000), the seconds (0.01 to 5) and the gain (0 to 1);
+ * - gust: the wind's speed (m/s, 0 to 60), the seconds (0.2 to 10) and the
+ *   gain (0 to 1).
+ */
+#define FOLEY_PRIMITIVE_BUBBLE 0
+
+#define FOLEY_PRIMITIVE_NOISE 1
+
+#define FOLEY_PRIMITIVE_TONE 2
+
+#define FOLEY_PRIMITIVE_GUST 3
+
+/**
+ * The most floats any primitive takes.
+ */
+#define FOLEY_PRIMITIVE_MAX_FLOATS 4
+
+/**
+ * Calls of another mod's creature, for `foley_render_creature`: ambient,
+ * hurt, death, growl, breath.
+ */
+#define FOLEY_CREATURE_AMBIENT 0
+
+#define FOLEY_CREATURE_HURT 1
+
+#define FOLEY_CREATURE_DEATH 2
+
+#define FOLEY_CREATURE_GROWL 3
+
+#define FOLEY_CREATURE_BREATH 4
+
+/**
+ * Another mod's creature's voice, the floats `foley_render_creature` takes,
+ * in order: its vocal tract's length (m, 0.03 to 1), its usual pitch (Hz,
+ * 30 to 4000), how rough it goes (0 to 1), how breathy (0 to 1).
+ */
+#define FOLEY_CREATURE_FLOATS 4
+
+/**
  * Materials for `foley_render_contact`: stone, wood, metal, glass, ice,
  * earth, granular (sand, gravel), plant, soft (wool), snow.
  */
 #define FOLEY_MATERIALS 10
+
+/**
+ * A custom material's physics, the floats `foley_render_contact_custom`
+ * takes, in order: which built-in behaviour it follows (an index below
+ * [`FOLEY_MATERIALS`], whose grains, scuff, crunch and crack it keeps),
+ * Young's modulus (Pa, 1e8 to 5e11), density (kg/m³, 1 to 20000), Poisson's
+ * ratio (0 to 0.49), loss factor η (0.0005 to 2), the vibrating plate's
+ * thickness (m, 0.001 to 1), fragments it shatters into (0 to 200),
+ * restitution (0 to 0.95), and shards' thickness (m, 0 for chunks or
+ * 0.0005 to 0.2).
+ */
+#define FOLEY_CUSTOM_MATERIAL_FLOATS 9
 
 /**
  * Contacts for `foley_render_contact`: a tool tapping, a block set down, a
@@ -239,6 +303,62 @@ int32_t foley_render_contact(int32_t kind,
                              int16_t *out,
                              size_t cap,
                              size_t *needed);
+
+/**
+ * Renders a `contact` (`FOLEY_CONTACT_*`) on a custom material's physics
+ * (the integration API): `props` is [`FOLEY_CUSTOM_MATERIAL_FLOATS`] floats
+ * (see it for the order and ranges), `speed` as in
+ * [`foley_render_contact`]. Writes it to `out` if `cap` samples are enough,
+ * and how many it needs to `*needed` either way.
+ *
+ * # Safety
+ * `props` must point to `count` floats; `out` must be writable for `cap`
+ * samples; `needed` must be writable.
+ */
+int32_t foley_render_contact_custom(const float *props,
+                                    size_t count,
+                                    int32_t kind,
+                                    float speed,
+                                    uint64_t seed,
+                                    int16_t *out,
+                                    size_t cap,
+                                    size_t *needed);
+
+/**
+ * Renders a primitive of `kind` (`FOLEY_PRIMITIVE_*`) from `seed`:
+ * `params` are its floats (see the kinds for the order and ranges). Writes
+ * it to `out` if `cap` samples are enough, and how many it needs to
+ * `*needed` either way.
+ *
+ * # Safety
+ * `params` must point to `count` floats; `out` must be writable for `cap`
+ * samples; `needed` must be writable.
+ */
+int32_t foley_render_primitive(int32_t kind,
+                               const float *params,
+                               size_t count,
+                               uint64_t seed,
+                               int16_t *out,
+                               size_t cap,
+                               size_t *needed);
+
+/**
+ * Renders a `call` (`FOLEY_CREATURE_*`) of another mod's creature: `spec`
+ * is its voice ([`FOLEY_CREATURE_FLOATS`] floats, see them for the order
+ * and ranges), made up from `seed`. Writes it to `out` if `cap` samples are
+ * enough, and how many it needs to `*needed` either way.
+ *
+ * # Safety
+ * `spec` must point to `count` floats; `out` must be writable for `cap`
+ * samples; `needed` must be writable.
+ */
+int32_t foley_render_creature(const float *spec,
+                              size_t count,
+                              int32_t call,
+                              uint64_t seed,
+                              int16_t *out,
+                              size_t cap,
+                              size_t *needed);
 
 /**
  * Renders a `call` (`FOLEY_CALL_*`) of `mob` (an index below

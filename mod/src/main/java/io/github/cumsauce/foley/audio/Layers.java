@@ -55,17 +55,39 @@ public final class Layers {
 		if (minecraft.player.distanceToSqr(sound.getX(), sound.getY(), sound.getZ()) > 16 * 16 || !FoleyClient.oneShot()) {
 			return;
 		}
-		int material = Materials.of(type);
+		// The custom material, if any: the block itself (exact, then a tag) where it can be asked, else its sound
+		// group — the only route for a break, whose block is already gone.
+		Identifier custom = null;
 		if (contact != NativeBridge.CONTACT_BREAK) {
 			// Landing and stepping: the block under the feet the sound plays at; else the block itself.
 			double below = contact == NativeBridge.CONTACT_LAND || contact == NativeBridge.CONTACT_STEP ? 0.2 : 0;
 			BlockState state = minecraft.level.getBlockState(
 					BlockPos.containing(sound.getX(), sound.getY() - below, sound.getZ()));
-			if (!state.isAir()) material = Materials.of(state);
+			if (!state.isAir()) custom = CustomMaterials.of(state);
 		}
-		SoundEvent event = Sounds.event(CONTACTS[contact] + "_" + Materials.NAMES[material]);
-		minecraft.getSoundManager().play(new SimpleSoundInstance(event, SoundSource.BLOCKS, VOLUME[contact] * FoleyClient.gain(), 1f,
-				SoundInstance.createUnseededRandom(), sound.getX(), sound.getY(), sound.getZ()));
+		if (custom == null) custom = CustomMaterials.of(type);
+		if (custom != null) {
+			// A custom layer has no sounds.json entry: it resolves itself to one of its eight variants.
+			String name = CustomMaterials.layerName(custom, contact);
+			if (name == null) return;
+			minecraft.getSoundManager().play(AddonSounds.instance(Sounds.event(name).location(),
+					Identifier.fromNamespaceAndPath("foley", "generated/" + name + "_"
+							+ SoundInstance.createUnseededRandom().nextInt(8)),
+					SoundSource.BLOCKS, VOLUME[contact] * FoleyClient.gain(), 1f, sound.getX(), sound.getY(),
+					sound.getZ()));
+		} else {
+			int material = Materials.of(type);
+			if (contact != NativeBridge.CONTACT_BREAK) {
+				double below = contact == NativeBridge.CONTACT_LAND || contact == NativeBridge.CONTACT_STEP ? 0.2 : 0;
+				BlockState state = minecraft.level.getBlockState(
+						BlockPos.containing(sound.getX(), sound.getY() - below, sound.getZ()));
+				if (!state.isAir()) material = Materials.of(state);
+			}
+			SoundEvent event = Sounds.event(CONTACTS[contact] + "_" + Materials.NAMES[material]);
+			minecraft.getSoundManager().play(new SimpleSoundInstance(event, SoundSource.BLOCKS,
+					VOLUME[contact] * FoleyClient.gain(), 1f, SoundInstance.createUnseededRandom(), sound.getX(),
+					sound.getY(), sound.getZ()));
+		}
 		FoleyClient.countLayered();
 	}
 }

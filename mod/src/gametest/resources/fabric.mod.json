@@ -8,6 +8,9 @@
 		"fabric-client-gametest": [
 			"io.github.cumsauce.foley.gametest.FoleyClientGameTest",
 			"io.github.cumsauce.foley.gametest.SceneRecording"
+		],
+		"foley": [
+			"io.github.cumsauce.foley.gametest.AddonFoley"
 		]
 	},
 	"depends": {
