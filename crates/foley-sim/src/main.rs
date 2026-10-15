@@ -89,7 +89,13 @@ fn main() {
             let svg = analysis::plot(&samples, read, &params, &format!("{name}: {}", scene.about));
             std::fs::write(out.join(format!("{}-{}.svg", scene.name, track.name)), svg)
                 .expect("write the plot");
-            let problems = analysis::problems(&samples, read, smooth(track.kind));
+            let mut problems = analysis::problems(&samples, read, smooth(track.kind));
+            // A scene that names a fault the bed isn't otherwise checked for
+            // (rain, fire, lava and thunder are drops and pops by nature): the
+            // clip check stays, the named one is added.
+            if let Some(expect) = track.expect {
+                problems.extend(analysis::expected(&samples, read, expect));
+            }
             println!(
                 "  {:8} {} {:5.1} LUFS | {report}",
                 track.name,
@@ -124,6 +130,14 @@ fn main() {
         any = true;
         failures += fuzz();
     }
+    if which == "all" || which == "stops" {
+        any = true;
+        failures += stops(read, &out);
+    }
+    if which == "all" || which == "mix" {
+        any = true;
+        failures += mix(read, &out);
+    }
     assert!(any, "no scene called {which}; --help lists them");
     std::fs::write(out.join("metrics.tsv"), lines.join("\n") + "\n").expect("write the metrics");
     println!("WAVs in {}", out.display());
@@ -131,6 +145,207 @@ fn main() {
         eprintln!("{failures} check(s) failed");
         std::process::exit(1);
     }
+}
+
+/// The seam a bed makes when it is stopped and started again: a cave entered,
+/// a portal, a world reloaded, a setting switched back on. Each bed is played
+/// to its steady level, freed, and a fresh one given the same scene; the level
+/// must not step across the join, and the fresh one must not fall silent. Wind
+/// is the one bed the game stops without a fade (`SurroundBeds.stop` stops it
+/// dead, where `PlacedBeds` fades water, fire and lava over 3 s), so this is
+/// where that is heard.
+fn stops(read: usize, out: &std::path::Path) -> usize {
+    use foley_ffi::*;
+    println!("stops: each bed stopped and started again, for a seam at the join");
+    let scenes: [(&str, i32, Vec<f32>); 5] = [
+        ("rain", FOLEY_BED_RAIN, {
+            let mut p = vec![10.0];
+            p.extend([0.0, 0.3, 0.2, 0.2, 0.3, 0.0, 0.0]);
+            p.extend([-1.0, 0.0]);
+            p
+        }),
+        ("wind", FOLEY_BED_WIND, vec![12.0, 1.0, 0.7]),
+        ("water", FOLEY_BED_WATER, vec![20.0, 5.0, 1.0]),
+        ("fire", FOLEY_BED_FIRE, vec![4.0, 1.0]),
+        ("lava", FOLEY_BED_LAVA, vec![20.0, 1.0]),
+    ];
+    let mut failures = 0;
+    for (name, kind, params) in &scenes {
+        // Two seconds of the bed, then two seconds of a fresh one on the same
+        // scene, joined: the join is where a stop and a start would be heard.
+        let half = 2 * RATE;
+        let mut pcm = vec![0i16; 2 * half];
+        // SAFETY: each bed is written by create, freed before the next, and
+        // every slice handed over is valid for its length.
+        #[allow(unsafe_code)]
+        unsafe {
+            for (part, chunk) in pcm.chunks_mut(half).enumerate() {
+                let mut bed: *mut FoleyBed = std::ptr::null_mut();
+                assert_eq!(foley_bed_create(*kind, 11 + part as u64, &mut bed), FOLEY_OK);
+                assert_eq!(
+                    foley_bed_set_scene(bed, params.as_ptr(), params.len()),
+                    FOLEY_OK,
+                    "{name}"
+                );
+                let mut done = 0;
+                while done < chunk.len() {
+                    let n = read.min(chunk.len() - done);
+                    assert_eq!(
+                        foley_bed_render(bed, chunk[done..].as_mut_ptr(), n),
+                        FOLEY_OK
+                    );
+                    done += n;
+                }
+                foley_bed_destroy(bed);
+            }
+        }
+        analysis::write_wav(&out.join(format!("stop-{name}.wav")), &pcm);
+        // The step from the last frame before the join to the first after it,
+        // against the usual step within a frame: a seam reads as a jump.
+        let x: Vec<f32> = pcm.iter().map(|s| f32::from(*s) / 32768.0).collect();
+        let level = analysis::frame_levels(&x);
+        let seam = level.len() / 2;
+        let around = RATE / 2 / 480;
+        let typical = {
+            let mut v: Vec<f32> = (seam.saturating_sub(around)..seam)
+                .chain((seam + 1)..(seam + around).min(level.len()))
+                .map(|k| (level[k] - level[k - 1]).abs())
+                .collect();
+            v.sort_by(f32::total_cmp);
+            if v.is_empty() {
+                0.0
+            } else {
+                v[v.len() / 2]
+            }
+        };
+        let step = (level[seam] - level[seam - 1]).abs();
+        let before = level[seam - around..seam].iter().copied().fold(f32::MIN, f32::max);
+        let after = level[seam..(seam + around).min(level.len())]
+            .iter()
+            .copied()
+            .fold(f32::MIN, f32::max);
+        // A seam is bad if the level jumps far more at the join than within a
+        // frame of it, or if the fresh bed is far quieter than the old one.
+        let jumped = step > (typical * 6.0).max(6.0);
+        let fell = after < before - 12.0;
+        let ok = !jumped && !fell;
+        println!(
+            "  {name:8} {} | step {step:5.1} dB (usual {typical:4.1}) | before {before:5.1} after {after:5.1} dB",
+            if ok { "ok  " } else { "FAIL" }
+        );
+        if jumped {
+            println!("           a {step:.1} dB jump at the join, against {typical:.1} dB within");
+        }
+        if fell {
+            println!("           the fresh bed is {:.1} dB quieter than the one before", before - after);
+        }
+        failures += usize::from(!ok);
+    }
+    failures
+}
+
+/// A storm as the game plays it: several beds at once on one clock. The game
+/// runs up to nine streams in an ordinary storm (rain and wind all round,
+/// water, fire and lava where they are, thunder) and sums them in its mixer,
+/// and no scene played two beds together, so the summed level went unmeasured
+/// while a single rain bed peaks at -3 dBFS. The storm's beds are played
+/// together here, each on its own scene schedule like its controller's: the
+/// sum must keep headroom (nothing near full scale), and its loudness goes in
+/// the metrics for a baseline.
+fn mix(read: usize, out: &std::path::Path) -> usize {
+    use foley_ffi::*;
+    let storm = crate::scenes::all()
+        .into_iter()
+        .find(|s| s.name == "storm")
+        .expect("the storm scene");
+    println!(
+        "mix: the storm's {} beds together, on one clock",
+        storm.tracks.len()
+    );
+    struct Driver {
+        bed: *mut FoleyBed,
+        every: u32,
+        params: fn(f32) -> Vec<f32>,
+        pending: Option<Vec<f32>>,
+        flashes: Vec<(f32, f32, f32, f32)>,
+        strikes: std::iter::Peekable<std::slice::Iter<'static, (f32, f32, f32, f32)>>,
+    }
+    let mut drivers: Vec<Driver> = Vec::new();
+    let seconds = storm.seconds;
+    let total = (seconds * RATE as f32) as usize;
+    let mut mixed = vec![0.0f32; total];
+    // SAFETY: each bed is created here, rendered into this function's own
+    // scratch, and freed before it returns; every slice handed over is valid
+    // for its length.
+    #[allow(unsafe_code)]
+    unsafe {
+        for track in storm.tracks {
+            let mut bed: *mut FoleyBed = std::ptr::null_mut();
+            assert_eq!(foley_bed_create(track.kind, 13, &mut bed), FOLEY_OK);
+            drivers.push(Driver {
+                bed,
+                every: track.every,
+                params: track.params,
+                pending: Some((track.params)(0.0)),
+                flashes: Vec::new(),
+                strikes: track.strikes.iter().peekable(),
+            });
+        }
+        let mut raw = vec![0i16; read];
+        let mut acc = vec![0.0f32; read];
+        let mut done = 0;
+        let mut tick = 0u32;
+        while done < total {
+            while (tick as usize) * TICK <= done {
+                let t = tick as f32 / 20.0;
+                for d in &mut drivers {
+                    if tick.is_multiple_of(d.every) {
+                        d.pending = Some((d.params)(t));
+                    }
+                    while let Some((at, x, y, z)) = d.strikes.next_if(|s| s.0 <= t).copied() {
+                        d.flashes.push((at, x, y, z));
+                    }
+                }
+                tick += 1;
+            }
+            for d in &mut drivers {
+                if let Some(p) = d.pending.take() {
+                    assert_eq!(foley_bed_set_scene(d.bed, p.as_ptr(), p.len()), FOLEY_OK);
+                }
+                for (at, x, y, z) in d.flashes.drain(..) {
+                    foley_bed_strike(d.bed, x, y, z, (at * 20.0) as u64);
+                    std::thread::sleep(std::time::Duration::from_millis(300));
+                }
+            }
+            let n = read.min(total - done);
+            acc[..n].fill(0.0);
+            for d in &mut drivers {
+                assert_eq!(foley_bed_render(d.bed, raw.as_mut_ptr(), n), FOLEY_OK);
+                for (sum, sample) in acc[..n].iter_mut().zip(&raw[..n]) {
+                    *sum += f32::from(*sample) / 32768.0;
+                }
+            }
+            mixed[done..done + n].copy_from_slice(&acc[..n]);
+            done += n;
+        }
+        for d in &drivers {
+            foley_bed_destroy(d.bed);
+        }
+    }
+    let clipped = mixed.iter().filter(|s| **s >= 32_000.0 / 32768.0).count();
+    let pcm: Vec<i16> = mixed.iter().map(|s| (s.clamp(-1.0, 0.9999) * 32768.0) as i16).collect();
+    analysis::write_wav(&out.join("mix-storm.wav"), &pcm);
+    let metrics = analysis::Metrics::of(&pcm, read);
+    println!("  {:8} {} | peak {:5.1} dBFS | {:.1} LUFS",
+        "storm",
+        if clipped == 0 { "ok  " } else { "FAIL" },
+        20.0 * (mixed.iter().map(|s| s.abs()).fold(1e-9f32, f32::max)).log10(),
+        metrics.lufs,
+    );
+    if clipped > 0 {
+        println!("           {clipped} samples past full scale in the sum");
+    }
+    usize::from(clipped > 0)
 }
 
 /// Whether a kind of bed should sound smooth (wind, water): no dropouts, no
@@ -223,7 +438,7 @@ impl Lcg {
 
 /// Every bed, its scene thrown anywhere in range every tick and read in
 /// buffers of any size, for a minute each: no call may fail, nothing may
-/// clip past the level guard, and no stretch may go silent while it plays.
+/// clip past the level guard.
 fn fuzz() -> usize {
     use foley_ffi::*;
     println!("fuzz: every bed, scenes anywhere in range every tick, reads of any size");
@@ -323,7 +538,7 @@ fn play_with(
     kind: i32,
     every: u32,
     params: &dyn Fn(f32) -> Vec<f32>,
-    strikes: &[f32],
+    strikes: &[(f32, f32, f32, f32)],
     seconds: f32,
     read: usize,
 ) -> Vec<i16> {
@@ -338,7 +553,7 @@ fn play_with(
         // What the game thread has handed over and the stream thread hasn't
         // taken up yet (BedSound's pending scene and queued flashes).
         let mut pending: Option<Vec<f32>> = Some(params(0.0));
-        let mut flashes: Vec<f32> = Vec::new();
+        let mut flashes: Vec<(f32, f32, f32, f32)> = Vec::new();
         let mut strikes = strikes.iter().peekable();
         let mut done = 0;
         let mut tick = 0u32;
@@ -349,8 +564,8 @@ fn play_with(
                 if tick.is_multiple_of(every) {
                     pending = Some(params(t));
                 }
-                while strikes.next_if(|s| **s <= t).is_some() {
-                    flashes.push(t);
+                while let Some((at, x, y, z)) = strikes.next_if(|s| s.0 <= t).copied() {
+                    flashes.push((at, x, y, z));
                 }
                 tick += 1;
             }
@@ -363,9 +578,9 @@ fn play_with(
                     name
                 );
             }
-            for (n, _) in flashes.drain(..).enumerate() {
-                let angle = n as f32 * 2.1;
-                foley_bed_strike(bed, 900.0 * angle.cos(), 0.0, 900.0 * angle.sin(), n as u64);
+            for (at, x, y, z) in flashes.drain(..) {
+                let _ = at;
+                foley_bed_strike(bed, x, y, z, (at * 20.0) as u64);
                 // Thunder is made on its own thread, in real time; the game
                 // waits seconds for it anyway, so here it's given the time.
                 std::thread::sleep(std::time::Duration::from_millis(300));

@@ -4,6 +4,8 @@
 use std::io::Write;
 use std::path::Path;
 
+use crate::scenes::Expect;
+
 const RATE: usize = 48_000;
 /// Level frames: 10 ms.
 const FRAME: usize = RATE / 100;
@@ -54,6 +56,36 @@ pub fn report(samples: &[i16], read: usize) -> String {
     )
 }
 
+/// What's wrong with `samples` against a scene's own [`Expect`], for a bed
+/// that isn't smooth by nature: only the faults the scenario means to prove,
+/// so its natural drops and pops don't mask one.
+pub fn expected(samples: &[i16], read: usize, expect: Expect) -> Vec<String> {
+    let x: Vec<f32> = samples.iter().map(|s| f32::from(*s) / 32768.0).collect();
+    let level = levels(&x);
+    let mut out = Vec::new();
+    if expect.clicks {
+        let ticks = clicks(&x);
+        if ticks > 0 {
+            out.push(format!("{ticks} clicks"));
+        }
+    }
+    if expect.dropouts {
+        let gaps = dropouts(&level);
+        if !gaps.is_empty() {
+            out.push(format!("{} dropouts, from {:.2} s", gaps.len(), gaps[0]));
+        }
+    }
+    if let Some(most) = expect.read_steps {
+        let (steps, worst) = read_steps(&level, read);
+        if steps > most {
+            out.push(format!(
+                "level steps {steps:.2}x as large at the reads (worst {worst:.1} dB), over {most:.2}x"
+            ));
+        }
+    }
+    out
+}
+
 /// What's wrong with `samples`, against what every bed must do (not clip)
 /// and, if `smooth`, what wind and water must (no clicks, no dropouts, no
 /// crackle, no steps at the reads).
@@ -92,6 +124,11 @@ pub fn problems(samples: &[i16], read: usize, smooth: bool) -> Vec<String> {
         }
     }
     out
+}
+
+/// Each 10 ms frame's level, dB. Exposed for the stop seam's own measurement.
+pub fn frame_levels(x: &[f32]) -> Vec<f32> {
+    levels(x)
 }
 
 /// Each 10 ms frame's level, dB.
