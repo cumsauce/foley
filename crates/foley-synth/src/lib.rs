@@ -9,6 +9,7 @@ mod oneshot;
 mod outdoors;
 mod plants;
 mod primitives;
+mod sculk;
 mod thunder;
 mod voice;
 
@@ -27,6 +28,7 @@ pub use crate::oneshot::{drip_into_water, drip_on_stone, lava_drip};
 pub use crate::outdoors::{cicadas, owl, surf, woodpecker};
 pub use crate::plants::{Plant, brush, buzz, flush, ice_singing, settling_stone};
 pub use crate::primitives::{bubble, gust, noise_burst, tone};
+pub use crate::sculk::sculk_ring;
 pub use crate::thunder::{Segment, Thunder, ThunderScene, channel, strike};
 pub use crate::voice::{
     Call, CreatureCall, CreatureSpec, Mob, Pulse, creature_voice, howl, lf_pulse, voice,
