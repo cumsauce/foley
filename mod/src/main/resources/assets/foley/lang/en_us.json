@@ -78,6 +78,7 @@
 	"foley.settings.boats": "Boats",
 	"foley.settings.boats.tooltip": "Water laps at a boat's hull, faster the faster the boat moves.",
 	"foley.settings.sculk": "Sculk",
+	"foley.settings.village": "Village Ambience",
 	"foley.settings.sculk.tooltip": "A sculk sensor rings when it triggers, and the sculk around it rings back.",
 	"foley.settings.section.structures": "Active structures",
 	"foley.settings.bypass.unbound": "Bind \"Bypass Foley\" in Controls to switch Foley off and on while you listen.",

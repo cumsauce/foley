@@ -5362,5 +5362,29 @@
 			"foley:generated/sculk_ring_2",
 			"foley:generated/sculk_ring_3"
 		]
+	},
+	"village_bell": {
+		"sounds": [
+			"foley:generated/village_bell_0",
+			"foley:generated/village_bell_1",
+			"foley:generated/village_bell_2",
+			"foley:generated/village_bell_3"
+		]
+	},
+	"village_murmur": {
+		"sounds": [
+			"foley:generated/village_murmur_0",
+			"foley:generated/village_murmur_1",
+			"foley:generated/village_murmur_2",
+			"foley:generated/village_murmur_3"
+		]
+	},
+	"smith_anvil": {
+		"sounds": [
+			"foley:generated/smith_anvil_0",
+			"foley:generated/smith_anvil_1",
+			"foley:generated/smith_anvil_2",
+			"foley:generated/smith_anvil_3"
+		]
 	}
 }

@@ -382,6 +382,23 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			}
 			context.runOnClient(mc -> FoleyClient.apply(settings));
 
+			// Village ambience (M20): a placed bell rings and murmurs; all off silences it.
+			var villages = java.util.Objects.requireNonNull(io.github.cumsauce.foley.FoleyClient.villageAmbience(),
+					"village ambience not loaded");
+			int beforeVillage = villages.played();
+			singleplayer.getServer().runCommand("setblock ~5 ~ ~ bell[attachment=floor,facing=north]");
+			context.waitFor(client -> villages.played() > beforeVillage, 100);
+			int villageMuted = villages.played();
+			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
+					settings.volume(), false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, 0L)));
+			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
+			if (villages.played() != villageMuted) {
+				throw new AssertionError("M20 played when its toggle was off");
+			}
+			singleplayer.getServer().runCommand("setblock ~5 ~ ~ air");
+			context.runOnClient(mc -> FoleyClient.apply(settings));
+
 			// The settings, where players look first: Options → Music & Sounds → Foley.
 			context.setScreen(() -> new SoundOptionsScreen(null, Minecraft.getInstance().options));
 			// The button is inside the screen's options list, where clickScreenButton doesn't look.
