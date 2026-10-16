@@ -5362,5 +5362,14 @@
 			"foley:generated/sculk_ring_2",
 			"foley:generated/sculk_ring_3"
 		]
+	},
+	"aeolian": {
+		"subtitle": "subtitles.foley.aeolian",
+		"sounds": [
+			{
+				"name": "foley:generated/aeolian_0",
+				"attenuation_distance": 24
+			}
+		]
 	}
 }

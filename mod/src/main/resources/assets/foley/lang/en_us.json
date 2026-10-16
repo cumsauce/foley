@@ -129,5 +129,8 @@
 	"foley.settings.voice.guardian": "Guardians",
 	"foley.settings.voice.silverfish": "Silverfish, Endermites",
 	"foley.settings.voices.all_foley": "Voice All Mobs with Foley",
-	"foley.settings.voices.all_game": "Give All Mobs the Game's Voices"
+	"foley.settings.voices.all_game": "Give All Mobs the Game's Voices",
+	"subtitles.foley.aeolian": "Wind whistles",
+	"foley.settings.aeolian": "Aeolian Tones",
+	"foley.settings.aeolian.tooltip": "Whistles from iron bars, fences, lanterns, bells and bamboo when the wind blows past: the faster the wind, the higher the pitch."
 }
