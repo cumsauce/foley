@@ -5362,5 +5362,14 @@
 			"foley:generated/sculk_ring_2",
 			"foley:generated/sculk_ring_3"
 		]
+	},
+	"cave": {
+		"subtitle": "subtitles.foley.cave",
+		"sounds": [
+			"foley:generated/cave_0",
+			"foley:generated/cave_1",
+			"foley:generated/cave_2",
+			"foley:generated/cave_3"
+		]
 	}
 }

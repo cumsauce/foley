@@ -42,7 +42,8 @@ import org.jspecify.annotations.Nullable;
  *   <li>After rain, the trees go on <b>dripping</b> for a minute.</li>
  *   <li>Frogs <b>answer</b> each other along the water; night insects come in through dusk.</li>
  *   <li>Lake <b>ice sings</b> in the cold, most at dawn and dusk; lakes lap in a light wind.</li>
- *   <li>In <b>caves</b>, a stone settles now and then off in the dark, and water drips from the roof.</li>
+ *   <li>Cave atmosphere (M12) is handled by {@link CaveController} as a placed bed; the per-event settling
+ *       stones and drips from caves have been replaced by its continuous mix.</li>
  * </ul>
  *
  * Only in a dimension with a sky and no ceiling (the Overworld), and only when the listener is outside enough to hear
@@ -121,8 +122,9 @@ public final class Life {
 		// Under trees the sky is hidden, but the woods are all around: they count as outside.
 		float exposure = wind == null ? 1
 				: Math.max(wind.scene().exposure(), 0.8f * wind.scene().leaves());
+		// Cave atmosphere (M12) is handled by {@link CaveController}; Life no
+		// longer fires per-event settling stones or drips from caves.
 		if (exposure < 0.2f) {
-			caves(minecraft, level);
 			return;
 		}
 		Vec3 eye = minecraft.player.getEyePosition();
@@ -329,36 +331,8 @@ public final class Life {
 	}
 
 	/**
-	 * Underground: now and then a stone working loose and settling somewhere off in the cave, and water dripping from
-	 * the roof; Earshot gives them the cave's echo.
+	 * A bird that lives here, more or less likely by what the biome is like.
 	 */
-	private void caves(Minecraft minecraft, ClientLevel level) {
-		if (ticks % 20 != 0 || minecraft.player == null) return;
-		BlockPos ear = BlockPos.containing(minecraft.player.getEyePosition());
-		boolean underground = level.getBrightness(net.minecraft.world.level.LightLayer.SKY, ear) == 0
-				&& ear.getY() < level.getHeight(Heightmap.Types.WORLD_SURFACE, ear.getX(), ear.getZ()) - 8;
-		if (!underground) return;
-		BlockPos air = caveAir(level, ear);
-		if (air == null) return;
-		if (FoleyClient.wants(FoleyConfig::strikes) && random.nextFloat() < 0.04f) {
-			call(minecraft, "settle_0", air, 0.5f);
-		} else if (FoleyClient.wants(FoleyConfig::drips) && random.nextFloat() < 0.15f) {
-			dripAt(minecraft, air);
-		}
-	}
-
-	/** A spot on the floor of the cave 6 to 20 blocks off, or null. */
-	private @Nullable BlockPos caveAir(ClientLevel level, BlockPos ear) {
-		for (int tries = 0; tries < 6; tries++) {
-			BlockPos at = ear.offset(random.nextInt(41) - 20, random.nextInt(9) - 4, random.nextInt(41) - 20);
-			if (at.distSqr(ear) < 36 || !level.getBlockState(at).isAir()) continue;
-			for (int down = 0; down < 8 && level.getBlockState(at.below()).isAir(); down++) at = at.below();
-			if (!level.getBlockState(at.below()).isAir()) return at;
-		}
-		return null;
-	}
-
-	/** A bird that lives here, more or less likely by what the biome is like. */
 	private int pickBird(Holder<Biome> biome, float celsius) {
 		int[] weights; // crow, dove, robin, cardinal, chickadee, gull, loon (not by day), jay, warbler
 		if (biome.is(BiomeTags.IS_OCEAN) || biome.is(BiomeTags.IS_BEACH)) {

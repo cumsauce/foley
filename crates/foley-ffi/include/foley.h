@@ -34,8 +34,10 @@
  *     F3).
  * 20: active structures (M21): `FOLEY_SHOT_SCULK_RING`, a triggered low-Q
  *     tone for sculk sensors.
+ * 21: cave atmosphere (M12), `foley_bed_create` of `FOLEY_BED_CAVE` and a
+ *     bed's `CaveScene` (depth, mass, openness, drips, gain).
  */
-#define FOLEY_ABI_VERSION 20
+#define FOLEY_ABI_VERSION 21
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -69,6 +71,12 @@
 #define FOLEY_BED_LAVA 4
 
 #define FOLEY_BED_THUNDER 5
+
+/**
+ * - cave: depth (0 to 1), stone mass above (0 to 1), openness to sky
+ *   (0 to 1), drip rate (0 to 1), gain (0 to 1).
+ */
+#define FOLEY_BED_CAVE 6
 
 /**
  * One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the

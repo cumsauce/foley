@@ -129,5 +129,8 @@
 	"foley.settings.voice.guardian": "Guardians",
 	"foley.settings.voice.silverfish": "Silverfish, Endermites",
 	"foley.settings.voices.all_foley": "Voice All Mobs with Foley",
-	"foley.settings.voices.all_game": "Give All Mobs the Game's Voices"
+	"foley.settings.voices.all_game": "Give All Mobs the Game's Voices",
+	"subtitles.foley.cave": "Cave drips and rumble",
+	"foley.settings.caveAtmosphere": "Cave Atmosphere",
+	"foley.settings.caveAtmosphere.tooltip": "Cave atmosphere (M12): drips from a low stone roof and a sub-bass rumble in deep caves, off by default. The game's own cave sounds are sparse; Foley's is continuous."
 }

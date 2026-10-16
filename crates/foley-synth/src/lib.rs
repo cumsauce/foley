@@ -14,9 +14,9 @@ mod thunder;
 mod voice;
 
 pub use foley_dsp::{
-    BandPass, Bubble, Fire, FireScene, Lava, LavaScene, LowPass, Rain, RainScene, Rng, SAMPLE_RATE,
-    Surface, Water, WaterScene, Wind, WindScene, absorption_cutoff, absorption_db_per_m, helmholtz,
-    minnaert_hz, plunge_radius, to_pcm,
+    BandPass, Bubble, Cave, CaveScene, Fire, FireScene, Lava, LavaScene, LowPass, Rain, RainScene,
+    Rng, SAMPLE_RATE, Surface, Water, WaterScene, Wind, WindScene, absorption_cutoff,
+    absorption_db_per_m, helmholtz, minnaert_hz, plunge_radius, to_pcm,
 };
 
 pub use crate::birds::{Bird, bird_call};
