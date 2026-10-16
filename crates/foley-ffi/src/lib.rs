@@ -15,11 +15,11 @@ mod no_alloc;
 
 use foley_synth::{
     Call, Contact, CreatureCall, CreatureSpec, Fire, FireScene, Lava, LavaScene, Material,
-    MaterialProps, Mob, Plant, Rain, RainScene, SAMPLE_RATE, Surface, Thunder, ThunderScene, Water,
-    WaterScene, Wind, WindScene, birdsong, brush, bubble, buzz, cicadas, contact, contact_with,
-    creature_voice, crickets, drip_into_water, drip_on_stone, flush, fracture, fracture_with, frog,
-    gust, howl, ice_singing, lava_drip, noise_burst, owl, sculk_ring, settling_stone, surf, to_pcm,
-    tone, voice, woodpecker,
+    MaterialProps, Mob, Plant, Rain, RainScene, SAMPLE_RATE, Surface, Thunder, ThunderScene,
+    Underwater, UnderwaterScene, Water, WaterScene, Wind, WindScene, birdsong, brush, bubble, buzz,
+    cicadas, contact, contact_with, creature_voice, crickets, drip_into_water, drip_on_stone,
+    flush, fracture, fracture_with, frog, gust, howl, ice_singing, lava_drip, noise_burst, owl,
+    sculk_ring, settling_stone, surf, to_pcm, tone, voice, woodpecker,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -50,7 +50,9 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 ///     F3).
 /// 20: active structures (M21): `FOLEY_SHOT_SCULK_RING`, a triggered low-Q
 ///     tone for sculk sensors.
-pub const FOLEY_ABI_VERSION: u32 = 20;
+/// 21: underwater ambience (M14): `FOLEY_BED_UNDERWATER`, a listener-state
+///     bed of bubbles and a pressure tone, fading over 1 s on emerging.
+pub const FOLEY_ABI_VERSION: u32 = 21;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -69,12 +71,15 @@ pub const FOLEY_SURFACES: usize = 7;
 /// - thunder: the air's temperature (°C) and relative humidity (percent),
 ///   and the listener's exposure to the sky (0 to 1). Each flash is added
 ///   with `foley_bed_strike`.
+/// - underwater: the level (0 to 1); the controller glides this from the
+///   listener's depth and movement. Silent above sea level.
 pub const FOLEY_BED_RAIN: i32 = 0;
 pub const FOLEY_BED_WIND: i32 = 1;
 pub const FOLEY_BED_WATER: i32 = 2;
 pub const FOLEY_BED_FIRE: i32 = 3;
 pub const FOLEY_BED_LAVA: i32 = 4;
 pub const FOLEY_BED_THUNDER: i32 = 5;
+pub const FOLEY_BED_UNDERWATER: i32 = 6;
 
 /// One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
 /// water drips (0.1 to 10), and unused for lava; the air's temperature in °C
@@ -179,6 +184,7 @@ enum Synth {
     Fire(Fire),
     Lava(Lava),
     Thunder(Thunder),
+    Underwater(Underwater),
 }
 
 /// Opaque handle to a bed: a sound made as it plays, endlessly.
@@ -230,6 +236,7 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
             FOLEY_BED_FIRE => Synth::Fire(Fire::new(seed)),
             FOLEY_BED_LAVA => Synth::Lava(Lava::new(seed)),
             FOLEY_BED_THUNDER => Synth::Thunder(Thunder::new()),
+            FOLEY_BED_UNDERWATER => Synth::Underwater(Underwater::new(seed)),
             _ => return Err(FfiError::invalid("unknown bed kind")),
         };
         *out = Box::into_raw(Box::new(FoleyBed {
@@ -287,6 +294,7 @@ fn apply(synth: &mut Synth, p: &[f32]) -> Result<(), FfiError> {
         Synth::Rain(_) => 3 + FOLEY_SURFACES,
         Synth::Wind(_) | Synth::Water(_) | Synth::Thunder(_) => 3,
         Synth::Fire(_) | Synth::Lava(_) => 2,
+        Synth::Underwater(_) => 1,
     };
     if p.len() != wanted {
         return Err(FfiError::invalid("wrong number of params for this bed"));
@@ -361,6 +369,9 @@ fn apply(synth: &mut Synth, p: &[f32]) -> Result<(), FfiError> {
                 exposure: gain(p[2])?,
             });
         }
+        Synth::Underwater(underwater) => {
+            underwater.set_scene(UnderwaterScene { level: gain(p[0])? })
+        }
     }
     Ok(())
 }
@@ -408,6 +419,7 @@ pub unsafe extern "C" fn foley_bed_render(bed: *mut FoleyBed, out: *mut i16, fra
                 Synth::Fire(synth) => synth.render(block),
                 Synth::Lava(synth) => synth.render(block),
                 Synth::Thunder(synth) => synth.render(block),
+                Synth::Underwater(synth) => synth.render(block),
             }
             // The level guard: the envelope rises at once and falls over
             // about half a second; the gain follows it down quickly and back
@@ -873,7 +885,7 @@ mod tests {
     #[test]
     fn the_audio_thread_never_allocates() {
         let rain = |rate: f32| [rate, 0.4, 0.2, 0.1, 0.1, 0.1, 0.05, 0.05, 2.0, 4.0];
-        let beds: [(i32, Vec<Vec<f32>>); 6] = [
+        let beds: [(i32, Vec<Vec<f32>>); 7] = [
             (
                 FOLEY_BED_RAIN,
                 vec![rain(5.0).to_vec(), rain(150.0).to_vec(), rain(0.0).to_vec()],
@@ -906,6 +918,7 @@ mod tests {
                 FOLEY_BED_THUNDER,
                 vec![vec![20.0, 70.0, 1.0], vec![5.0, 30.0, 0.2]],
             ),
+            (FOLEY_BED_UNDERWATER, vec![vec![1.0], vec![0.0], vec![1.0]]),
         ];
         // The counter itself works.
         assert!(allocations(|| drop(std::hint::black_box(vec![1u8]))) > 0);
@@ -981,6 +994,7 @@ mod tests {
             (FOLEY_BED_WATER, &[5.0, 5.0, 1.0][..]),
             (FOLEY_BED_FIRE, &[4.0, 1.0][..]),
             (FOLEY_BED_LAVA, &[20.0, 1.0][..]),
+            (FOLEY_BED_UNDERWATER, &[1.0f32][..]),
         ] {
             assert!(render(kind, params).iter().any(|&s| s != 0), "bed {kind}");
         }

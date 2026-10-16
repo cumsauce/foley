@@ -34,8 +34,10 @@
  *     F3).
  * 20: active structures (M21): `FOLEY_SHOT_SCULK_RING`, a triggered low-Q
  *     tone for sculk sensors.
+ * 21: underwater ambience (M14): `FOLEY_BED_UNDERWATER`, a listener-state
+ *     bed of bubbles and a pressure tone, fading over 1 s on emerging.
  */
-#define FOLEY_ABI_VERSION 20
+#define FOLEY_ABI_VERSION 21
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -57,6 +59,8 @@
  * - thunder: the air's temperature (°C) and relative humidity (percent),
  *   and the listener's exposure to the sky (0 to 1). Each flash is added
  *   with `foley_bed_strike`.
+ * - underwater: the level (0 to 1); the controller glides this from the
+ *   listener's depth and movement. Silent above sea level.
  */
 #define FOLEY_BED_RAIN 0
 
@@ -69,6 +73,8 @@
 #define FOLEY_BED_LAVA 4
 
 #define FOLEY_BED_THUNDER 5
+
+#define FOLEY_BED_UNDERWATER 6
 
 /**
  * One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
