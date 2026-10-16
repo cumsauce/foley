@@ -52,10 +52,13 @@ public final class UnderwaterController {
 		if (minecraft.level == null || minecraft.player == null) {
 			scene = UnderwaterScene.DRY;
 			stop(minecraft);
+			bridge.setSubmerged(false);
 			return;
 		}
 		scene = sample(minecraft);
-		if (!FoleyClient.wants(FoleyConfig::underwater) || scene.level() <= 0f) {
+		boolean submerged = scene.level() > 0f;
+		bridge.setSubmerged(submerged);
+		if (!FoleyClient.wants(FoleyConfig::underwater) || !submerged) {
 			stop(minecraft);
 			return;
 		}

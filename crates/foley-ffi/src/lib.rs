@@ -52,7 +52,9 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 ///     tone for sculk sensors.
 /// 21: underwater ambience (M14): `FOLEY_BED_UNDERWATER`, a listener-state
 ///     bed of bubbles and a pressure tone, fading over 1 s on emerging.
-pub const FOLEY_ABI_VERSION: u32 = 21;
+/// 22: `foley_set_submerged` for the global 1 kHz low-pass on every Foley
+///     stream (not voices) while the head is under.
+pub const FOLEY_ABI_VERSION: u32 = 22;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -203,6 +205,11 @@ pub struct FoleyBed {
     heard: [f32; MAX_PARAMS],
     /// How many params this kind takes; 0 until a scene is set.
     params: usize,
+    /// State of the global underwater LPF (1 kHz, eased in over ~250 ms when
+    /// the listener's head goes under). Not used by the underwater bed.
+    underwater: UnderwaterLpf,
+    /// How much of the underwater LPF is mixed in (0..=1, eased).
+    underwater_mix: f32,
 }
 
 /// Scenes glide this often, samples, and over about this long, seconds.
@@ -212,6 +219,51 @@ const GLIDE_TIME: f32 = 0.3;
 /// Beds never go past this peak: a scene that jumps (a waterfall appearing,
 /// a gust) is caught before it reaches the speakers.
 const BED_CEILING: f32 = 0.4;
+
+/// A listener-state flag, set by `foley_set_submerged`: while the head is
+/// under water, every Foley's other streamed bed (rain, wind, water, fire,
+/// lava, thunder) is low-passed at 1 kHz before reaching the speakers, the
+/// canonical underwater muffle. The `Underwater` bed itself isn't filtered
+/// (it's already underwater), and mob voices are unaffected — the spec calls
+/// them out as the control case ("voices already do this kind of muffled
+/// underwater thing"). Set once at startup; the game's main thread is the
+/// only writer, the stream thread reads.
+static SUBMERGED: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
+
+/// Sets whether the listener's head is submerged. While `true`, every other
+/// Foley stream plays through a 1 kHz low-pass; the underwater bed itself is
+/// not filtered. Any thread, cheap.
+#[unsafe(no_mangle)]
+pub extern "C" fn foley_set_submerged(submerged: bool) {
+    SUBMERGED.store(submerged, core::sync::atomic::Ordering::Relaxed);
+}
+
+/// Cutoff of the global underwater low-pass, Hz.
+const UNDERWATER_LPF_HZ: f32 = 1000.0;
+
+/// Per-bed filter state for the global underwater LPF: a one-pole low-pass
+/// that fades in over about a quarter of a second when the listener goes
+/// under, so a sudden dive doesn't click.
+#[derive(Debug, Default)]
+struct UnderwaterLpf {
+    y: f32,
+    a: f32,
+}
+
+impl UnderwaterLpf {
+    fn new() -> Self {
+        let mut lpf = UnderwaterLpf::default();
+        lpf.a = 1.0 - (-core::f32::consts::TAU * UNDERWATER_LPF_HZ / SAMPLE_RATE as f32).exp();
+        lpf
+    }
+
+    /// The next sample: low-pass at [`UNDERWATER_LPF_HZ`], then back-mix in
+    /// the dry signal as `mix` rises from 0 to 1 (a quarter-second ease-in).
+    fn process(&mut self, x: f32, mix: f32) -> f32 {
+        self.y += self.a * (x - self.y);
+        mix * self.y + (1.0 - mix) * x
+    }
+}
 
 /// Returns [`FOLEY_ABI_VERSION`]. Safe to call before anything else.
 #[unsafe(no_mangle)]
@@ -247,6 +299,8 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
             target: [0.0; MAX_PARAMS],
             heard: [0.0; MAX_PARAMS],
             params: 0,
+            underwater: UnderwaterLpf::new(),
+            underwater_mix: 0.0,
         }));
         Ok(())
     })
@@ -424,12 +478,26 @@ pub unsafe extern "C" fn foley_bed_render(bed: *mut FoleyBed, out: *mut i16, fra
             // The level guard: the envelope rises at once and falls over
             // about half a second; the gain follows it down quickly and back
             // up slowly.
+            // The underwater LPF (M14): eased in over about a quarter second
+            // so a sudden dive doesn't click. Skipped for the underwater bed
+            // itself (already underwater). Mob voices are unaffected (they
+            // never go through here).
+            let submerged = SUBMERGED.load(core::sync::atomic::Ordering::Relaxed);
+            let target_mix = if submerged && !matches!(bed.synth, Synth::Underwater(_)) {
+                1.0
+            } else {
+                0.0
+            };
             for (out, sample) in out.iter_mut().zip(block.iter()) {
                 bed.envelope = sample.abs().max(bed.envelope * 0.99996);
                 let wanted = (BED_CEILING / bed.envelope.max(1e-6)).min(1.0);
                 let rate = if wanted < bed.guard { 0.01 } else { 0.0001 };
                 bed.guard += (wanted - bed.guard) * rate;
-                *out = to_pcm(sample * bed.guard);
+                // Ease in/out at ~250 ms.
+                bed.underwater_mix +=
+                    (target_mix - bed.underwater_mix) * (1.0 / (0.25 * SAMPLE_RATE as f32));
+                let filtered = bed.underwater.process(*sample, bed.underwater_mix);
+                *out = to_pcm(filtered * bed.guard);
             }
         }
         Ok(())
@@ -1013,6 +1081,53 @@ mod tests {
                 "exposure over 1"
             );
             foley_bed_destroy(bed);
+        }
+    }
+
+    #[test]
+    fn a_submerged_head_hears_the_world_low_passed() {
+        let scene = [12.0f32, 1.0, 0.5];
+        let blocks = 10;
+        let high = |pcm: &[i16]| -> f64 {
+            pcm.windows(2)
+                .map(|w| ((w[1] as i32 - w[0] as i32) as f64).powi(2))
+                .sum()
+        };
+        let mut bed = std::ptr::null_mut();
+        // SAFETY: every pointer is valid for its length; `bed` is freed last.
+        unsafe {
+            assert_eq!(foley_bed_create(FOLEY_BED_WIND, 7, &mut bed), FOLEY_OK);
+            assert_eq!(foley_bed_set_scene(bed, scene.as_ptr(), 3), FOLEY_OK);
+            // Warm up past the bed's own fade-in, then measure the dry highs.
+            let mut pcm = vec![0i16; 4800];
+            for _ in 0..blocks {
+                assert_eq!(foley_bed_render(bed, pcm.as_mut_ptr(), pcm.len()), FOLEY_OK);
+            }
+            let mut dry = vec![0i16; 4800 * 4];
+            for chunk in dry.chunks_mut(4800) {
+                assert_eq!(
+                    foley_bed_render(bed, chunk.as_mut_ptr(), chunk.len()),
+                    FOLEY_OK
+                );
+            }
+            // The head goes under: the mix eases in over a quarter second.
+            foley_set_submerged(true);
+            for _ in 0..blocks {
+                assert_eq!(foley_bed_render(bed, pcm.as_mut_ptr(), pcm.len()), FOLEY_OK);
+            }
+            let mut wet = vec![0i16; 4800 * 4];
+            for chunk in wet.chunks_mut(4800) {
+                assert_eq!(
+                    foley_bed_render(bed, chunk.as_mut_ptr(), chunk.len()),
+                    FOLEY_OK
+                );
+            }
+            foley_set_submerged(false);
+            foley_bed_destroy(bed);
+            // The one-pole at 1 kHz must take the broadband wind's highs down.
+            // (Reset before asserting, so a failure can't leave it submerged.)
+            let (dry, wet) = (high(&dry), high(&wet));
+            assert!(wet < 0.5 * dry, "dry highs {dry}, wet highs {wet}");
         }
     }
 
