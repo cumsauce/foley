@@ -116,7 +116,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 
 		list.addHeader(Component.translatable("foley.settings.section.weather"));
 		list.addSmall(rain, thunder);
-		list.addSmall(wind, null);
+		list.addSmall(wind, underwater);
 
 		list.addHeader(Component.translatable("foley.settings.section.elements"));
 		list.addSmall(water, drips);
@@ -173,7 +173,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 	private void updateActive() {
 		boolean audible = volume.get() > 0;
 		List<OptionInstance<?>> all = new java.util.ArrayList<>(List.of(rain, wind, thunder, water, fire, lava, drips,
-				strikes, footsteps, birds, crickets, frogs));
+				strikes, footsteps, birds, crickets, frogs, underwater));
 		all.addAll(voices);
 		for (OptionInstance<?> option : all) {
 			AbstractWidget widget = list.findOption(option);
