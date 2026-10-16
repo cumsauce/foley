@@ -46,10 +46,20 @@ public record WindScene(float speed, float exposure, float leaves, float[] aroun
 	/** Below this speed of their own, m/s, the listener doesn't hear the air going by. */
 	private static final double FAST = 8;
 
+	/** The m/s a 10 m reference wind would have in this weather. */
+	static float reference(ClientLevel level) {
+		return CLEAR + (RAIN - CLEAR) * level.getRainLevel(1f) + (STORM - RAIN) * level.getThunderLevel(1f);
+	}
+
+	/** That reference expressed as 0..1 between {@link #CLEAR} and {@link #STORM}. */
+	static float storm(ClientLevel level) {
+		return Math.clamp((reference(level) - CLEAR) / (STORM - CLEAR), 0f, 1f);
+	}
+
 	public static WindScene sample(Minecraft minecraft) {
 		ClientLevel level = minecraft.level;
 		if (level == null || minecraft.player == null || !level.dimensionType().hasSkyLight()) return CALM;
-		float reference = CLEAR + (RAIN - CLEAR) * level.getRainLevel(1f) + (STORM - RAIN) * level.getThunderLevel(1f);
+		float reference = reference(level);
 		Vec3 eye = minecraft.player.getEyePosition();
 		double ground = 0;
 		float weights = 0;

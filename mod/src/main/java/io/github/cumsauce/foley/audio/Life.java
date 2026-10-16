@@ -246,7 +246,7 @@ public final class Life {
 		// Cicadas sing in the heat of the afternoon (noon to 5 pm), and from the trees, not over everything.
 		boolean afternoon = time >= 6000 && time < 11000;
 		if (FoleyClient.wants(FoleyConfig::crickets) && hot && afternoon && !raining && ticks >= nextCicadas) {
-			nextCicadas = ticks + 110 + random.nextInt(40);
+			nextCicadas = ticks + 120 + random.nextInt(40);
 			BlockPos tree = find(level, eye, 20, state -> state.is(BlockTags.LEAVES));
 			if (tree != null) {
 				float warm = Math.max(celsius, 28);
