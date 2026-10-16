@@ -16,11 +16,11 @@ mod no_alloc;
 use foley_synth::{
     Biome, BiomeScene, Birds, Call, Cave, CaveScene, Contact, CreatureCall, CreatureSpec, Fire,
     FireScene, Lava, LavaScene, Material, MaterialProps, Mob, Plant, Rain, RainScene, SAMPLE_RATE,
-    Surface, Thunder, ThunderScene, Underwater, UnderwaterScene, Water, WaterScene, Wind,
-    WindScene, aeolian, bell, birdsong2, brush, bubble, buzz, cicadas, contact, contact_with,
-    creature_voice, crickets, drip_into_water, drip_on_stone, flush, fracture, fracture_with, frog,
-    gust, howl, ice_singing, lava_drip, noise_burst, owl, sculk_ring, settling_stone, surf, to_pcm,
-    tone, voice, woodpecker,
+    Surf, SurfScene, Surface, Thunder, ThunderScene, Underwater, UnderwaterScene, Water,
+    WaterScene, Wind, WindScene, aeolian, bell, birdsong2, brush, bubble, buzz, cicadas, contact,
+    contact_with, creature_voice, crickets, drip_into_water, drip_on_stone, flush, fracture,
+    fracture_with, frog, gust, howl, ice_singing, lava_drip, noise_burst, owl, sculk_ring,
+    settling_stone, surf, to_pcm, tone, voice, woodpecker,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -64,7 +64,8 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 ///     mixer (desert, mushroom, lush, dripstone, deep dark, snow, mangrove).
 /// 22: `foley_set_submerged` for the global 1 kHz low-pass on every Foley
 ///     stream (not voices) while the head is under.
-pub const FOLEY_ABI_VERSION: u32 = 22;
+/// 23: surf as a placed bed (M17): `FOLEY_BED_SURF`, one continuous shore bed.
+pub const FOLEY_ABI_VERSION: u32 = 23;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -102,6 +103,11 @@ pub const FOLEY_BED_UNDERWATER: i32 = 7;
 /// count for deep_dark, mangrove leaf count for mangrove, leaf exposure for
 /// snow), and `gain` (0 to 1) — a per-bed master gain.
 pub const FOLEY_BED_BIOME: i32 = 8;
+/// A shore bed. The bed takes 4 floats: `height` (wave height in m, 0.2 to
+/// 3.0; 0 renders silence), `shore` (0 to 1, how close the listener is to the
+/// water's edge), `storm` (0 to 1, rain and thunder), and `exposure` (0 to 1,
+/// the wind the wind bed reports).
+pub const FOLEY_BED_SURF: i32 = 9;
 /// One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
 /// water drips (0.1 to 10), and unused for lava; the air's temperature in °C
 /// for crickets (-30 to 50); the species (0 to 56) for birdsong (the M13
@@ -216,6 +222,7 @@ enum Synth {
     Cave(Cave),
     Underwater(Underwater),
     Biome(Biome),
+    Surf(Surf),
 }
 
 /// Opaque handle to a bed: a sound made as it plays, endlessly.
@@ -396,6 +403,7 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
             FOLEY_BED_CAVE => Synth::Cave(Cave::new(seed)),
             FOLEY_BED_UNDERWATER => Synth::Underwater(Underwater::new(seed)),
             FOLEY_BED_BIOME => Synth::Biome(Biome::new(seed)),
+            FOLEY_BED_SURF => Synth::Surf(Surf::new(seed)),
             _ => return Err(FfiError::invalid("unknown bed kind")),
         };
         *out = Box::into_raw(Box::new(FoleyBed {
@@ -458,6 +466,7 @@ fn apply(synth: &mut Synth, p: &[f32]) -> Result<(), FfiError> {
         Synth::Cave(_) => 5,
         Synth::Underwater(_) => 1,
         Synth::Biome(_) => 4,
+        Synth::Surf(_) => 4,
     };
     if p.len() != wanted {
         return Err(FfiError::invalid("wrong number of params for this bed"));
@@ -563,6 +572,20 @@ fn apply(synth: &mut Synth, p: &[f32]) -> Result<(), FfiError> {
                 gain,
             });
         }
+        Synth::Surf(surf) => {
+            if !(0.0..=3.0).contains(&p[0]) {
+                return Err(FfiError::invalid("surf height out of range"));
+            }
+            let shore = gain(p[1])?;
+            let storm = gain(p[2])?;
+            let exposure = gain(p[3])?;
+            surf.set_scene(SurfScene {
+                height: p[0],
+                shore,
+                storm,
+                exposure,
+            });
+        }
     }
     Ok(())
 }
@@ -653,6 +676,7 @@ fn render_bed(bed: &mut FoleyBed, out: &mut [i16]) -> Result<(), FfiError> {
             Synth::Cave(synth) => synth.render(block),
             Synth::Underwater(synth) => synth.render(block),
             Synth::Biome(synth) => synth.render(block),
+            Synth::Surf(synth) => synth.render(block),
         }
         // The level guard: the envelope rises at once and falls over
         // about half a second; the gain follows it down quickly and back
@@ -1314,6 +1338,7 @@ mod tests {
             (FOLEY_BED_LAVA, &[20.0, 1.0][..]),
             (FOLEY_BED_CAVE, &[1.0, 1.0, 0.0, 0.5, 1.0][..]),
             (FOLEY_BED_UNDERWATER, &[1.0f32][..]),
+            (FOLEY_BED_SURF, &[1.0, 1.0, 0.5, 0.5][..]),
         ] {
             assert!(render(kind, params).iter().any(|&s| s != 0), "bed {kind}");
         }
