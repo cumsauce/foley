@@ -134,7 +134,11 @@
 	"foley.settings.voices.all_game": "Give All Mobs the Game's Voices",
 	"subtitles.foley.cave": "Cave drips and rumble",
 	"foley.settings.caveAtmosphere": "Cave Atmosphere",
-	"foley.settings.caveAtmosphere.tooltip": "Cave atmosphere (M12): drips from a low stone roof and a sub-bass rumble in deep caves, off by default. The game's own cave sounds are sparse; Foley's is continuous."
+	"foley.settings.caveAtmosphere.tooltip": "Cave atmosphere (M12): drips from a low stone roof and a sub-bass rumble in deep caves, off by default. The game's own cave sounds are sparse; Foley's is continuous.",
 	"subtitles.foley.underwater": "Underwater",
 	"foley.settings.underwater": "Underwater Ambience",
-	"foley.settings.underwater.tooltip": "Bubbles rise past your ear and a low tone builds with depth when your head is under water. Emerged, Foley sounds the same as above."}
+	"foley.settings.underwater.tooltip": "Bubbles rise past your ear and a low tone builds with depth when your head is under water. Emerged, Foley sounds the same as above.",
+	"subtitles.foley.aeolian": "Wind whistles",
+	"foley.settings.aeolian": "Aeolian Tones",
+	"foley.settings.aeolian.tooltip": "Whistles from iron bars, fences, lanterns, bells and bamboo when the wind blows past: the faster the wind, the higher the pitch."
+}

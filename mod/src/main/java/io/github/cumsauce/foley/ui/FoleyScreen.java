@@ -46,8 +46,9 @@ public final class FoleyScreen extends OptionsSubScreen {
 	private final OptionInstance<Boolean> sculk;
 	private final OptionInstance<Boolean> caveAtmosphere;
 	private final OptionInstance<Boolean> rarerSpecies;
-	private final OptionInstance<Boolean> underwater;	private final List<OptionInstance<Boolean>> voices = new java.util.ArrayList<>();
-
+	private final OptionInstance<Boolean> underwater;
+	private final OptionInstance<Boolean> aeolian;
+	private final List<OptionInstance<Boolean>> voices = new java.util.ArrayList<>();
 	/** The settings over {@code parent}, or an alert if Foley's synthesis isn't running. */
 	public static Screen open(Screen parent) {
 		Minecraft minecraft = Minecraft.getInstance();
@@ -85,8 +86,9 @@ public final class FoleyScreen extends OptionsSubScreen {
 		sculk = added("foley.settings.sculk", config.sculk());
 		caveAtmosphere = added("foley.settings.caveAtmosphere", config.caveAtmosphere());
 		rarerSpecies = added("foley.settings.rarerSpecies", config.rarerSpecies());
-		underwater = added("foley.settings.underwater", config.underwater());		for (int i = 0; i < io.github.cumsauce.foley.audio.Voices.GROUPS.size(); i++) {
-			String mob = io.github.cumsauce.foley.audio.Voices.GROUPS.get(i);
+		underwater = added("foley.settings.underwater", config.underwater());
+		aeolian = added("foley.settings.aeolian", config.aeolian());
+		for (int i = 0; i < io.github.cumsauce.foley.audio.Voices.GROUPS.size(); i++) {			String mob = io.github.cumsauce.foley.audio.Voices.GROUPS.get(i);
 			voices.add(new OptionInstance<>("foley.settings.voice." + mob,
 					OptionInstance.cachedConstantTooltip(Component.translatable("foley.settings.voice.tooltip")),
 					(caption, value) -> Component.translatable(
@@ -136,6 +138,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 		list.addSmall(minecarts, doors);
 		list.addSmall(chests, redstone);
 		list.addSmall(boats, sculk);
+		list.addSmall(aeolian, null);
 
 		list.addHeader(Component.translatable("foley.settings.section.voices"));
 		list.addBig(note(Component.translatable("foley.settings.voices.note")));
@@ -200,7 +203,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 		FoleyConfig next = new FoleyConfig(volume.get(), rain.get(), wind.get(), thunder.get(), water.get(), fire.get(),
 				lava.get(), drips.get(), strikes.get(), footsteps.get(), birds.get(), crickets.get(), frogs.get(),
 				minecarts.get(), doors.get(), chests.get(), redstone.get(), boats.get(), sculk.get(),
-				caveAtmosphere.get(), rarerSpecies.get(), underwater.get(), voiced);		if (!next.equals(initial)) FoleyClient.apply(next);
-		super.removed();
+				caveAtmosphere.get(), rarerSpecies.get(), underwater.get(), aeolian.get(), voiced);
+		if (!next.equals(initial)) FoleyClient.apply(next);		super.removed();
 	}
 }

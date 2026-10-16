@@ -273,8 +273,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 						settings.drips(), settings.strikes(), settings.footsteps(), settings.birds(),
 						settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(), settings.chests(),
 						settings.redstone(), settings.boats(), settings.sculk(), settings.caveAtmosphere(),
-						settings.rarerSpecies(), settings.underwater(), 1 << 2));				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.SHEEP_AMBIENT, SoundSource.NEUTRAL, 1f,
-						1.5f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),
+						settings.rarerSpecies(), settings.underwater(), settings.aeolian(), 1 << 2));
+				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.SHEEP_AMBIENT, SoundSource.NEUTRAL, 1f,						1.5f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),
 						mc.player.getZ()));
 				FoleyClient.apply(settings);
 			});
@@ -294,7 +294,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
 					false, settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
 					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
-					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.voices())));
+					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
+					settings.voices())));
 			if (context.computeOnClient(mc -> FoleyClient.wants(
 					io.github.cumsauce.foley.config.FoleyConfig::birds))) {
 				FoleyClient.apply(settings);
@@ -316,8 +317,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 						settings.drips(), settings.strikes(), settings.footsteps(), settings.birds(),
 						settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(), settings.chests(),
 						settings.redstone(), settings.boats(), settings.sculk(),
-						settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(),						1L << io.github.cumsauce.foley.audio.Voices.ADDON_GROUP));
-				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.DOLPHIN_AMBIENT, SoundSource.NEUTRAL,
+						settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
+						1L << io.github.cumsauce.foley.audio.Voices.ADDON_GROUP));				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.DOLPHIN_AMBIENT, SoundSource.NEUTRAL,
 						1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),
 						mc.player.getZ()));
 				FoleyClient.apply(settings);
@@ -332,8 +333,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
 					settings.birds(), settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
 					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
-					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(),					(1 << 5) | (1 << 10))));
-			singleplayer.getServer().runCommand("summon zombie ~3 ~ ~ {NoAI:1b,PersistenceRequired:1b}");
+					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
+					(1 << 5) | (1 << 10))));			singleplayer.getServer().runCommand("summon zombie ~3 ~ ~ {NoAI:1b,PersistenceRequired:1b}");
 			try {
 				context.waitFor(mc -> FoleyClient.breathing().breaths() > 0, 10 * 20);
 			} catch (RuntimeException | AssertionError e) {
@@ -358,8 +359,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
 					settings.birds(), settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
 					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
-					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(),					chosen)));
-			int beforeAnimals = FoleyClient.replaced();
+					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
+					chosen)));			int beforeAnimals = FoleyClient.replaced();
 			int beforeRedirect = io.github.cumsauce.foley.audio.Voices.redirected();
 			context.runOnClient(mc -> {
 				for (var event : java.util.List.of(SoundEvents.HORSE_AMBIENT, SoundEvents.GOAT_SCREAMING_AMBIENT,
@@ -395,8 +396,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			int beforeMuted = FoleyClient.replaced();
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, false, 0L)));			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CHEST_OPEN,
-					SoundSource.BLOCKS, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX() + 4,
+					false, false, false, false, false, false, false, false, false, false, false, false, false, 0L)));
+			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CHEST_OPEN,					SoundSource.BLOCKS, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX() + 4,
 					mc.player.getY(), mc.player.getZ())));
 			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
 			if (FoleyClient.replaced() != beforeMuted) {
@@ -453,6 +454,30 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			} catch (RuntimeException | AssertionError e) {
 				throw new AssertionError("the cave bed played on the surface", e);
 			}
+			context.runOnClient(mc -> FoleyClient.apply(settings));
+
+			// Aeolian tones (M18): with wind blowing past iron bars and a bell, Foley's whistle fires.
+			singleplayer.getServer().runCommand("setblock ~5 ~ ~ iron_bars");
+			singleplayer.getServer().runCommand("setblock ~6 ~ ~ bell");
+			singleplayer.getServer().runCommand("foley wind 12"); // force the wind
+			try {
+				context.waitFor(mc -> {
+					var ae = FoleyClient.aeolian();
+					return ae != null && ae.played() > 0;
+				}, 15 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("M18 aeolian never fired (played=" + FoleyClient.aeolian().played() + ")", e);
+			}
+			// All toggles off: aeolian stays silent.
+			int beforeMutedAeolian = FoleyClient.aeolian().played();
+			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
+					settings.volume(), false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, false, false,
+					0L)));
+			singleplayer.getServer().waitFor(server -> server.getTickCount() > 100, 200);
+			if (FoleyClient.aeolian().played() != beforeMutedAeolian) {
+				throw new AssertionError("M18 aeolian played when its toggle was off (delta="
+						+ (FoleyClient.aeolian().played() - beforeMutedAeolian) + ")");			}
 			context.runOnClient(mc -> FoleyClient.apply(settings));
 
 			// The settings, where players look first: Options → Music & Sounds → Foley.

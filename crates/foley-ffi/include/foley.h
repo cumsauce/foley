@@ -33,7 +33,8 @@
  * 17: other mods' creatures, `foley_render_creature` (the integration API,
  *     F3).
  * 20: active structures (M21): `FOLEY_SHOT_SCULK_RING`, a triggered low-Q
- *     tone for sculk sensors.
+ *     tone for sculk sensors; M18's aeolian primitive is additive within
+ *     the F2 integration API (`FOLEY_PRIMITIVE_AEOLIAN`).
  * 21: cave atmosphere (M12), `foley_bed_create` of `FOLEY_BED_CAVE` and a
  *     bed's `CaveScene` (depth, mass, openness, drips, gain); more birds
  *     (M13): 57-species `Birds` enum (48 biome-roster species plus the
@@ -155,7 +156,10 @@
  * - tone: the pitch (Hz, 20 to 10000), where it glides to (Hz, 20 to
  *   20000), the seconds (0.01 to 5) and the gain (0 to 1);
  * - gust: the wind's speed (m/s, 0 to 60), the seconds (0.2 to 10) and the
- *   gain (0 to 1).
+ *   gain (0 to 1);
+ * - aeolian: the obstacle's characteristic diameter (m, 0.005 to 0.5), the
+ *   wind's speed (m/s, 0.5 to 30; silent below 2), the seconds (0.05 to 2)
+ *   and the gain (0 to 1) — a Strouhal whistle at f ≈ 0.2·U/d (M18).
  */
 #define FOLEY_PRIMITIVE_BUBBLE 0
 
@@ -164,6 +168,8 @@
 #define FOLEY_PRIMITIVE_TONE 2
 
 #define FOLEY_PRIMITIVE_GUST 3
+
+#define FOLEY_PRIMITIVE_AEOLIAN 4
 
 /**
  * The most floats any primitive takes.

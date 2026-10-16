@@ -2,6 +2,7 @@ package io.github.cumsauce.foley;
 
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import io.github.cumsauce.foley.audio.ActiveStructures;
+import io.github.cumsauce.foley.audio.AeolianSources;
 import io.github.cumsauce.foley.audio.AddonSounds;
 import io.github.cumsauce.foley.audio.Breathing;
 import io.github.cumsauce.foley.audio.CaveController;
@@ -46,7 +47,7 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable Breathing breathing;
 	private static @Nullable ActiveStructures activeStructures;
 	private static @Nullable UnderwaterController underwater;
-	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
+	private static @Nullable AeolianSources aeolian;	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
 	private static volatile boolean bypassed;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
 	private static final java.util.concurrent.atomic.AtomicInteger layered = new java.util.concurrent.atomic.AtomicInteger();
@@ -83,6 +84,10 @@ public final class FoleyClient implements ClientModInitializer {
 	public static @Nullable UnderwaterController underwater() {
 		return underwater;
 	}
+
+	/** M18: aeolian whistles from iron bars, fences, lanterns, bells and bamboo. */
+	public static @Nullable AeolianSources aeolian() {
+		return aeolian;	}
 
 	/** One-shots Foley may start in a tick; past it, the game's own sound plays alone. */
 	private static final int ONE_SHOTS_PER_TICK = 6;
@@ -224,7 +229,9 @@ public final class FoleyClient implements ClientModInitializer {
 		UnderwaterController under = new UnderwaterController(loaded);
 		underwater = under;
 		ClientTickEvents.END_CLIENT_TICK.register(under::tick);
-		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
+		AeolianSources aeolianSources = new AeolianSources(loaded);
+		aeolian = aeolianSources;
+		ClientTickEvents.END_CLIENT_TICK.register(aeolianSources::tick);		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
 		registerCommands(loaded);
 	}
 

@@ -6389,4 +6389,14 @@
 			"foley:generated/underwater_pressure_2",
 			"foley:generated/underwater_pressure_3"		]
 	}
+,
+	"aeolian": {
+		"subtitle": "subtitles.foley.aeolian",
+		"sounds": [
+			{
+				"name": "foley:generated/aeolian_0",
+				"attenuation_distance": 24
+			}
+		]
+	}
 }

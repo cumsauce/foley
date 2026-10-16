@@ -86,15 +86,16 @@ public class SceneRecording implements FabricClientGameTest {
 			phase(context, "earshot", () -> earshot(false));
 			phase(context, "earshot+foley-ambience", () -> {
 				FoleyClient.apply(new FoleyConfig(100, true, true, true, true, true, true, true, false, false, true,
-						true, true, true, true, true, true, true, true, false, false, true, 0));				FoleyClient.setBypassed(false);
+						true, true, true, true, true, true, true, true, false, false, true, true, 0));
+				FoleyClient.setBypassed(false);
 			});
 			phase(context, "earshot+foley-steps-strikes", () -> FoleyClient.apply(new FoleyConfig(100, false, false,
 					false, false, false, false, false, true, true, false, false, false, true, true, true, true, true,
-					true, false, false, true, 0)));
+					true, false, false, true, true, 0)));
 			phase(context, "earshot+foley-voices", () -> FoleyClient.apply(new FoleyConfig(100, false, false, false,
 					false, false, false, false, false, false, false, false, false, true, true, true, true, true,
-					true, false, false, true, ~0L)));			phase(context, "everything", () -> FoleyClient.apply(all));
-			phase(context, "foley-only", () -> earshot(true));
+					true, false, false, true, true, ~0L)));
+			phase(context, "everything", () -> FoleyClient.apply(all));			phase(context, "foley-only", () -> earshot(true));
 			FoleyClient.apply(none);
 			FoleyClient.apply(all);
 			earshot(false);
