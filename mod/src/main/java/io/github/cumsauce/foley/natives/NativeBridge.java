@@ -63,6 +63,7 @@ public final class NativeBridge {
 	public static final int PRIMITIVE_NOISE = 1;
 	public static final int PRIMITIVE_TONE = 2;
 	public static final int PRIMITIVE_GUST = 3;
+	public static final int PRIMITIVE_AEOLIAN = 4;
 
 	private static final ValueLayout.OfLong SIZE_T = JAVA_LONG;
 
