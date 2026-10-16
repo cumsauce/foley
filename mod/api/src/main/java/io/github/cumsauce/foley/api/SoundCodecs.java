@@ -29,6 +29,7 @@ import io.github.cumsauce.foley.api.SoundModel.LavaDrip;
 import io.github.cumsauce.foley.api.SoundModel.Owl;
 import io.github.cumsauce.foley.api.SoundModel.PlantKind;
 import io.github.cumsauce.foley.api.SoundModel.SettlingStone;
+import io.github.cumsauce.foley.api.SoundModel.SculkRing;
 import io.github.cumsauce.foley.api.SoundModel.Surf;
 import io.github.cumsauce.foley.api.SoundModel.Voice;
 import io.github.cumsauce.foley.api.SoundModel.Woodpecker;
@@ -112,6 +113,10 @@ public final class SoundCodecs {
 			named("insect", InsectKind.values()).fieldOf("insect").forGetter(Buzz::insect)).apply(instance,
 			Buzz::new));
 
+	/** A sculk sensor's triggered tone ({@code q} 0.5 to 20). */
+	public static final MapCodec<SculkRing> SCULK_RING = RecordCodecBuilder.mapCodec(instance -> instance.group(
+			Codec.floatRange(0.5f, 20f).fieldOf("q").forGetter(SculkRing::q)).apply(instance, SculkRing::new));
+
 	/** A bubble's ring ({@code radius_mm} 0.05 to 20). */
 	public static final MapCodec<Bubble> BUBBLE = RecordCodecBuilder.mapCodec(instance -> instance.group(
 			Codec.floatRange(0.05f, 20f).fieldOf("radius_mm").forGetter(Bubble::radiusMm)).apply(instance,
@@ -167,6 +172,7 @@ public final class SoundCodecs {
 			Map.entry("settling_stone", SETTLING_STONE),
 			Map.entry("flush", FLUSH),
 			Map.entry("buzz", BUZZ),
+			Map.entry("sculk_ring", SCULK_RING),
 			Map.entry("bubble", BUBBLE),
 			Map.entry("noise", NOISE_BURST),
 			Map.entry("tone", TONE),
@@ -204,6 +210,7 @@ public final class SoundCodecs {
 		if (model instanceof SettlingStone) return "settling_stone";
 		if (model instanceof Flush) return "flush";
 		if (model instanceof Buzz) return "buzz";
+		if (model instanceof SculkRing) return "sculk_ring";
 		if (model instanceof Bubble) return "bubble";
 		if (model instanceof NoiseBurst) return "noise";
 		if (model instanceof Tone) return "tone";

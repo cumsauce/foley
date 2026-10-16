@@ -185,6 +185,7 @@ public final class AddonSounds {
 			case SoundModel.SettlingStone m -> bridge.renderOneShot(NativeBridge.SHOT_SETTLING_STONE, 0f, seed);
 			case SoundModel.Flush m -> bridge.renderOneShot(NativeBridge.SHOT_FLUSH, 0f, seed);
 			case SoundModel.Buzz m -> bridge.renderOneShot(NativeBridge.SHOT_BUZZ, m.insect().ordinal(), seed);
+			case SoundModel.SculkRing m -> bridge.renderOneShot(NativeBridge.SHOT_SCULK_RING, m.q(), seed);
 			// The primitives (F2), composed into sounds of the addon's own invention.
 			case SoundModel.Bubble m -> bridge.renderPrimitive(NativeBridge.PRIMITIVE_BUBBLE,
 					new float[] {m.radiusMm()}, seed);

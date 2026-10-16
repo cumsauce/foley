@@ -86,6 +86,13 @@ public sealed interface SoundModel {
 	/** An insect's wingbeat buzz: a bee's or a fly's. */
 	record Buzz(InsectKind insect) implements SoundModel {}
 
+	/** A sculk sensor's triggered tone ({@code q} 0.5 to 20): a bowl ring at ~200 Hz, the higher the q the longer. */
+	record SculkRing(float q) implements SoundModel {
+		public SculkRing {
+			q = check("q", q, 0.5f, 20f);
+		}
+	}
+
 	/** A bubble's Minnaert ring ({@code radius_mm} 0.05 to 20), gone in tens of milliseconds. */
 	record Bubble(float radiusMm) implements SoundModel {
 		public Bubble {
