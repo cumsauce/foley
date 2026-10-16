@@ -362,7 +362,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CHEST_OPEN,
 					SoundSource.BLOCKS, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX() + 4,
 					mc.player.getY(), mc.player.getZ())));
-			for (int i = 0; i < 5; i++) singleplayer.getServer().waitForTick();
+			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
 			if (FoleyClient.replaced() < beforeStructures + 2) {
 				throw new AssertionError("M21 door/chest did not fire (replaced delta="
 						+ (FoleyClient.replaced() - beforeStructures) + ")");
@@ -375,7 +375,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CHEST_OPEN,
 					SoundSource.BLOCKS, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX() + 4,
 					mc.player.getY(), mc.player.getZ())));
-			for (int i = 0; i < 5; i++) singleplayer.getServer().waitForTick();
+			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
 			if (FoleyClient.replaced() != beforeMuted) {
 				throw new AssertionError("M21 played when its toggles were off (replaced delta="
 						+ (FoleyClient.replaced() - beforeMuted) + ")");
