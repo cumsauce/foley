@@ -59,12 +59,14 @@ pub struct BiomeScene {
 
 /// One per-biome bed. Re-created by the Java side when the listener moves
 /// between biomes; the synth itself does not switch kinds mid-stream.
+#[derive(Debug)]
 pub struct Biome {
     seed: u64,
     scene: BiomeScene,
     state: BiomeState,
 }
 
+#[derive(Debug)]
 enum BiomeState {
     Desert(DesertState),
     Mushroom(MushroomState),
@@ -75,6 +77,7 @@ enum BiomeState {
     Mangrove(MangroveState),
 }
 
+#[derive(Debug)]
 struct DesertState {
     rng: Rng,
     until_grain: f32,
@@ -83,12 +86,14 @@ struct DesertState {
     whistle: BandPass,
 }
 
+#[derive(Debug)]
 struct Vortex {
     length: usize,
     at: usize,
     band: BandPass,
 }
 
+#[derive(Debug)]
 struct MushroomState {
     rng: Rng,
     phase_low: f32,
@@ -96,12 +101,14 @@ struct MushroomState {
     band: BandPass,
 }
 
+#[derive(Debug)]
 struct LushState {
     rng: Rng,
     until_burst: f32,
     band: BandPass,
 }
 
+#[derive(Debug)]
 struct DripstoneState {
     rng: Rng,
     until_drip: f32,
@@ -109,6 +116,7 @@ struct DripstoneState {
     rumble: LowPass,
 }
 
+#[derive(Debug)]
 struct DeepDarkState {
     rng: Rng,
     phase: f32,
@@ -116,12 +124,14 @@ struct DeepDarkState {
     scuttle: Option<Scuttle>,
 }
 
+#[derive(Debug)]
 struct Scuttle {
     length: usize,
     at: usize,
     band: BandPass,
 }
 
+#[derive(Debug)]
 struct SnowState {
     rng: Rng,
     band: BandPass,
@@ -130,6 +140,7 @@ struct SnowState {
     lpf_cutoff: f32,
 }
 
+#[derive(Debug)]
 struct MangroveState {
     rng: Rng,
     band: BandPass,

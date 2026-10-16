@@ -44,6 +44,13 @@ public final class FoleyScreen extends OptionsSubScreen {
 	private final OptionInstance<Boolean> redstone;
 	private final OptionInstance<Boolean> boats;
 	private final OptionInstance<Boolean> sculk;
+	private final OptionInstance<Boolean> biomeBeds;
+	private final OptionInstance<Boolean> desertBeds;
+	private final OptionInstance<Boolean> mushroomHum;
+	private final OptionInstance<Boolean> caveColors;
+	private final OptionInstance<Boolean> deepDark;
+	private final OptionInstance<Boolean> snowyHush;
+	private final OptionInstance<Boolean> mangroveDrone;
 	private final List<OptionInstance<Boolean>> voices = new java.util.ArrayList<>();
 
 	/** The settings over {@code parent}, or an alert if Foley's synthesis isn't running. */
@@ -81,6 +88,13 @@ public final class FoleyScreen extends OptionsSubScreen {
 		redstone = added("foley.settings.redstone", config.redstone());
 		boats = added("foley.settings.boats", config.boats());
 		sculk = added("foley.settings.sculk", config.sculk());
+		biomeBeds = added("foley.settings.biomeBeds", config.biomeBeds());
+		desertBeds = added("foley.settings.desertBeds", config.desertBeds());
+		mushroomHum = added("foley.settings.mushroomHum", config.mushroomHum());
+		caveColors = added("foley.settings.caveColors", config.caveColors());
+		deepDark = added("foley.settings.deepDark", config.deepDark());
+		snowyHush = added("foley.settings.snowyHush", config.snowyHush());
+		mangroveDrone = added("foley.settings.mangroveDrone", config.mangroveDrone());
 		for (int i = 0; i < io.github.cumsauce.foley.audio.Voices.GROUPS.size(); i++) {
 			String mob = io.github.cumsauce.foley.audio.Voices.GROUPS.get(i);
 			voices.add(new OptionInstance<>("foley.settings.voice." + mob,
@@ -132,6 +146,12 @@ public final class FoleyScreen extends OptionsSubScreen {
 		list.addSmall(chests, redstone);
 		list.addSmall(boats, sculk);
 
+		list.addHeader(Component.translatable("foley.settings.section.biome"));
+		list.addSmall(biomeBeds, null);
+		list.addSmall(desertBeds, mushroomHum);
+		list.addSmall(caveColors, deepDark);
+		list.addSmall(snowyHush, mangroveDrone);
+
 		list.addHeader(Component.translatable("foley.settings.section.voices"));
 		list.addBig(note(Component.translatable("foley.settings.voices.note")));
 		boolean allFoley = voices.stream().allMatch(OptionInstance::get);
@@ -171,7 +191,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 	private void updateActive() {
 		boolean audible = volume.get() > 0;
 		List<OptionInstance<?>> all = new java.util.ArrayList<>(List.of(rain, wind, thunder, water, fire, lava, drips,
-				strikes, footsteps, birds, crickets, frogs));
+				strikes, footsteps, birds, crickets, frogs, minecarts, doors, chests, redstone, boats, sculk));
 		all.addAll(voices);
 		for (OptionInstance<?> option : all) {
 			AbstractWidget widget = list.findOption(option);
@@ -194,7 +214,9 @@ public final class FoleyScreen extends OptionsSubScreen {
 		}
 		FoleyConfig next = new FoleyConfig(volume.get(), rain.get(), wind.get(), thunder.get(), water.get(), fire.get(),
 				lava.get(), drips.get(), strikes.get(), footsteps.get(), birds.get(), crickets.get(), frogs.get(),
-				minecarts.get(), doors.get(), chests.get(), redstone.get(), boats.get(), sculk.get(), voiced);
+				minecarts.get(), doors.get(), chests.get(), redstone.get(), boats.get(), sculk.get(), biomeBeds.get(),
+				desertBeds.get(), mushroomHum.get(), caveColors.get(), deepDark.get(), snowyHush.get(),
+				mangroveDrone.get(), voiced);
 		if (!next.equals(initial)) FoleyClient.apply(next);
 		super.removed();
 	}

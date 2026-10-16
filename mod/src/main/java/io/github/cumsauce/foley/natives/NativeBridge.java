@@ -22,7 +22,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class NativeBridge {
 	/** Must equal {@code FOLEY_ABI_VERSION} in {@code foley.h}. */
-	public static final int ABI_VERSION = 20;
+	public static final int ABI_VERSION = 21;
 	/** Surfaces rain lands on, in the order its scene takes them. */
 	public static final int SURFACES = 7;
 	public static final int SAMPLE_RATE = 48_000;
@@ -33,6 +33,7 @@ public final class NativeBridge {
 	public static final int BED_FIRE = 3;
 	public static final int BED_LAVA = 4;
 	public static final int BED_THUNDER = 5;
+	public static final int BED_BIOME = 6;
 	/** One-shot kinds ({@code FOLEY_SHOT_*}). */
 	public static final int SHOT_DRIP_INTO_WATER = 0;
 	public static final int SHOT_DRIP_ON_STONE = 1;
