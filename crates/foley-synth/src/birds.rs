@@ -11,6 +11,7 @@ use std::f32::consts::TAU;
 use crate::dsp::{add_at, normalize, smooth};
 use crate::{BandPass, LowPass, Rng, SAMPLE_RATE};
 
+pub mod engine1;
 pub mod engine2;
 pub use engine2::*;
 
@@ -536,5 +537,32 @@ mod tests {
         );
         let robin = pitch(&bird_call(Bird::Robin, 1));
         assert!((1500.0..4500.0).contains(&robin), "robin {robin} Hz");
+    }
+
+    /// Pearson correlation coefficient between two PCM streams aligned to the
+    /// shorter length. A perfect copy gives 1.0; a noisy version might dip
+    /// below 0.9; total independence is near 0.
+    fn pearson(a: &[f32], b: &[f32]) -> f32 {
+        let n = a.len().min(b.len());
+        let (a, b) = (&a[..n], &b[..n]);
+        let p1: f32 = a.iter().map(|x| x * x).sum();
+        let p2: f32 = b.iter().map(|x| x * x).sum();
+        let cov: f32 = a.iter().zip(b).map(|(x, y)| x * y).sum();
+        let denom = (p1.sqrt() * p2.sqrt()).max(1e-9);
+        cov / denom
+    }
+
+    /// Engine 2's migration of the original 9 must correlate with engine 1
+    /// above 0.9 on every (bird, seed) pair, by the spec.
+    #[test]
+    fn engine2_matches_engine1_within_audible_tolerance() {
+        for bird in Bird::ALL {
+            for seed in 0..6 {
+                let v1 = engine1::bird_call(bird, seed);
+                let v2 = bird_call(bird, seed);
+                let corr = pearson(&v1, &v2);
+                assert!(corr > 0.9, "{bird:?} seed {seed}: corr {corr:.3}");
+            }
+        }
     }
 }
