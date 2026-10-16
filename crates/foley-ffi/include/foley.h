@@ -34,8 +34,10 @@
  *     F3).
  * 20: active structures (M21): `FOLEY_SHOT_SCULK_RING`, a triggered low-Q
  *     tone for sculk sensors.
+ * 21: more birds (M13): 48-species `Birds` enum, per-biome rosters; the
+ *     `FOLEY_SHOT_BIRDSONG` size argument widens to cover the catalogue.
  */
-#define FOLEY_ABI_VERSION 20
+#define FOLEY_ABI_VERSION 21
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -73,10 +75,11 @@
 /**
  * One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
  * water drips (0.1 to 10), and unused for lava; the air's temperature in °C
- * for crickets (-30 to 50); the species (0 to 1000) for birdsong; the body
- * length in cm for a frog (2 to 20); the wave's height in m for surf (0.2 to
- * 3); the temperature for cicadas, like crickets; unused for woodpeckers,
- * owls and howls.
+ * for crickets (-30 to 50); the species (0 to 50) for birdsong (the M13
+ * 48-species catalogue, with two headroom slots); the body length in cm for
+ * a frog (2 to 20); the wave's height in m for surf (0.2 to 3); the
+ * temperature for cicadas, like crickets; unused for woodpeckers, owls and
+ * howls.
  */
 #define FOLEY_SHOT_DRIP_INTO_WATER 0
 

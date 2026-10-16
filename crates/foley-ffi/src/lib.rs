@@ -14,9 +14,9 @@ mod guard;
 mod no_alloc;
 
 use foley_synth::{
-    Call, Contact, CreatureCall, CreatureSpec, Fire, FireScene, Lava, LavaScene, Material,
+    Birds, Call, Contact, CreatureCall, CreatureSpec, Fire, FireScene, Lava, LavaScene, Material,
     MaterialProps, Mob, Plant, Rain, RainScene, SAMPLE_RATE, Surface, Thunder, ThunderScene, Water,
-    WaterScene, Wind, WindScene, birdsong, brush, bubble, buzz, cicadas, contact, contact_with,
+    WaterScene, Wind, WindScene, birdsong2, brush, bubble, buzz, cicadas, contact, contact_with,
     creature_voice, crickets, drip_into_water, drip_on_stone, flush, fracture, fracture_with, frog,
     gust, howl, ice_singing, lava_drip, noise_burst, owl, sculk_ring, settling_stone, surf, to_pcm,
     tone, voice, woodpecker,
@@ -50,7 +50,9 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 ///     F3).
 /// 20: active structures (M21): `FOLEY_SHOT_SCULK_RING`, a triggered low-Q
 ///     tone for sculk sensors.
-pub const FOLEY_ABI_VERSION: u32 = 20;
+/// 21: more birds (M13): 48-species `Birds` enum, per-biome rosters; the
+///     `FOLEY_SHOT_BIRDSONG` size argument widens to cover the catalogue.
+pub const FOLEY_ABI_VERSION: u32 = 21;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -78,10 +80,11 @@ pub const FOLEY_BED_THUNDER: i32 = 5;
 
 /// One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
 /// water drips (0.1 to 10), and unused for lava; the air's temperature in °C
-/// for crickets (-30 to 50); the species (0 to 1000) for birdsong; the body
-/// length in cm for a frog (2 to 20); the wave's height in m for surf (0.2 to
-/// 3); the temperature for cicadas, like crickets; unused for woodpeckers,
-/// owls and howls.
+/// for crickets (-30 to 50); the species (0 to 50) for birdsong (the M13
+/// 48-species catalogue, with two headroom slots); the body length in cm for
+/// a frog (2 to 20); the wave's height in m for surf (0.2 to 3); the
+/// temperature for cicadas, like crickets; unused for woodpeckers, owls and
+/// howls.
 pub const FOLEY_SHOT_DRIP_INTO_WATER: i32 = 0;
 pub const FOLEY_SHOT_DRIP_ON_STONE: i32 = 1;
 pub const FOLEY_SHOT_LAVA_DRIP: i32 = 2;
@@ -499,7 +502,9 @@ pub unsafe extern "C" fn foley_render_one_shot(
             FOLEY_SHOT_DRIP_ON_STONE => drip_on_stone(drop_size()?, seed),
             FOLEY_SHOT_LAVA_DRIP => lava_drip(seed),
             FOLEY_SHOT_CRICKETS if (-30.0..=50.0).contains(&size) => crickets(size, seed),
-            FOLEY_SHOT_BIRDSONG if (0.0..=1000.0).contains(&size) => birdsong(size as u32, seed),
+            FOLEY_SHOT_BIRDSONG if (0.0..=Birds::ALL.len() as f32 - 1.0).contains(&size) => {
+                birdsong2(Birds::of(size as u32), seed)
+            }
             FOLEY_SHOT_FROG if (2.0..=20.0).contains(&size) => frog(size, seed),
             FOLEY_SHOT_SURF if (0.2..=3.0).contains(&size) => surf(size, seed),
             FOLEY_SHOT_WOODPECKER => woodpecker(seed),
@@ -1523,6 +1528,48 @@ mod tests {
                 foley_render_one_shot(
                     FOLEY_SHOT_DRIP_ON_STONE,
                     50.0,
+                    7,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed
+                ),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+        }
+    }
+
+    /// M13: every species in the M13 catalogue renders via `FOLEY_SHOT_BIRDSONG`,
+    /// and a species index past the catalogue's last entry is rejected.
+    #[test]
+    fn every_birdsong_species_renders() {
+        // Every index up to (and including) the catalogue's last renders.
+        for n in 0..Birds::ALL.len() {
+            let mut needed = 0;
+            // SAFETY: null buffer with capacity 0 is not written.
+            unsafe {
+                assert_eq!(
+                    foley_render_one_shot(
+                        FOLEY_SHOT_BIRDSONG,
+                        n as f32,
+                        7,
+                        std::ptr::null_mut(),
+                        0,
+                        &mut needed
+                    ),
+                    FOLEY_OK,
+                    "species {n}"
+                );
+            }
+            assert!(needed > 100, "species {n}: {needed} samples");
+        }
+        // One past the last must be rejected (size is `Birds::ALL.len() - 1`).
+        let mut needed = 0;
+        // SAFETY: the check refuses before writing.
+        unsafe {
+            assert_eq!(
+                foley_render_one_shot(
+                    FOLEY_SHOT_BIRDSONG,
+                    Birds::ALL.len() as f32,
                     7,
                     std::ptr::null_mut(),
                     0,
