@@ -947,15 +947,106 @@ fn villager(rng: &mut Rng) -> Vec<Seg> {
     }
 }
 
+/// Which of the four meow shapes a call draws.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Meow {
+    /// Classic rising-falling "mi-a-ow".
+    Classic,
+    /// A short flat chirp.
+    Chirp,
+    /// A drawn-out wail.
+    Wail,
+    /// A soft questioning rise.
+    Question,
+}
+
+impl Meow {
+    const ALL: [Meow; 4] = [Meow::Classic, Meow::Chirp, Meow::Wail, Meow::Question];
+}
+
+thread_local! {
+    /// The previous meow's shape, so back-to-back calls (the Beg pair) never
+    /// repeat it.
+    static LAST_MEOW: std::cell::Cell<Option<Meow>> = const { std::cell::Cell::new(None) };
+}
+
+/// The next shape at random, never the one just used.
+fn pick_meow(rng: &mut Rng, last: Option<Meow>) -> Meow {
+    let n = Meow::ALL.len();
+    let mut i = (rng.unit() * n as f32) as usize % n;
+    while last == Some(Meow::ALL[i]) {
+        i = (i + 1) % n;
+    }
+    Meow::ALL[i]
+}
+
+/// An f0 contour scaled into this meow's register, with a slight per-draw
+/// wobble so repeats of one shape are never machine-identical.
+fn meow_f0(rng: &mut Rng, register: f32, base: &[(f32, f32)]) -> K {
+    let pts: Vec<(f32, f32)> = base
+        .iter()
+        .map(|&(t, v)| (t, v * register * (1.0 + (rng.unit() * 2.0 - 1.0) * 0.04)))
+        .collect();
+    k(&pts)
+}
+
 fn meow(rng: &mut Rng) -> Seg {
-    // "Mi-a-ow": lips part from an "m", the tongue slides back, the lips round.
-    let mut m = Seg::new(vary(rng, 0.7, 0.25)).vowels(&[(0.0, EE), (0.3, AA), (0.85, OO)]);
-    m.lips = k(&[(0.0, 0.0), (0.12, 1.0)]);
-    m.velum = k(&[(0.0, 1.0), (0.15, 0.0)]);
-    m.f0 = k(&[(0.0, 0.92), (0.35, 1.33), (1.0, 0.83)]);
-    m.rd = c(1.0);
-    m.breath = c(0.08);
-    m
+    let shape = LAST_MEOW.with(|prev| {
+        let next = pick_meow(rng, prev.get());
+        prev.set(Some(next));
+        next
+    });
+    // Some cats are deep and throaty, others high and thin.
+    let roll = rng.unit();
+    let register = if roll < 0.35 {
+        0.68
+    } else if roll < 0.65 {
+        1.28
+    } else {
+        1.0
+    };
+    match shape {
+        // "Mi-a-ow": lips part from an "m", the tongue slides back, the lips round.
+        Meow::Classic => {
+            let mut m = Seg::new(vary(rng, 0.7, 0.2)).vowels(&[(0.0, EE), (0.3, AA), (0.85, OO)]);
+            m.lips = k(&[(0.0, 0.0), (0.12, 1.0)]);
+            m.velum = k(&[(0.0, 1.0), (0.15, 0.0)]);
+            m.f0 = meow_f0(rng, register, &[(0.0, 0.92), (0.35, 1.33), (1.0, 0.83)]);
+            m.rd = c(1.0);
+            m.breath = k(&[(0.0, 0.5), (0.2, 0.14), (1.0, 0.06)]);
+            m
+        }
+        // A short flat chirp: barely opens, barely rounds, breathy throughout.
+        Meow::Chirp => {
+            let mut m = Seg::new(vary(rng, 0.27, 0.15)).vowels(&[(0.0, EE), (0.55, AA)]);
+            m.lips = k(&[(0.0, 0.1), (0.3, 0.7)]);
+            m.velum = k(&[(0.0, 1.0), (0.1, 0.0)]);
+            m.f0 = meow_f0(rng, register, &[(0.0, 1.12), (0.5, 1.18), (1.0, 1.08)]);
+            m.rd = c(0.75);
+            m.breath = k(&[(0.0, 0.8), (0.25, 0.22), (1.0, 0.1)]);
+            m
+        }
+        // A drawn-out wail: throaty and slow, the mouth open long.
+        Meow::Wail => {
+            let mut m = Seg::new(vary(rng, 1.15, 0.2)).vowels(&[(0.0, AA), (0.4, EE), (1.0, OO)]);
+            m.lips = k(&[(0.0, 0.0), (0.2, 0.9), (0.8, 1.0)]);
+            m.velum = k(&[(0.0, 1.0), (0.2, 0.0)]);
+            m.f0 = meow_f0(rng, register, &[(0.0, 0.8), (0.45, 1.18), (1.0, 0.66)]);
+            m.rd = c(1.3);
+            m.breath = k(&[(0.0, 0.35), (0.15, 0.1), (1.0, 0.05)]);
+            m
+        }
+        // Soft, rising at the end as if asking a question.
+        Meow::Question => {
+            let mut m = Seg::new(vary(rng, 0.8, 0.15)).vowels(&[(0.0, EE), (0.4, AA), (0.75, UH)]);
+            m.lips = k(&[(0.0, 0.0), (0.15, 0.8), (0.7, 0.3)]);
+            m.velum = k(&[(0.0, 1.0), (0.12, 0.0)]);
+            m.f0 = meow_f0(rng, register, &[(0.0, 0.9), (0.55, 1.02), (1.0, 1.42)]);
+            m.rd = c(0.9);
+            m.breath = k(&[(0.0, 0.65), (0.2, 0.16), (1.0, 0.08)]);
+            m
+        }
+    }
 }
 
 /// Panting: short breaths out and in, about three a second.
@@ -1056,5 +1147,98 @@ mod tests {
         assert!(rms(&fuse[half..]) > 1.5 * rms(&fuse[..half]));
         let bones = voice(Mob::Skeleton, Call::Ambient, 1);
         assert!(bones.iter().fold(0f32, |p, x| p.max(x.abs())) > 5.0 * rms(&bones));
+    }
+
+    // --- cat meow variety -------------------------------------------------
+
+    /// A meow's shape fingerprint: vowel keyframes, throat texture (rd) and
+    /// the breath ramp's onset and tail. Duration, pitch register and wobble
+    /// are jittered per call and deliberately excluded, so one shape always
+    /// maps to one fingerprint.
+    fn meow_shape(m: &Seg) -> (usize, u32, u32, u32) {
+        (
+            m.mouth.len(),
+            (m.rd.at(0.5) * 20.0).round() as u32,
+            (m.breath.at(0.0) * 20.0).round() as u32,
+            (m.breath.at(1.0) * 20.0).round() as u32,
+        )
+    }
+
+    #[test]
+    fn meows_come_in_four_shapes_and_never_repeat_back_to_back() {
+        let mut rng = Rng::new(9);
+        let mut sigs: Vec<(usize, u32, u32, u32)> = Vec::new();
+        for _ in 0..40 {
+            sigs.push(meow_shape(&meow(&mut rng)));
+        }
+        let mut uniq = sigs.clone();
+        uniq.sort();
+        uniq.dedup();
+        assert!(
+            uniq.len() >= 4,
+            "only {} distinct shapes: {uniq:?}",
+            uniq.len()
+        );
+        for pair in sigs.windows(2) {
+            assert_ne!(pair[0], pair[1], "same shape twice in a row: {pair:?}");
+        }
+    }
+
+    #[test]
+    fn meows_span_a_deep_and_a_high_register() {
+        let mut rng = Rng::new(4);
+        let mut bases: Vec<f32> = (0..60).map(|_| meow(&mut rng).f0.at(0.0)).collect();
+        bases.sort_by(f32::total_cmp);
+        let (lo, hi) = (bases[0], bases[bases.len() - 1]);
+        assert!(lo <= 0.75, "no deep meow: lowest f0 base {lo}");
+        assert!(hi >= 1.1, "no high meow: highest f0 base {hi}");
+        assert!(hi >= 1.4 * lo, "register too narrow: {lo}..{hi}");
+    }
+
+    #[test]
+    fn meows_open_breathy_and_settle_rather_than_holding_a_flat_breath() {
+        let mut rng = Rng::new(5);
+        for _ in 0..30 {
+            let m = meow(&mut rng);
+            let first = m.breath.at(0.0);
+            let last = m.breath.at(1.0);
+            assert!(
+                first >= 0.3 && first >= 2.0 * last,
+                "no breathy onset: first {first}, last {last}"
+            );
+        }
+    }
+
+    #[test]
+    fn meow_durations_span_chirps_to_wails() {
+        let mut rng = Rng::new(6);
+        let mut durs: Vec<f32> = (0..80).map(|_| meow(&mut rng).secs).collect();
+        durs.sort_by(f32::total_cmp);
+        assert!(durs[0] <= 0.35, "no short chirp: shortest {}", durs[0]);
+        assert!(
+            durs[durs.len() - 1] >= 1.1,
+            "no drawn-out wail: longest {}",
+            durs[durs.len() - 1]
+        );
+    }
+
+    #[test]
+    fn same_shape_meows_still_wobble_in_pitch() {
+        let mut rng = Rng::new(8);
+        let drawn: Vec<((usize, u32, u32, u32), f32)> = (0..60)
+            .map(|_| {
+                let m = meow(&mut rng);
+                (meow_shape(&m), m.f0.at(0.0))
+            })
+            .collect();
+        let mut varied = false;
+        for (i, a) in drawn.iter().enumerate() {
+            for b in &drawn[i + 1..] {
+                if a.0 == b.0 && (a.1 - b.1).abs() > 1e-3 {
+                    varied = true;
+                }
+            }
+        }
+        assert!(varied, "identical shape implies identical pitch: no wobble");
     }
 }
