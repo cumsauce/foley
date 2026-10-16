@@ -309,6 +309,8 @@ int32_t foley_bed_set_scene(struct FoleyBed *bed, const float *params, size_t co
 
 /**
  * Renders the next `frames` samples of `bed` into `out`, as 16-bit PCM.
+ * Every call that fails leaves `out` all-zero for `frames` samples (when
+ * `out` itself is valid), so a caller never plays a stale tail.
  *
  * # Safety
  * `bed` must be live and not used on another thread during the call; `out`
