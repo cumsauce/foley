@@ -450,6 +450,26 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 				throw new AssertionError("the surf bed never came alive at the shore: "
 						+ (surf == null ? "off" : surf.scene()), e);
 			}
+			// The window is calibrated, not arbitrary. The one-shot this step pins out fired only at a
+			// shore when `sea || windSpeed > 1.5f`, reading the speed from the wind bed. This superflat
+			// can never read as sea — the biome is plains at world gen and water blocks do not change
+			// biome tags — so the wind is forced above the old 1.5 m/s gate for the window: in calm
+			// weather a re-added firing would slip past a bare "no Life calls" check. `force` lands in
+			// the wind bed's next sample even with its own toggle off; the wait pins that it did.
+			context.runOnClient(mc -> {
+				var wind = FoleyClient.wind();
+				if (wind != null) wind.force(12f);
+			});
+			try {
+				context.waitFor(mc -> {
+					var wind = FoleyClient.wind();
+					return wind != null && wind.scene().speed() > 1.5f;
+				}, 5 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				var wind = FoleyClient.wind();
+				throw new AssertionError("the wind never crossed the old 1.5 m/s wave gate (speed="
+						+ (wind == null ? "no bed" : wind.scene().speed()) + ")", e);
+			}
 			int beforeWaves = FoleyClient.life().calls();
 			var window = context.computeOnClient(mc -> mc.level.getGameTime());
 			context.waitFor(mc -> mc.level != null && mc.level.getGameTime() > window + 15 * 20, 20 * 20);
@@ -468,6 +488,11 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 				throw new AssertionError("M17 Life fired " + (FoleyClient.life().calls() - beforeWaves)
 						+ " one-shot(s) while the surf bed was live (waves belong to the bed now)");
 			}
+			// Back to weather-driven wind for the steps after this one.
+			context.runOnClient(mc -> {
+				var wind = FoleyClient.wind();
+				if (wind != null) wind.force(null);
+			});
 			// Far from any water, the bed stops. Absolute coordinates: runCommand's source may not sit
 			// at the player, so relative ones would resolve somewhere else entirely.
 			double[] dest = context.computeOnClient(mc -> new double[] {
