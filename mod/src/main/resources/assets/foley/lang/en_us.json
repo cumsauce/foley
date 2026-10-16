@@ -129,5 +129,8 @@
 	"foley.settings.voice.guardian": "Guardians",
 	"foley.settings.voice.silverfish": "Silverfish, Endermites",
 	"foley.settings.voices.all_foley": "Voice All Mobs with Foley",
-	"foley.settings.voices.all_game": "Give All Mobs the Game's Voices"
+	"foley.settings.voices.all_game": "Give All Mobs the Game's Voices",
+	"subtitles.foley.underwater": "Underwater",
+	"foley.settings.underwater": "Underwater Ambience",
+	"foley.settings.underwater.tooltip": "Bubbles rise past your ear and a low tone builds with depth when your head is under water. Emerged, Foley sounds the same as above."
 }
