@@ -5,6 +5,7 @@ import io.github.cumsauce.foley.audio.ActiveStructures;
 import io.github.cumsauce.foley.audio.AddonSounds;
 import io.github.cumsauce.foley.audio.Breathing;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
+import io.github.cumsauce.foley.audio.AshDrift;
 import io.github.cumsauce.foley.audio.MobBrushes;
 import io.github.cumsauce.foley.audio.PeacefulBreathing;
 import io.github.cumsauce.foley.audio.Settling;
@@ -48,6 +49,7 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable Settling settling;
 	private static @Nullable MobBrushes mobBrushes;
 	private static @Nullable PeacefulBreathing peacefulBreathing;
+	private static @Nullable AshDrift ashDrift;
 	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
 	private static volatile boolean bypassed;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
@@ -94,6 +96,11 @@ public final class FoleyClient implements ClientModInitializer {
 	/** M22: cows and sheep breathing quietly when Foley voices them. */
 	public static @Nullable PeacefulBreathing peacefulBreathing() {
 		return peacefulBreathing;
+	}
+
+	/** M22: ash and snow drifting during a storm. */
+	public static @Nullable AshDrift ashDrift() {
+		return ashDrift;
 	}
 
 	/** One-shots Foley may start in a tick; past it, the game's own sound plays alone. */
@@ -233,6 +240,9 @@ public final class FoleyClient implements ClientModInitializer {
 		PeacefulBreathing quiet = new PeacefulBreathing();
 		peacefulBreathing = quiet;
 		ClientTickEvents.END_CLIENT_TICK.register(quiet::tick);
+		AshDrift drift = new AshDrift();
+		ashDrift = drift;
+		ClientTickEvents.END_CLIENT_TICK.register(drift::tick);
 		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
 		registerCommands(loaded);
 	}

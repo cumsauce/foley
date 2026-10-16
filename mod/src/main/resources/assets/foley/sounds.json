@@ -5371,5 +5371,14 @@
 			"foley:generated/settle_gravel_2",
 			"foley:generated/settle_gravel_3"
 		]
+	},
+	"ash_drift": {
+		"subtitle": "subtitles.foley.ash",
+		"sounds": [
+			"foley:generated/ash_drift_0",
+			"foley:generated/ash_drift_1",
+			"foley:generated/ash_drift_2",
+			"foley:generated/ash_drift_3"
+		]
 	}
 }
