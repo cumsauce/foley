@@ -11,8 +11,7 @@ class FoleyConfigTest {
 	@Test
 	void itRoundTrips() {
 		FoleyConfig changed = new FoleyConfig(40, false, true, false, true, false, true, false, true, false, true,
-				false, true, true, false, true, false, true, false, true, false, false, true,
-				(1L << 35) | 0b1010_0101);
+				false, true, true, false, true, false, true, false, true, false, false, true, true, false, true, false, true, false, true,				(1L << 35) | 0b1010_0101);
 		assertEquals(changed, FoleyConfig.fromJson(changed.toJson()));
 	}
 

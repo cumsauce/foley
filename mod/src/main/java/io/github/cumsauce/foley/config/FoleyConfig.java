@@ -40,66 +40,123 @@ import java.nio.file.Path;
  * @param rarerSpecies rare birdsong (M13): Kori bustard, golden eagle, alpine chough (off by default)
  * @param underwater underwater ambience (M14): bubbles rising past the ear and a low pressure tone when the head is under
  * @param aeolian    aeolian whistles from iron bars, fences, lanterns, bells and bamboo (added)
- * @param voices     which mobs Foley voices (M6, M7), a bit each in {@code Voices.GROUPS}' order; none by default
+ * @param biomeBeds  biome-specific beds (M19): umbrella toggle
+ * @param desertBeds desert / badlands sand hiss
+ * @param mushroomHum mushroom fields hum
+ * @param caveColors lush and dripstone cave beds
+ * @param deepDark   deep dark subsonic drone and scuttles
+ * @param snowyHush  snow / ice / frozen ocean hush
+ * @param mangroveDrone mangrove swamp insect drone * @param voices     which mobs Foley voices (M6, M7), a bit each in {@code Voices.GROUPS}' order; none by default
  */
 public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunder, boolean water, boolean fire,
 		boolean lava, boolean drips, boolean strikes, boolean footsteps, boolean birds, boolean crickets,
 		boolean frogs, boolean minecarts, boolean doors, boolean chests, boolean redstone, boolean boats,
-		boolean sculk, boolean caveAtmosphere, boolean rarerSpecies, boolean underwater, boolean aeolian,
+		boolean sculk, boolean caveAtmosphere, boolean rarerSpecies, boolean underwater,
+		boolean aeolian, boolean biomeBeds, boolean desertBeds, boolean mushroomHum,
+		boolean caveColors, boolean deepDark, boolean snowyHush, boolean mangroveDrone,
 		long voices) {
 	public static final FoleyConfig DEFAULT = new FoleyConfig(100, true, true, true, true, true, true, true, true, true,
-			true, true, true, true, true, true, true, true, true, false, false, true, true, 0);
-	/** Everything on, every mob's voice too. */
+			true, true, true, true, true, true, true, true, true, false, false, true, true, true, true, true,
+			true, true, true, true, 0);	/** Everything on, every mob's voice too. */
 	public static final FoleyConfig ALL = DEFAULT.withVoices(~0L).withCaveAtmosphere(true).withRarerSpecies(true)
 			.withUnderwater(true).withAeolian(true);
 	/** Everything off. */
 	public static final FoleyConfig NONE = new FoleyConfig(100, false, false, false, false, false, false, false, false,
-			false, false, false, false, false, false, false, false, false, false, false, false, false, false, 0);
-
+			false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, 0);
 	/** These settings with the mob voices in {@code mask} ({@code Voices.GROUPS} bits). */
 	public FoleyConfig withVoices(long mask) {
 		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
-				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, underwater, aeolian,
-				mask);
-	}
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, underwater,
+				aeolian, biomeBeds, desertBeds, mushroomHum, caveColors, deepDark, snowyHush, mangroveDrone, mask);	}
 
 	/** These settings with the wind on or off. */
 	public FoleyConfig withWind(boolean on) {
 		return new FoleyConfig(volume, rain, on, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
 				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, underwater,
-				aeolian, voices);
-	}
+				aeolian, biomeBeds, desertBeds, mushroomHum, caveColors, deepDark, snowyHush, mangroveDrone, voices);	}
 
 	/** These settings with flowing water on or off. */
 	public FoleyConfig withWater(boolean on) {
 		return new FoleyConfig(volume, rain, wind, thunder, on, fire, lava, drips, strikes, footsteps, birds, crickets,
 				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, underwater,
-				aeolian, voices);
+				aeolian, biomeBeds, desertBeds, mushroomHum, caveColors, deepDark, snowyHush, mangroveDrone, voices);
 	}
-
-	/** These settings with the aeolian tones on or off. */
-	public FoleyConfig withAeolian(boolean on) {
-		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds,
-				crickets, frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies,
-				underwater, on, voices);	}
 
 	/** These settings with the cave atmosphere on or off. */
 	public FoleyConfig withCaveAtmosphere(boolean on) {
 		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
-				frogs, minecarts, doors, chests, redstone, boats, sculk, on, rarerSpecies, underwater, aeolian, voices);
+				frogs, minecarts, doors, chests, redstone, boats, sculk, on, rarerSpecies, underwater,
+				aeolian, biomeBeds, desertBeds, mushroomHum, caveColors, deepDark, snowyHush, mangroveDrone, voices);
 	}
 
 	/** These settings with {@code rarerSpecies} on or off. */
 	public FoleyConfig withRarerSpecies(boolean on) {
 		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
-				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, on, underwater, aeolian, voices);
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, on, underwater,
+				aeolian, biomeBeds, desertBeds, mushroomHum, caveColors, deepDark, snowyHush, mangroveDrone, voices);
 	}
 
 	/** These settings with the underwater ambience on or off. */
 	public FoleyConfig withUnderwater(boolean on) {
 		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
-				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, on, aeolian,
-				voices);
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, on,
+				aeolian, biomeBeds, desertBeds, mushroomHum, caveColors, deepDark, snowyHush, mangroveDrone, voices);
+	}
+
+	/** These settings with the aeolian tones on or off. */
+	public FoleyConfig withAeolian(boolean on) {
+		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, underwater,
+				on, biomeBeds, desertBeds, mushroomHum, caveColors, deepDark, snowyHush, mangroveDrone, voices);
+	}
+
+	/** These settings with biome-specific beds (M19) on or off. */
+	public FoleyConfig withBiomeBeds(boolean on) {
+		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, underwater,
+				aeolian, on, desertBeds, mushroomHum, caveColors, deepDark, snowyHush, mangroveDrone, voices);
+	}
+
+	/** These settings with the desert sand hiss on or off. */
+	public FoleyConfig withDesertBeds(boolean on) {
+		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, underwater,
+				aeolian, biomeBeds, on, mushroomHum, caveColors, deepDark, snowyHush, mangroveDrone, voices);
+	}
+
+	/** These settings with the mushroom fields hum on or off. */
+	public FoleyConfig withMushroomHum(boolean on) {
+		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, underwater,
+				aeolian, biomeBeds, desertBeds, on, caveColors, deepDark, snowyHush, mangroveDrone, voices);
+	}
+
+	/** These settings with lush and dripstone cave colors on or off. */
+	public FoleyConfig withCaveColors(boolean on) {
+		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, underwater,
+				aeolian, biomeBeds, desertBeds, mushroomHum, on, deepDark, snowyHush, mangroveDrone, voices);
+	}
+
+	/** These settings with the deep dark drone on or off. */
+	public FoleyConfig withDeepDark(boolean on) {
+		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, underwater,
+				aeolian, biomeBeds, desertBeds, mushroomHum, caveColors, on, snowyHush, mangroveDrone, voices);
+	}
+
+	/** These settings with the snow / ice hush on or off. */
+	public FoleyConfig withSnowyHush(boolean on) {
+		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, underwater,
+				aeolian, biomeBeds, desertBeds, mushroomHum, caveColors, deepDark, on, mangroveDrone, voices);
+	}
+
+	/** These settings with the mangrove insect drone on or off. */
+	public FoleyConfig withMangroveDrone(boolean on) {
+		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, underwater,
+				aeolian, biomeBeds, desertBeds, mushroomHum, caveColors, deepDark, snowyHush, on, voices);
 	}
 
 	/** Whether Foley voices the group at {@code index} in {@code Voices.GROUPS}. */
@@ -146,7 +203,11 @@ public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunde
 				flag(json, "chests", d.chests), flag(json, "redstone", d.redstone), flag(json, "boats", d.boats),
 				flag(json, "sculk", d.sculk), flag(json, "caveAtmosphere", d.caveAtmosphere),
 				flag(json, "rarerSpecies", d.rarerSpecies), flag(json, "underwater", d.underwater),
-				flag(json, "aeolian", d.aeolian), voices(json));
+				flag(json, "aeolian", d.aeolian), flag(json, "biomeBeds", d.biomeBeds),
+				flag(json, "desertBeds", d.desertBeds), flag(json, "mushroomHum", d.mushroomHum),
+				flag(json, "caveColors", d.caveColors), flag(json, "deepDark", d.deepDark),
+				flag(json, "snowyHush", d.snowyHush), flag(json, "mangroveDrone", d.mangroveDrone),
+				voices(json));
 	}
 
 	JsonObject toJson() {
@@ -174,7 +235,15 @@ public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunde
 		json.addProperty("rarerSpecies", rarerSpecies);
 		json.addProperty("underwater", underwater);
 		json.addProperty("aeolian", aeolian);
-		JsonObject mobs = new JsonObject();		for (int i = 0; i < MOBS.size(); i++) mobs.addProperty(MOBS.get(i), voice(i));
+		json.addProperty("biomeBeds", biomeBeds);
+		json.addProperty("desertBeds", desertBeds);
+		json.addProperty("mushroomHum", mushroomHum);
+		json.addProperty("caveColors", caveColors);
+		json.addProperty("deepDark", deepDark);
+		json.addProperty("snowyHush", snowyHush);
+		json.addProperty("mangroveDrone", mangroveDrone);
+		JsonObject mobs = new JsonObject();
+		for (int i = 0; i < MOBS.size(); i++) mobs.addProperty(MOBS.get(i), voice(i));
 		json.add("voices", mobs);
 		return json;
 	}

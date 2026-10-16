@@ -3,7 +3,7 @@ package io.github.cumsauce.foley;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import io.github.cumsauce.foley.audio.ActiveStructures;
 import io.github.cumsauce.foley.audio.AeolianSources;
-import io.github.cumsauce.foley.audio.AddonSounds;
+import io.github.cumsauce.foley.audio.BiomeController;import io.github.cumsauce.foley.audio.AddonSounds;
 import io.github.cumsauce.foley.audio.Breathing;
 import io.github.cumsauce.foley.audio.CaveController;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
@@ -46,9 +46,10 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable CaveController cave;
 	private static @Nullable Breathing breathing;
 	private static @Nullable ActiveStructures activeStructures;
-	private static @Nullable UnderwaterController underwater;
-	private static @Nullable AeolianSources aeolian;	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
-	private static volatile boolean bypassed;
+private static @Nullable UnderwaterController underwater;
+	private static @Nullable AeolianSources aeolian;
+	private static @Nullable BiomeController biomeController;
+	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;	private static volatile boolean bypassed;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
 	private static final java.util.concurrent.atomic.AtomicInteger layered = new java.util.concurrent.atomic.AtomicInteger();
 
@@ -87,8 +88,12 @@ public final class FoleyClient implements ClientModInitializer {
 
 	/** M18: aeolian whistles from iron bars, fences, lanterns, bells and bamboo. */
 	public static @Nullable AeolianSources aeolian() {
-		return aeolian;	}
-
+		return aeolian;
+	}
+	/** M19: biome-specific beds (desert, mushroom, lush, dripstone, deep dark, snow, mangrove). */
+	public static @Nullable BiomeController biome() {
+		return biomeController;
+	}
 	/** One-shots Foley may start in a tick; past it, the game's own sound plays alone. */
 	private static final int ONE_SHOTS_PER_TICK = 6;
 	private static int oneShots;
@@ -231,8 +236,12 @@ public final class FoleyClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(under::tick);
 		AeolianSources aeolianSources = new AeolianSources(loaded);
 		aeolian = aeolianSources;
-		ClientTickEvents.END_CLIENT_TICK.register(aeolianSources::tick);		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
-		registerCommands(loaded);
+		ClientTickEvents.END_CLIENT_TICK.register(aeolianSources::tick);		
+		BiomeController biomeCtl = new BiomeController(loaded);
+		biomeController = biomeCtl;
+		ClientTickEvents.END_CLIENT_TICK.register(biomeCtl::tick);
+		
+		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);		registerCommands(loaded);
 	}
 
 	/** A generated drip at the player's feet, a different one each time. */
@@ -277,7 +286,8 @@ public final class FoleyClient implements ClientModInitializer {
 									? "Foley is off"
 									: rain.scene() + "\n" + wind.scene() + "\n" + placed.around().water() + "\n"
 											+ placed.around().fire() + "\n" + placed.around().lava() + "\n"
-											+ (cave == null ? "CaveScene[off]" : cave.scene())));
+											+ (cave == null ? "CaveScene[off]" : cave.scene()) + "\n"
+											+ (biomeController == null ? "no biome" : biomeController.scene())));
 							return 1;
 						}))
 						.then(ClientCommands.literal("drip").executes(c -> {

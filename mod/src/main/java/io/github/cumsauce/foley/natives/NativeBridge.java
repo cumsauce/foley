@@ -38,6 +38,8 @@ public final class NativeBridge {
 	public static final int BED_CAVE = 6;
 	/** M14: bubbles rising past the ear and a low pressure tone while the head is under. */
 	public static final int BED_UNDERWATER = 7;
+	/** M19: a per-biome streaming mixer (desert, mushroom, lush, dripstone, deep dark, snow, mangrove). */
+	public static final int BED_BIOME = 8;
 	/** One-shot kinds ({@code FOLEY_SHOT_*}). */
 	public static final int SHOT_DRIP_INTO_WATER = 0;
 	public static final int SHOT_DRIP_ON_STONE = 1;

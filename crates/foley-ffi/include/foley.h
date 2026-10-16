@@ -41,7 +41,9 @@
  *     nine originals appended), per-biome rosters; the
  *     `FOLEY_SHOT_BIRDSONG` size argument widens to cover the catalogue;
  *     underwater ambience (M14): `FOLEY_BED_UNDERWATER`, a listener-state
- *     bed of bubbles and a pressure tone, fading over 1 s on emerging.
+ *     bed of bubbles and a pressure tone, fading over 1 s on emerging;
+ *     biome-specific beds (M19): `FOLEY_BED_BIOME`, a per-biome streaming
+ *     mixer (desert, mushroom, lush, dripstone, deep dark, snow, mangrove).
  * 22: `foley_set_submerged` for the global 1 kHz low-pass on every Foley
  *     stream (not voices) while the head is under.
  */
@@ -92,6 +94,15 @@
  * - underwater: the listener's level under the surface (0 to 1).
  */
 #define FOLEY_BED_UNDERWATER 7
+
+/**
+ * Biome-specific bed. The bed takes 4 floats: `kind` (0 to 6 — desert,
+ * mushroom, lush, dripstone, deep dark, snow, mangrove), `intensity` (0 to 1),
+ * `sub` (a kind-specific count: vortex rings per 30 s for desert, scuttle
+ * count for deep_dark, mangrove leaf count for mangrove, leaf exposure for
+ * snow), and `gain` (0 to 1) — a per-bed master gain.
+ */
+#define FOLEY_BED_BIOME 8
 
 /**
  * One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the

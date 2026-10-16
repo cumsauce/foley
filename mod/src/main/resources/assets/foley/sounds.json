@@ -6398,5 +6398,13 @@
 				"attenuation_distance": 24
 			}
 		]
+	},
+	"biome": {
+		"subtitle": "subtitles.foley.biome",
+		"sounds": [
+			{
+				"name": "fabric-sound-api-v1:empty",
+				"stream": true			}
+		]
 	}
 }

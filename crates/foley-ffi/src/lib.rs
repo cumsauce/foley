@@ -14,13 +14,13 @@ mod guard;
 mod no_alloc;
 
 use foley_synth::{
-    Birds, Call, Cave, CaveScene, Contact, CreatureCall, CreatureSpec, Fire, FireScene, Lava,
-    LavaScene, Material, MaterialProps, Mob, Plant, Rain, RainScene, SAMPLE_RATE, Surface,
-    Thunder, ThunderScene, Underwater, UnderwaterScene, Water, WaterScene, Wind, WindScene,
-    aeolian, birdsong2, brush, bubble, buzz, cicadas, contact, contact_with, creature_voice,
-    crickets, drip_into_water, drip_on_stone, flush, fracture, fracture_with, frog, gust, howl,
-    ice_singing, lava_drip, noise_burst, owl, sculk_ring, settling_stone, surf, to_pcm, tone,
-    voice, woodpecker,
+    Biome, BiomeScene, Birds, Call, Cave, CaveScene, Contact, CreatureCall, CreatureSpec, Fire,
+    FireScene, Lava, LavaScene, Material, MaterialProps, Mob, Plant, Rain, RainScene,
+    SAMPLE_RATE, Surface, Thunder, ThunderScene, Underwater, UnderwaterScene, Water, WaterScene,
+    Wind, WindScene, aeolian, birdsong2, brush, bubble, buzz, cicadas, contact, contact_with,
+    creature_voice, crickets, drip_into_water, drip_on_stone, flush, fracture, fracture_with,
+    frog, gust, howl, ice_singing, lava_drip, noise_burst, owl, sculk_ring, settling_stone,
+    surf, to_pcm, tone, voice, woodpecker,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -58,7 +58,9 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 ///     nine originals appended), per-biome rosters; the
 ///     `FOLEY_SHOT_BIRDSONG` size argument widens to cover the catalogue;
 ///     underwater ambience (M14): `FOLEY_BED_UNDERWATER`, a listener-state
-///     bed of bubbles and a pressure tone, fading over 1 s on emerging.
+///     bed of bubbles and a pressure tone, fading over 1 s on emerging;
+///     biome-specific beds (M19): `FOLEY_BED_BIOME`, a per-biome streaming
+///     mixer (desert, mushroom, lush, dripstone, deep dark, snow, mangrove).
 /// 22: `foley_set_submerged` for the global 1 kHz low-pass on every Foley
 ///     stream (not voices) while the head is under.
 pub const FOLEY_ABI_VERSION: u32 = 22;
@@ -93,7 +95,12 @@ pub const FOLEY_BED_THUNDER: i32 = 5;
 pub const FOLEY_BED_CAVE: i32 = 6;
 /// - underwater: the listener's level under the surface (0 to 1).
 pub const FOLEY_BED_UNDERWATER: i32 = 7;
-
+/// Biome-specific bed. The bed takes 4 floats: `kind` (0 to 6 — desert,
+/// mushroom, lush, dripstone, deep dark, snow, mangrove), `intensity` (0 to 1),
+/// `sub` (a kind-specific count: vortex rings per 30 s for desert, scuttle
+/// count for deep_dark, mangrove leaf count for mangrove, leaf exposure for
+/// snow), and `gain` (0 to 1) — a per-bed master gain.
+pub const FOLEY_BED_BIOME: i32 = 8;
 /// One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
 /// water drips (0.1 to 10), and unused for lava; the air's temperature in °C
 /// for crickets (-30 to 50); the species (0 to 56) for birdsong (the M13
@@ -204,7 +211,7 @@ enum Synth {
     Thunder(Thunder),
     Cave(Cave),
     Underwater(Underwater),
-}
+    Biome(Biome),}
 
 /// Opaque handle to a bed: a sound made as it plays, endlessly.
 #[derive(Debug)]
@@ -307,7 +314,7 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
             FOLEY_BED_THUNDER => Synth::Thunder(Thunder::new()),
             FOLEY_BED_CAVE => Synth::Cave(Cave::new(seed)),
             FOLEY_BED_UNDERWATER => Synth::Underwater(Underwater::new(seed)),
-            _ => return Err(FfiError::invalid("unknown bed kind")),
+            FOLEY_BED_BIOME => Synth::Biome(Biome::new(seed)),            _ => return Err(FfiError::invalid("unknown bed kind")),
         };
         *out = Box::into_raw(Box::new(FoleyBed {
             synth,
@@ -368,7 +375,7 @@ fn apply(synth: &mut Synth, p: &[f32]) -> Result<(), FfiError> {
         Synth::Fire(_) | Synth::Lava(_) => 2,
         Synth::Cave(_) => 5,
         Synth::Underwater(_) => 1,
-    };
+        Synth::Biome(_) => 4,    };
     if p.len() != wanted {
         return Err(FfiError::invalid("wrong number of params for this bed"));
     }
@@ -452,6 +459,26 @@ fn apply(synth: &mut Synth, p: &[f32]) -> Result<(), FfiError> {
         Synth::Underwater(underwater) => {
             underwater.set_scene(UnderwaterScene { level: gain(p[0])? })
         }
+        Synth::Biome(biome) => {
+            let kind_idx = p[0].round() as i64;
+            if !(0..=6).contains(&kind_idx) {
+                return Err(FfiError::invalid("biome kind out of range"));
+            }
+            let kind = foley_synth::BiomeKind::from_index(kind_idx as u32)
+                .ok_or_else(|| FfiError::invalid("unknown biome kind"))?;
+            let intensity = gain(p[1])?;
+            let sub = if !(0.0..=200.0).contains(&p[2]) {
+                return Err(FfiError::invalid("sub out of range"));
+            } else {
+                p[2]
+            };
+            let gain = gain(p[3])?;
+            biome.set_scene(BiomeScene {
+                kind,
+                intensity,
+                sub,
+                gain,
+            });        }
     }
     Ok(())
 }
@@ -501,7 +528,7 @@ pub unsafe extern "C" fn foley_bed_render(bed: *mut FoleyBed, out: *mut i16, fra
                 Synth::Thunder(synth) => synth.render(block),
                 Synth::Cave(synth) => synth.render(block),
                 Synth::Underwater(synth) => synth.render(block),
-            }
+                Synth::Biome(synth) => synth.render(block),            }
             // The level guard: the envelope rises at once and falls over
             // about half a second; the gain follows it down quickly and back
             // up slowly.
@@ -989,7 +1016,7 @@ mod tests {
     #[test]
     fn the_audio_thread_never_allocates() {
         let rain = |rate: f32| [rate, 0.4, 0.2, 0.1, 0.1, 0.1, 0.05, 0.05, 2.0, 4.0];
-        let beds: [(i32, Vec<Vec<f32>>); 8] = [
+        let beds: [(i32, Vec<Vec<f32>>); 9] = [
             (
                 FOLEY_BED_RAIN,
                 vec![rain(5.0).to_vec(), rain(150.0).to_vec(), rain(0.0).to_vec()],
@@ -1027,6 +1054,14 @@ mod tests {
                 vec![vec![1.0, 0.8, 0.0, 0.5, 1.0], vec![0.0, 0.0, 1.0, 0.0, 0.0]],
             ),
             (FOLEY_BED_UNDERWATER, vec![vec![1.0], vec![0.0], vec![1.0]]),
+            (
+                FOLEY_BED_BIOME,
+                vec![
+                    vec![0.0, 1.0, 0.0, 1.0],
+                    vec![3.0, 0.4, 50.0, 0.6],
+                    vec![4.0, 0.8, 0.0, 0.0],
+                ],
+            ),
         ];
         // The counter itself works.
         assert!(allocations(|| drop(std::hint::black_box(vec![1u8]))) > 0);
