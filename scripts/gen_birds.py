@@ -166,12 +166,14 @@ ROSTERS = {
         ("grey_crowned_rosy_finch", 40, False),
     ],
     "minecraft:beach": [
-        ("common_tern", 50, False),
-        ("sanderling", 50, False),
+        ("common_tern", 40, False),
+        ("sanderling", 35, False),
+        ("herring_gull", 25, False),
     ],
     "minecraft:stony_shore": [
-        ("common_tern", 50, False),
-        ("sanderling", 50, False),
+        ("common_tern", 40, False),
+        ("sanderling", 35, False),
+        ("herring_gull", 25, False),
     ],
     "minecraft:mushroom_fields": [("mushroom_trill", 100, False)],
 }
@@ -253,6 +255,27 @@ public final class BiomeRoster {{
 	/** Biomes with rosters. Biomes without an entry have no birds. */
 	public static final Map<String, List<Entry>> ROSTERS = Map.ofEntries(
 			{java_entries()});
+
+	/**
+	 * Picks a species for {{@code biome}}: {{@code roll}} in [0, 1) chooses by weight, and rare
+	 * species are skipped unless {{@code includeRare}}. The species' index in {{@code Birds#ALL}},
+	 * or -1 when the biome has no roster (or nothing eligible).
+	 */
+	public static int pick(String biome, float roll, boolean includeRare) {{
+		if (biome == null) return -1;
+		List<Entry> roster = ROSTERS.get(biome);
+		if (roster == null) return -1;
+		int total = 0;
+		for (Entry e : roster) if (includeRare || !e.rare()) total += e.weight();
+		if (total == 0) return -1;
+		float target = roll * total;
+		for (Entry e : roster) {{
+			if (!includeRare && e.rare()) continue;
+			target -= e.weight();
+			if (target < 0) return Birds.ALL.indexOf(e.species());
+		}}
+		return -1;
+	}}
 
 	private BiomeRoster() {{}}
 }}

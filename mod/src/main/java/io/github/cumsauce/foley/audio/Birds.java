@@ -20,7 +20,10 @@ public final class Birds {
 			"red_winged_blackbird", "common_yellowthroat", "prothonotary_warbler", "limpkin",
 			"clark_nutcracker", "golden_eagle", "alpine_chough", "grey_crowned_rosy_finch",
 			"common_tern", "sanderling",
-			"mushroom_trill");
+			"mushroom_trill",
+			// The nine originals (M5), appended after the catalogue so existing indices stay.
+			"crow", "dove", "robin", "cardinal", "chickadee", "herring_gull", "common_loon", "jay",
+			"warbler");
 
 	/**
 	 * The rare-gated species, in {@code ALL}'s order: {@code true} means the
@@ -40,7 +43,9 @@ public final class Birds {
 			false, false, false, false,
 			false, true, true, false,
 			false, false,
-			false);
+			false,
+			// The nine originals: none rare-gated.
+			false, false, false, false, false, false, false, false, false);
 
 	public static final int SPECIES = ALL.size();
 

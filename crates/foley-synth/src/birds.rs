@@ -129,11 +129,23 @@ pub enum Birds {
     Sanderling,
     // Mushroom fields — 1
     MushroomTrill,
+    // The nine originals (M5), appended so their indices never shift:
+    // Life's loon, gull, crow and jay specials live here. They delegate to
+    // the migrated `bird_call`, keeping the calls players know.
+    Crow,
+    Dove,
+    Robin,
+    Cardinal,
+    Chickadee,
+    HerringGull,
+    CommonLoon,
+    Jay,
+    Warbler,
 }
 
 impl Birds {
     /// Every species in ABI order.
-    pub const ALL: [Birds; 48] = [
+    pub const ALL: [Birds; 57] = [
         // Taiga, snowy taiga
         Birds::BorealOwl,
         Birds::GreatGreyOwl,
@@ -195,6 +207,16 @@ impl Birds {
         Birds::Sanderling,
         // Mushroom fields
         Birds::MushroomTrill,
+        // The nine originals (M5)
+        Birds::Crow,
+        Birds::Dove,
+        Birds::Robin,
+        Birds::Cardinal,
+        Birds::Chickadee,
+        Birds::HerringGull,
+        Birds::CommonLoon,
+        Birds::Jay,
+        Birds::Warbler,
     ];
 
     /// By its index in [`Birds::ALL`]. Panics if out of range; callers should

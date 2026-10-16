@@ -38,9 +38,30 @@ public final class BiomeRoster {
 			Map.entry("minecraft:stony_peaks", List.of(new Entry("clark_nutcracker", 30, false), new Entry("golden_eagle", 10, true), new Entry("alpine_chough", 25, true), new Entry("grey_crowned_rosy_finch", 35, false))),
 			Map.entry("minecraft:meadow", List.of(new Entry("clark_nutcracker", 20, false), new Entry("alpine_chough", 30, true), new Entry("grey_crowned_rosy_finch", 50, false))),
 			Map.entry("minecraft:groove", List.of(new Entry("clark_nutcracker", 35, false), new Entry("alpine_chough", 25, true), new Entry("grey_crowned_rosy_finch", 40, false))),
-			Map.entry("minecraft:beach", List.of(new Entry("common_tern", 50, false), new Entry("sanderling", 50, false))),
-			Map.entry("minecraft:stony_shore", List.of(new Entry("common_tern", 50, false), new Entry("sanderling", 50, false))),
+			Map.entry("minecraft:beach", List.of(new Entry("common_tern", 40, false), new Entry("sanderling", 35, false), new Entry("herring_gull", 25, false))),
+			Map.entry("minecraft:stony_shore", List.of(new Entry("common_tern", 40, false), new Entry("sanderling", 35, false), new Entry("herring_gull", 25, false))),
 			Map.entry("minecraft:mushroom_fields", List.of(new Entry("mushroom_trill", 100, false))));
+
+	/**
+	 * Picks a species for {@code biome}: {@code roll} in [0, 1) chooses by weight, and rare
+	 * species are skipped unless {@code includeRare}. The species' index in {@code Birds#ALL},
+	 * or -1 when the biome has no roster (or nothing eligible).
+	 */
+	public static int pick(String biome, float roll, boolean includeRare) {
+		if (biome == null) return -1;
+		List<Entry> roster = ROSTERS.get(biome);
+		if (roster == null) return -1;
+		int total = 0;
+		for (Entry e : roster) if (includeRare || !e.rare()) total += e.weight();
+		if (total == 0) return -1;
+		float target = roll * total;
+		for (Entry e : roster) {
+			if (!includeRare && e.rare()) continue;
+			target -= e.weight();
+			if (target < 0) return Birds.ALL.indexOf(e.species());
+		}
+		return -1;
+	}
 
 	private BiomeRoster() {}
 }

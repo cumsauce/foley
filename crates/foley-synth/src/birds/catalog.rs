@@ -6,12 +6,29 @@
 //! lives there.
 
 use crate::SAMPLE_RATE;
+use crate::birds::Bird;
 use crate::birds::Birds;
+use crate::birds::bird_call;
 use crate::birds::engine2::{Phrase, Segment, SegmentKind};
 use crate::dsp::normalize;
 
 /// One phrase for the species, rendered from `seed`.
 pub fn birdsong2(bird: Birds, seed: u64) -> Vec<f32> {
+    // The nine originals (M5) keep the calls Life has always played, at
+    // their legacy levels: they ride at the end of the catalogue and
+    // delegate to the (engine-2 migrated) `bird_call`.
+    match bird {
+        Birds::Crow => return bird_call(Bird::Crow, seed),
+        Birds::Dove => return bird_call(Bird::Dove, seed),
+        Birds::Robin => return bird_call(Bird::Robin, seed),
+        Birds::Cardinal => return bird_call(Bird::Cardinal, seed),
+        Birds::Chickadee => return bird_call(Bird::Chickadee, seed),
+        Birds::HerringGull => return bird_call(Bird::Gull, seed),
+        Birds::CommonLoon => return bird_call(Bird::Loon, seed),
+        Birds::Jay => return bird_call(Bird::Jay, seed),
+        Birds::Warbler => return bird_call(Bird::Warbler, seed),
+        _ => {}
+    }
     let phrase = phrase_for(bird);
     let samples = phrase.render(seed);
     let mut samples = samples;
@@ -72,6 +89,19 @@ fn phrase_for(bird: Birds) -> Phrase {
         Birds::CommonTern => common_tern(),
         Birds::Sanderling => sanderling(),
         Birds::MushroomTrill => mushroom_trill(),
+        // The nine originals never come through here; `birdsong2` delegates
+        // them to `bird_call` before asking for a phrase.
+        Birds::Crow
+        | Birds::Dove
+        | Birds::Robin
+        | Birds::Cardinal
+        | Birds::Chickadee
+        | Birds::HerringGull
+        | Birds::CommonLoon
+        | Birds::Jay
+        | Birds::Warbler => {
+            unreachable!("the nine originals are delegated in birdsong2")
+        }
     }
 }
 

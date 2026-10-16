@@ -50,7 +50,8 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 ///     F3).
 /// 20: active structures (M21): `FOLEY_SHOT_SCULK_RING`, a triggered low-Q
 ///     tone for sculk sensors.
-/// 21: more birds (M13): 48-species `Birds` enum, per-biome rosters; the
+/// 21: more birds (M13): 57-species `Birds` enum (48 biome-roster species
+///     plus the nine originals appended), per-biome rosters; the
 ///     `FOLEY_SHOT_BIRDSONG` size argument widens to cover the catalogue.
 pub const FOLEY_ABI_VERSION: u32 = 21;
 
@@ -80,8 +81,8 @@ pub const FOLEY_BED_THUNDER: i32 = 5;
 
 /// One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
 /// water drips (0.1 to 10), and unused for lava; the air's temperature in °C
-/// for crickets (-30 to 50); the species (0 to 50) for birdsong (the M13
-/// 48-species catalogue, with two headroom slots); the body length in cm for
+/// for crickets (-30 to 50); the species (0 to 56) for birdsong (the M13
+/// 57-species catalogue: 48 biome-roster species plus the nine originals); the body length in cm for
 /// a frog (2 to 20); the wave's height in m for surf (0.2 to 3); the
 /// temperature for cicadas, like crickets; unused for woodpeckers, owls and
 /// howls.

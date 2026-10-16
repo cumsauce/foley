@@ -280,6 +280,28 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			});
 			if (FoleyClient.replaced() != beforeVoice + 1) throw new AssertionError("the sheep wasn't voiced by Foley");
 
+			// M13: birds by biome. At the dawn chorus on a superflat plains, a roster bird sings...
+			singleplayer.getServer().runCommand("time set 23500");
+			int beforeDawn = context.computeOnClient(mc -> FoleyClient.life().calls());
+			try {
+				context.waitFor(mc -> FoleyClient.life().calls() > beforeDawn, 30 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("no bird at the dawn chorus in the plains", e);
+			}
+			// ...and with birds switched off, the gate is closed.
+			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
+					settings.volume(), settings.rain(), settings.wind(), settings.thunder(), settings.water(),
+					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
+					false, settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
+					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
+					settings.rarerSpecies(), settings.voices())));
+			if (context.computeOnClient(mc -> FoleyClient.wants(
+					io.github.cumsauce.foley.config.FoleyConfig::birds))) {
+				FoleyClient.apply(settings);
+				throw new AssertionError("birds still wanted after switching them off");
+			}
+			FoleyClient.apply(settings);
+
 			// The gametest's own creature (F3): the dolphin, voiced by its descriptor, once "Addons' Creatures" is
 			// switched on; off by default like every voice group.
 			int beforeDolphin = FoleyClient.replaced();
@@ -373,7 +395,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			int beforeMuted = FoleyClient.replaced();
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, 0L)));
+					false, false, false, false, false, false, false, false, false, false, 0L)));
 			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CHEST_OPEN,
 					SoundSource.BLOCKS, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX() + 4,
 					mc.player.getY(), mc.player.getZ())));
