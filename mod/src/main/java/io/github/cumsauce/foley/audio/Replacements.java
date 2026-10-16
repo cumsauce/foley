@@ -27,6 +27,8 @@ import net.minecraft.world.level.material.Fluids;
  *       lake there played one per block, and ran the game out of sources;</li>
  *   <li>dripstone drips, swapped for a generated drip where the drop lands: into water if it lands in water or a
  *       cauldron, on stone otherwise, or a drop of lava.</li>
+ *   <li>M21 active structures: door, chest, shulker and minecart events (the
+ *       per-tick sounds Foley makes instead are played by {@link ActiveStructures}).</li>
  * </ul>
  */
 public final class Replacements {
@@ -44,6 +46,20 @@ public final class Replacements {
 			SoundEvents.POINTED_DRIPSTONE_DRIP_WATER_INTO_CAULDRON.location();
 	private static final Set<Identifier> DRIP_LAVA = Set.of(SoundEvents.POINTED_DRIPSTONE_DRIP_LAVA.location(),
 			SoundEvents.POINTED_DRIPSTONE_DRIP_LAVA_INTO_CAULDRON.location());
+	/** M21: door, chest, shulker and minecart vanilla events, to skip so Foley can layer. */
+	private static final Set<Identifier> DOOR_WOOD = Set.of(SoundEvents.WOODEN_DOOR_OPEN.location(),
+			SoundEvents.WOODEN_DOOR_CLOSE.location(), SoundEvents.WOODEN_TRAPDOOR_OPEN.location(),
+			SoundEvents.WOODEN_TRAPDOOR_CLOSE.location());
+	private static final Set<Identifier> DOOR_IRON = Set.of(SoundEvents.IRON_DOOR_OPEN.location(),
+			SoundEvents.IRON_DOOR_CLOSE.location(), SoundEvents.IRON_TRAPDOOR_OPEN.location(),
+			SoundEvents.IRON_TRAPDOOR_CLOSE.location());
+	private static final Set<Identifier> CHEST = Set.of(SoundEvents.CHEST_OPEN.location(),
+			SoundEvents.CHEST_CLOSE.location(), SoundEvents.ENDER_CHEST_OPEN.location(),
+			SoundEvents.ENDER_CHEST_CLOSE.location());
+	private static final Set<Identifier> SHULKER = Set.of(SoundEvents.SHULKER_BOX_OPEN.location(),
+			SoundEvents.SHULKER_BOX_CLOSE.location());
+	private static final Set<Identifier> MINECART = Set.of(SoundEvents.MINECART_INSIDE.location(),
+			SoundEvents.MINECART_RIDING.location());
 	/** At most this many of the game's water, lava or fire sounds play at once beyond Foley's reach, each. */
 	static final int MOST_FAR = 6;
 	/** Those playing now: water, lava, fire. Client thread. */
@@ -84,9 +100,9 @@ public final class Replacements {
 			far.add(sound);
 			return false;
 		}
-		SoundEvent drip;
+		SoundEvent drip = null;
 		if (!FoleyClient.wants(FoleyConfig::drips)) {
-			return false;
+			// Still check M21 events before falling through: a toggled-off drips user may want doors on.
 		} else if (DRIP_LAVA.contains(id)) {
 			drip = DRIP_LAVA_EVENT;
 		} else if (id.equals(DRIP_WATER_INTO_CAULDRON)) {
@@ -94,14 +110,46 @@ public final class Replacements {
 		} else if (id.equals(DRIP_WATER)) {
 			BlockPos at = BlockPos.containing(sound.getX(), sound.getY() - 0.05, sound.getZ());
 			drip = minecraft.level.getFluidState(at).getType().isSame(Fluids.WATER) ? DRIP : DRIP_STONE;
-		} else {
-			return false;
 		}
-		// The game's drips play at 0.3 to 1 of full volume.
-		float volume = (0.3f + 0.7f * minecraft.level.getRandom().nextFloat()) * FoleyClient.gain();
-		minecraft.getSoundManager().play(new SimpleSoundInstance(drip, SoundSource.BLOCKS, volume, 1f,
-				SoundInstance.createUnseededRandom(), sound.getX(), sound.getY(), sound.getZ()));
-		return counted();
+		if (drip != null) {
+			// The game's drips play at 0.3 to 1 of full volume.
+			float volume = (0.3f + 0.7f * minecraft.level.getRandom().nextFloat()) * FoleyClient.gain();
+			minecraft.getSoundManager().play(new SimpleSoundInstance(drip, SoundSource.BLOCKS, volume, 1f,
+					SoundInstance.createUnseededRandom(), sound.getX(), sound.getY(), sound.getZ()));
+			return counted();
+		}
+		// M21: doors, chests, shulkers, minecarts. Foley layers its own under the game's
+		// event (which the dispatcher is about to skip) — the per-tick scan in
+		// {@link ActiveStructures} plays the actual creak, the chest puff, the wheel impact.
+		if (FoleyClient.activeStructures() != null) {
+			if (DOOR_WOOD.contains(id) || DOOR_IRON.contains(id)) {
+				if (FoleyClient.wants(FoleyConfig::doors)) {
+					FoleyClient.activeStructures().onDoorSkipped(minecraft, sound, DOOR_IRON.contains(id));
+					return counted();
+				}
+				return false;
+			}
+			if (CHEST.contains(id)) {
+				if (FoleyClient.wants(FoleyConfig::chests)) {
+					FoleyClient.activeStructures().onChestSkipped(minecraft, sound, false);
+					return counted();
+				}
+				return false;
+			}
+			if (SHULKER.contains(id)) {
+				if (FoleyClient.wants(FoleyConfig::chests)) {
+					FoleyClient.activeStructures().onChestSkipped(minecraft, sound, true);
+					return counted();
+				}
+				return false;
+			}
+			if (MINECART.contains(id)) {
+				// The game plays a constant drone while riding; we just let Foley's per-tick
+				// rush bed take over and skip the game's own.
+				return FoleyClient.wants(FoleyConfig::minecarts) && counted();
+			}
+		}
+		return false;
 	}
 
 	private static boolean counted() {

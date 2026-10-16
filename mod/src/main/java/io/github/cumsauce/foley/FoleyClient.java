@@ -1,6 +1,7 @@
 package io.github.cumsauce.foley;
 
 import com.mojang.brigadier.arguments.FloatArgumentType;
+import io.github.cumsauce.foley.audio.ActiveStructures;
 import io.github.cumsauce.foley.audio.AddonSounds;
 import io.github.cumsauce.foley.audio.Breathing;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
@@ -40,6 +41,7 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable ThunderController thunder;
 	private static @Nullable Life life;
 	private static @Nullable Breathing breathing;
+	private static @Nullable ActiveStructures activeStructures;
 	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
 	private static volatile boolean bypassed;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
@@ -66,6 +68,11 @@ public final class FoleyClient implements ClientModInitializer {
 	/** What keeps the water, fire and lava going, or null if Foley is off. */
 	public static @Nullable PlacedBeds placed() {
 		return placed;
+	}
+
+	/** M21: minecarts, doors, chests, redstone, boats, sculk. */
+	public static @Nullable ActiveStructures activeStructures() {
+		return activeStructures;
 	}
 
 	/** One-shots Foley may start in a tick; past it, the game's own sound plays alone. */
@@ -194,6 +201,9 @@ public final class FoleyClient implements ClientModInitializer {
 		breathing = breaths;
 		ClientTickEvents.END_CLIENT_TICK.register(breaths::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(new io.github.cumsauce.foley.audio.Brush()::tick);
+		ActiveStructures structures = new ActiveStructures(loaded);
+		activeStructures = structures;
+		ClientTickEvents.END_CLIENT_TICK.register(structures::tick);
 		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
 		registerCommands(loaded);
 	}
