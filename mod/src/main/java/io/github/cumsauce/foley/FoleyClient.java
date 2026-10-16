@@ -5,6 +5,7 @@ import io.github.cumsauce.foley.audio.ActiveStructures;
 import io.github.cumsauce.foley.audio.AddonSounds;
 import io.github.cumsauce.foley.audio.Breathing;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
+import io.github.cumsauce.foley.audio.UnderwaterController;
 import io.github.cumsauce.foley.config.FoleyConfig;
 import io.github.cumsauce.foley.ui.BypassKey;
 import io.github.cumsauce.foley.ui.SoundOptionsButton;
@@ -42,6 +43,7 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable Life life;
 	private static @Nullable Breathing breathing;
 	private static @Nullable ActiveStructures activeStructures;
+	private static @Nullable UnderwaterController underwater;
 	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
 	private static volatile boolean bypassed;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
@@ -73,6 +75,11 @@ public final class FoleyClient implements ClientModInitializer {
 	/** M21: minecarts, doors, chests, redstone, boats, sculk. */
 	public static @Nullable ActiveStructures activeStructures() {
 		return activeStructures;
+	}
+
+	/** M14: the underwater ambience (bubbles and pressure tone) when the head is under. */
+	public static @Nullable UnderwaterController underwater() {
+		return underwater;
 	}
 
 	/** One-shots Foley may start in a tick; past it, the game's own sound plays alone. */
@@ -204,6 +211,9 @@ public final class FoleyClient implements ClientModInitializer {
 		ActiveStructures structures = new ActiveStructures(loaded);
 		activeStructures = structures;
 		ClientTickEvents.END_CLIENT_TICK.register(structures::tick);
+		UnderwaterController under = new UnderwaterController(loaded);
+		underwater = under;
+		ClientTickEvents.END_CLIENT_TICK.register(under::tick);
 		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
 		registerCommands(loaded);
 	}
