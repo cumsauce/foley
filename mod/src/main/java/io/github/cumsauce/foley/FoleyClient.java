@@ -2,6 +2,7 @@ package io.github.cumsauce.foley;
 
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import io.github.cumsauce.foley.audio.ActiveStructures;
+import io.github.cumsauce.foley.audio.AeolianSources;
 import io.github.cumsauce.foley.audio.AddonSounds;
 import io.github.cumsauce.foley.audio.Breathing;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
@@ -42,6 +43,7 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable Life life;
 	private static @Nullable Breathing breathing;
 	private static @Nullable ActiveStructures activeStructures;
+	private static @Nullable AeolianSources aeolian;
 	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
 	private static volatile boolean bypassed;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
@@ -73,6 +75,11 @@ public final class FoleyClient implements ClientModInitializer {
 	/** M21: minecarts, doors, chests, redstone, boats, sculk. */
 	public static @Nullable ActiveStructures activeStructures() {
 		return activeStructures;
+	}
+
+	/** M18: aeolian whistles from iron bars, fences, lanterns, bells and bamboo. */
+	public static @Nullable AeolianSources aeolian() {
+		return aeolian;
 	}
 
 	/** One-shots Foley may start in a tick; past it, the game's own sound plays alone. */
@@ -204,6 +211,9 @@ public final class FoleyClient implements ClientModInitializer {
 		ActiveStructures structures = new ActiveStructures(loaded);
 		activeStructures = structures;
 		ClientTickEvents.END_CLIENT_TICK.register(structures::tick);
+		AeolianSources aeolianSources = new AeolianSources(loaded);
+		aeolian = aeolianSources;
+		ClientTickEvents.END_CLIENT_TICK.register(aeolianSources::tick);
 		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
 		registerCommands(loaded);
 	}
