@@ -13,6 +13,7 @@ mod outdoors;
 mod plants;
 mod primitives;
 mod sculk;
+mod surf;
 mod thunder;
 mod voice;
 
@@ -36,6 +37,7 @@ pub use crate::outdoors::{cicadas, owl, surf, woodpecker};
 pub use crate::plants::{Plant, brush, buzz, flush, ice_singing, settling_stone};
 pub use crate::primitives::{bubble, gust, noise_burst, tone};
 pub use crate::sculk::sculk_ring;
+pub use crate::surf::{Surf, SurfScene};
 pub use crate::thunder::{Segment, Thunder, ThunderScene, channel, strike};
 pub use crate::voice::{
     Call, CreatureCall, CreatureSpec, Mob, Pulse, creature_voice, howl, lf_pulse, voice,

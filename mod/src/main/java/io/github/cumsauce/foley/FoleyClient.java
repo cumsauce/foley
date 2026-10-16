@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.FloatArgumentType;
 import io.github.cumsauce.foley.audio.ActiveStructures;
 import io.github.cumsauce.foley.audio.AeolianSources;
 import io.github.cumsauce.foley.audio.BiomeController;
+import io.github.cumsauce.foley.audio.SurfController;
 import io.github.cumsauce.foley.audio.VillageAmbience;
 import io.github.cumsauce.foley.audio.AddonSounds;
 import io.github.cumsauce.foley.audio.Breathing;
@@ -58,7 +59,9 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable Settling settling;
 	private static @Nullable MobBrushes mobBrushes;
 	private static @Nullable PeacefulBreathing peacefulBreathing;
-	private static @Nullable AshDrift ashDrift;	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
+	private static @Nullable SurfController surf;
+	private static @Nullable AshDrift ashDrift;
+	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
 	private static volatile boolean bypassed;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
 	private static final java.util.concurrent.atomic.AtomicInteger layered = new java.util.concurrent.atomic.AtomicInteger();
@@ -127,7 +130,13 @@ public final class FoleyClient implements ClientModInitializer {
 
 	/** M22: ash and snow drifting during a storm. */
 	public static @Nullable AshDrift ashDrift() {
-		return ashDrift;	}
+		return ashDrift;
+	}
+
+	/** M17: the surf bed at the shore, replacing Life's one-shot waves. */
+	public static @Nullable SurfController surf() {
+		return surf;
+	}
 
 	/** One-shots Foley may start in a tick; past it, the game's own sound plays alone. */
 	private static final int ONE_SHOTS_PER_TICK = 6;
@@ -288,8 +297,13 @@ public final class FoleyClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(quiet::tick);
 		AshDrift drift = new AshDrift();
 		ashDrift = drift;
-		ClientTickEvents.END_CLIENT_TICK.register(drift::tick);		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
-		registerCommands(loaded);	}
+		ClientTickEvents.END_CLIENT_TICK.register(drift::tick);
+		SurfController surfBed = new SurfController(loaded);
+		surf = surfBed;
+		ClientTickEvents.END_CLIENT_TICK.register(surfBed::tick);
+		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
+		registerCommands(loaded);
+	}
 
 	/** A generated drip at the player's feet, a different one each time. */
 	public static SimpleSoundInstance drip(double x, double y, double z) {

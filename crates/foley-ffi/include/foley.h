@@ -47,8 +47,9 @@
  *     mixer (desert, mushroom, lush, dripstone, deep dark, snow, mangrove).
  * 22: `foley_set_submerged` for the global 1 kHz low-pass on every Foley
  *     stream (not voices) while the head is under.
+ * 23: surf as a placed bed (M17): `FOLEY_BED_SURF`, one continuous shore bed.
  */
-#define FOLEY_ABI_VERSION 22
+#define FOLEY_ABI_VERSION 23
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -104,6 +105,14 @@
  * snow), and `gain` (0 to 1) — a per-bed master gain.
  */
 #define FOLEY_BED_BIOME 8
+
+/**
+ * A shore bed. The bed takes 4 floats: `height` (wave height in m, 0.2 to
+ * 3.0; 0 renders silence), `shore` (0 to 1, how close the listener is to the
+ * water's edge), `storm` (0 to 1, rain and thunder), and `exposure` (0 to 1,
+ * the wind speed the wind bed reports).
+ */
+#define FOLEY_BED_SURF 9
 
 /**
  * One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the

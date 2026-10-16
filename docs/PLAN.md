@@ -592,18 +592,18 @@ Sparse and eerie. Three layers:
 
 **Tests:** spawn on the central island, check the whisper + dragon bed; fly to the outer End, check only the drone; the wingbeat bed stops when the dragon dies; respawning the dragon restores it.
 
-## M17 plan: surf as a placed bed
+## M17 results: surf as a placed bed (2026-10-16)
 
-The `surf()` model exists and is fired as one-shots from `Life` every 6 to 12 s. A stormy shore sounds discrete ("crash… crash… crash"). M17 turns it into a placed bed, sharing the M12 / M2 placed-bed pattern:
-
-- A single `FOLEY_BED_SURF` running while the player is on a shore near water.
-- The scene: distance to the nearest water block (or large water body), shore direction (a beach tag), storm level, wind speed (the wind bed already reports it).
-- The bed streams continuous drips with a slow modulation in level (the rise of the wave), punctuated by `surf()` crashing surges at a Poisson rate ∝ wind speed × storm level.
-- A calmer lake is the existing `surf(0.3, …)` looping at a low level; a stormy sea is `surf(2.2, …)` crashing every 2 s.
-
-**Exit:** a stormy beach is continuous surf, not discrete crashes; a lake laps quietly in light air; a calm sea has its slow surge.
-
-**Tests:** stand on a stormy beach, hear continuous surf with crashing surges; on a calm sea, hear only the slow surge; the one-shot firing from `Life` is removed (so the bed doesn't double up); surf on a freshwater lake is gentler than on a saltwater ocean at the same wind.
+- **The bed:** `FOLEY_BED_SURF = 9`, a streaming bed in `crates/foley-synth/src/surf.rs` (`Surf`/`SurfScene`) modelling the wave cycle: grains of the existing `outdoors::surf(height, seed)` scheduled by the bed itself at an interval mapped from `storm × exposure` — about 12 s in calm, about 2 s in a full storm — over a continuous band-passed shingle/foam wash (`≈ 0.15 × height/3 × shore`). At `height <= 0` it renders exact silence. Landed in ABI **23** (from 22).
+- **Scene floats:** `{height, shore, storm, exposure}` — height in wave metres (the 0.2–3.0 tiers are `{0.3, 1.0, 2.2}`), the rest 0..1.
+- **Driving it:** `SurfController` (10-tick cadence) samples distance-to-shore, salt vs fresh from `BiomeTags.IS_OCEAN`/`IS_DEEP_OCEAN`/`IS_BEACH`, storm from rain/thunder, and exposure from the wind bed's reported speed as `clamp(speed / 16f, 0, 1)` (16 m/s = `WindScene.STORM`). It drives one `BedSound<SurfScene>`, gated on the existing `water` toggle — no new config field. `findShore` moved from `Life` into `SurfController` and now skips unloaded chunks.
+- **Life's one-shot is gone:** `Life` no longer fires surf; its `nextWave`/`shoreFoundAt`/`shore` fields and its `findShore` are removed. `Life.SURF_M`, `FOLEY_SHOT_SURF` and the `surf_0/1/2` sounds.json events remain for the addon/API path (`GeneratedSources` → `AddonSounds`). sounds.json gains a `"surf"` bed event with the same `fabric-sound-api-v1:empty` streaming placeholder as `"biome"`.
+- **Exit, met:** a stormy shore is continuous surf rather than discrete crashes; a lake laps quietly in light air; a calm sea keeps its slow surge; freshwater is gentler than salt at the same wind (the `heightFor` height tier, not the shore float); and with `Life`'s one-shots removed the bed does not double up.
+- **Tests:** eight in `surf.rs`, including the foam-wash and wave-cadence pins; six `SurfControllerTest`; a `LifeTest` pinning the removal. All green: `cargo test --workspace --lib` (foley-synth 73, foley-dsp 29, foley-ffi 19 + 1 ignored, foley-math 0) and 78 Java tests (`gradlew test`). A client gametest checks the bed comes alive at a shore (with wind forced past the old 1.5 m/s firing gate), fires no `surf_*` one-shot over a 15 s window, and stops far inland; it runs CI-side only (Linux/Xvfb) and has not been executed locally.
+- **Grain-spawn cost, measured:** `spawn_grain` synthesises a full ~7 s grain synchronously on the frames that spawn — worst `render` ≈11 ms over 800 renders (200 s of audio, release), first ≈7.9 ms, ~109/800 over 500 µs. Each pull is 0.25 s of audio, so the burst is ≈24× realtime; acceptable for now, and the pull size is the thing to watch.
+- **Lake/ocean tier is read at the listener's biome** (`heightFor`), matching the old one-shot: a listener standing on a non-beach coastline beside an ocean gets the lake tier. Accepted.
+- **Mirrors added:** `SurfController.exposureFor` (wind speed → 0..1, divisor 16 = `WindScene.STORM`) and the Java `surgeRate` mirror of the native surge cadence, both unit-pinned in `SurfControllerTest`.
+- Released as **0.1.0-beta.57**.
 
 ## M18 plan: aeolian tones wired to placement
 

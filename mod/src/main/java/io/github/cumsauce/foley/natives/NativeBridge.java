@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class NativeBridge {
 	/** Must equal {@code FOLEY_ABI_VERSION} in {@code foley.h}. */
-	public static final int ABI_VERSION = 22;
+	public static final int ABI_VERSION = 23;
 	/** Surfaces rain lands on, in the order its scene takes them. */
 	public static final int SURFACES = 7;
 	public static final int SAMPLE_RATE = 48_000;
@@ -40,6 +40,8 @@ public final class NativeBridge {
 	public static final int BED_UNDERWATER = 7;
 	/** M19: a per-biome streaming mixer (desert, mushroom, lush, dripstone, deep dark, snow, mangrove). */
 	public static final int BED_BIOME = 8;
+	/** M17: the shore bed: height, shore, storm, exposure. */
+	public static final int BED_SURF = 9;
 	/** One-shot kinds ({@code FOLEY_SHOT_*}). */
 	public static final int SHOT_DRIP_INTO_WATER = 0;
 	public static final int SHOT_DRIP_ON_STONE = 1;

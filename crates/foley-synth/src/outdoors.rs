@@ -3,29 +3,47 @@
 
 use std::f32::consts::TAU;
 
-use crate::dsp::{Wobble, add_at, normalize};
+use crate::dsp::{Wobble, add_at, normalize, normalize_in_place};
 use crate::{BandPass, Bubble, Contact, LowPass, Material, Rng, SAMPLE_RATE, contact};
 use foley_dsp::plunge_radius;
 
+/// Length in samples of one wave: about 7 s from rise to the end of the backwash.
+pub const SURF_LEN: usize = (7.0 * SAMPLE_RATE as f32) as usize;
+
+/// Samples in one shingle knock: 10 ms, on the stack so a shore never allocates.
+const KNOCK_LEN: usize = SAMPLE_RATE as usize / 100;
+
 /// One wave breaking on a shore, `height` metres high (0.2 to 3), about
-/// 7 s from its rise to the end of its backwash. As it steepens, a low roar
+/// 7 s from its rise to the end of its backwash — into a fresh buffer, for
+/// the callers that can afford to allocate. The audio thread calls
+/// [`surf_into`] instead.
+pub fn surf(height: f32, seed: u64) -> Vec<f32> {
+    let mut out = vec![0.0f32; SURF_LEN];
+    let mut bubbles = Vec::with_capacity(256);
+    surf_into(height, seed, &mut out, &mut bubbles);
+    out
+}
+
+/// [`surf`], written into `out` (exactly [`SURF_LEN`] samples) so breaking a
+/// wave on the audio thread allocates nothing. As it steepens, a low roar
 /// grows; it plunges, and the air it traps is torn into bubbles of every
 /// size (Deane and Stokes' spectrum), heard as the crash; the foam it leaves
 /// hisses as its small bubbles burst while the water runs up the beach; then
-/// it drains back, drawing the shingle with it, on a stony shore.
-pub fn surf(height: f32, seed: u64) -> Vec<f32> {
+/// it drains back, drawing the shingle with it, on a stony shore. `bubbles`
+/// is scratch, cleared and reused, and must have capacity 256.
+pub fn surf_into(height: f32, seed: u64, out: &mut [f32], bubbles: &mut Vec<Bubble>) {
+    debug_assert_eq!(out.len(), SURF_LEN);
     let mut rng = Rng::new(seed ^ 0x5EA);
     let rate = SAMPLE_RATE as f32;
     let height = height.clamp(0.2, 3.0);
-    let length = (7.0 * rate) as usize;
+    let length = out.len();
     let break_at = 1.2 + 0.6 * rng.unit();
     let shingle = rng.unit() < 0.5;
-    let mut out = vec![0.0f32; length];
+    bubbles.clear();
     let mut rumble = [LowPass::new(250.0), LowPass::new(250.0)];
     let mut crash = BandPass::new(900.0, 0.5);
     let mut foam = BandPass::new(5000.0, 0.7);
     let mut swell = Wobble::new(2.0, 3.0, 0.4, 1.6);
-    let mut bubbles: Vec<Bubble> = Vec::with_capacity(256);
     let mut until_bubble = 0.0f32;
     let mut until_pop = 0.0f32;
     let mut pop = 0.0f32;
@@ -71,7 +89,7 @@ pub fn surf(height: f32, seed: u64) -> Vec<f32> {
                 }
             }
         }
-        for bubble in &mut bubbles {
+        for bubble in &mut *bubbles {
             s += bubble.sample();
         }
         if i % 256 == 0 {
@@ -87,18 +105,16 @@ pub fn surf(height: f32, seed: u64) -> Vec<f32> {
         while at < 6.8 {
             let left = 1.0 - (at - start) / (6.8 - start);
             let f = 2500.0 + 3000.0 * rng.unit();
-            let knock: Vec<f32> = (0..(0.01 * rate) as usize)
-                .map(|n| {
-                    let t = n as f32 * dt;
-                    (-t * 600.0).exp() * (TAU * f * t).sin()
-                })
-                .collect();
-            add_at(
-                &mut out,
-                (at * rate) as usize,
-                &knock,
-                0.06 * left * rng.unit(),
-            );
+            let mut knock = [0.0f32; KNOCK_LEN];
+            for (n, k) in knock.iter_mut().enumerate() {
+                let t = n as f32 * dt;
+                *k = (-t * 600.0).exp() * (TAU * f * t).sin();
+            }
+            let gain = 0.06 * left * rng.unit();
+            let index = (at * rate) as usize;
+            for (o, k) in out.iter_mut().skip(index).zip(&knock) {
+                *o += gain * k;
+            }
             at += rng.exponential(250.0 * left + 5.0);
         }
     }
@@ -107,7 +123,7 @@ pub fn surf(height: f32, seed: u64) -> Vec<f32> {
     for i in 0..fade {
         out[length - 1 - i] *= i as f32 / fade as f32;
     }
-    normalize(out, 0.25 + 0.2 * (height / 3.0))
+    normalize_in_place(out, 0.25 + 0.2 * (height / 3.0));
 }
 
 /// A woodpecker drumming on a dead branch: 10 to 30 strikes at about 20 a

@@ -34,8 +34,6 @@ import org.jspecify.annotations.Nullable;
  *   <li><b>Crickets</b> chirp from the grass at night when it's warm enough (from 10 °C), at Dolbear's rate for the
  *       temperature, each staying where it is.</li>
  *   <li><b>Frogs</b> call from still water at night or in the rain; bigger ones in swamps.</li>
- *   <li><b>Surf</b> breaks on the shore near the sea, a wave every 6 to 12 s, bigger in rain and storms; a lake
- *       laps when the wind blows.</li>
  *   <li><b>Woodpeckers</b> drum in woods by day; <b>owls</b> hoot in woods and taiga at night.</li>
  *   <li><b>Cicadas</b> drone in the heat of the day, in jungle, savanna and badlands.</li>
  *   <li><b>Wolves</b> howl now and then on cold nights, far off.</li>
@@ -83,11 +81,8 @@ public final class Life {
 	private final List<Cricket> crickets = new ArrayList<>();
 	private int ticks;
 	private int calls;
-	private int nextWave;
 	private int nextCicadas;
 	private int rainedAt = Integer.MIN_VALUE / 2;
-	private @Nullable BlockPos shore;
-	private int shoreFoundAt = Integer.MIN_VALUE / 2;
 	/** A frog answering another: where, its size, and when (tick). */
 	private @Nullable BlockPos frogReply;
 	private int frogReplySize;
@@ -116,7 +111,6 @@ public final class Life {
 			crickets.clear();
 			frogReply = null;
 			perch = null;
-			shore = null;
 		}
 		if (level == null || minecraft.player == null || !level.dimensionType().hasSkyLight()
 				|| level.dimensionType().hasCeiling()) {
@@ -247,21 +241,6 @@ public final class Life {
 				call(minecraft, "howl_0", new BlockPos(x, Math.max(y, (int) eye.y - 8), z), 0.8f);
 			}
 		}
-		// Surf: a wave every 6 to 12 s on a shore near the sea, or a lake lapping in the wind.
-		if (FoleyClient.wants(FoleyConfig::water) && ticks >= nextWave) {
-			nextWave = ticks + 120 + random.nextInt(120);
-			if (ticks - shoreFoundAt > 200 || shore == null) {
-				shore = findShore(level, eye, 32);
-				shoreFoundAt = ticks;
-			}
-			boolean sea = biome.is(BiomeTags.IS_OCEAN) || biome.is(BiomeTags.IS_DEEP_OCEAN)
-					|| biome.is(BiomeTags.IS_BEACH);
-			float windSpeed = wind == null ? 0 : wind.scene().speed();
-			if (shore != null && (sea || windSpeed > 1.5f)) {
-				int size = !sea ? 0 : level.isThundering() || raining ? 2 : 1;
-				call(minecraft, "surf_" + size, shore, sea ? 1f : 0.6f);
-			}
-		}
 		// Cicadas through the heat of the day: one chorus after another.
 		boolean hot = biome.is(BiomeTags.IS_JUNGLE) || biome.is(BiomeTags.IS_SAVANNA) || biome.is(BiomeTags.IS_BADLANDS);
 		// Cicadas sing in the heat of the afternoon (noon to 5 pm), and from the trees, not over everything.
@@ -358,28 +337,6 @@ public final class Life {
 		minecraft.getSoundManager().play(new SimpleSoundInstance(Replacements.DRIP_STONE, SoundSource.AMBIENT, volume,
 				0.9f + 0.2f * random.nextFloat(), SoundInstance.createUnseededRandom(), at.getX() + random.nextFloat(),
 				at.getY() + 0.05, at.getZ() + random.nextFloat()));
-	}
-
-	/**
-	 * Where open water meets land within {@code radius}: a column whose top is a water source with land a couple of
-	 * blocks off one side, or null.
-	 */
-	private @Nullable BlockPos findShore(ClientLevel level, Vec3 eye, int radius) {
-		for (int tries = 0; tries < 24; tries++) {
-			int x = (int) Math.floor(eye.x) + random.nextInt(2 * radius + 1) - radius;
-			int z = (int) Math.floor(eye.z) + random.nextInt(2 * radius + 1) - radius;
-			int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1;
-			if (Math.abs(top - eye.y) > 16) continue;
-			if (!level.getFluidState(new BlockPos(x, top, z)).isSourceOfType(Fluids.WATER)) continue;
-			for (int[] d : new int[][] {{2, 0}, {-2, 0}, {0, 2}, {0, -2}}) {
-				BlockPos land = new BlockPos(x + d[0], level.getHeight(Heightmap.Types.MOTION_BLOCKING, x + d[0], z + d[1]) - 1,
-						z + d[1]);
-				if (!level.getFluidState(land).getType().isSame(Fluids.WATER) && Math.abs(land.getY() - top) <= 2) {
-					return new BlockPos(x, top, z);
-				}
-			}
-		}
-		return null;
 	}
 
 	/** The top block of one of a few random columns within {@code radius} that {@code wanted} accepts, or null. */
