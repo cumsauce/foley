@@ -135,4 +135,6 @@
 	"subtitles.foley.cave": "Cave drips and rumble",
 	"foley.settings.caveAtmosphere": "Cave Atmosphere",
 	"foley.settings.caveAtmosphere.tooltip": "Cave atmosphere (M12): drips from a low stone roof and a sub-bass rumble in deep caves, off by default. The game's own cave sounds are sparse; Foley's is continuous."
-}
+	"subtitles.foley.underwater": "Underwater",
+	"foley.settings.underwater": "Underwater Ambience",
+	"foley.settings.underwater.tooltip": "Bubbles rise past your ear and a low tone builds with depth when your head is under water. Emerged, Foley sounds the same as above."}

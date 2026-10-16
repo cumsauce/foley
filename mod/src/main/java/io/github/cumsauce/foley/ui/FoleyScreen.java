@@ -46,7 +46,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 	private final OptionInstance<Boolean> sculk;
 	private final OptionInstance<Boolean> caveAtmosphere;
 	private final OptionInstance<Boolean> rarerSpecies;
-	private final List<OptionInstance<Boolean>> voices = new java.util.ArrayList<>();
+	private final OptionInstance<Boolean> underwater;	private final List<OptionInstance<Boolean>> voices = new java.util.ArrayList<>();
 
 	/** The settings over {@code parent}, or an alert if Foley's synthesis isn't running. */
 	public static Screen open(Screen parent) {
@@ -85,7 +85,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 		sculk = added("foley.settings.sculk", config.sculk());
 		caveAtmosphere = added("foley.settings.caveAtmosphere", config.caveAtmosphere());
 		rarerSpecies = added("foley.settings.rarerSpecies", config.rarerSpecies());
-		for (int i = 0; i < io.github.cumsauce.foley.audio.Voices.GROUPS.size(); i++) {
+		underwater = added("foley.settings.underwater", config.underwater());		for (int i = 0; i < io.github.cumsauce.foley.audio.Voices.GROUPS.size(); i++) {
 			String mob = io.github.cumsauce.foley.audio.Voices.GROUPS.get(i);
 			voices.add(new OptionInstance<>("foley.settings.voice." + mob,
 					OptionInstance.cachedConstantTooltip(Component.translatable("foley.settings.voice.tooltip")),
@@ -118,7 +118,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 
 		list.addHeader(Component.translatable("foley.settings.section.weather"));
 		list.addSmall(rain, thunder);
-		list.addSmall(wind, null);
+		list.addSmall(wind, underwater);
 
 		list.addHeader(Component.translatable("foley.settings.section.elements"));
 		list.addSmall(water, drips);
@@ -176,7 +176,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 	private void updateActive() {
 		boolean audible = volume.get() > 0;
 		List<OptionInstance<?>> all = new java.util.ArrayList<>(List.of(rain, wind, thunder, water, fire, lava, drips,
-				strikes, footsteps, birds, crickets, frogs));
+				strikes, footsteps, birds, crickets, frogs, underwater));
 		all.addAll(voices);
 		for (OptionInstance<?> option : all) {
 			AbstractWidget widget = list.findOption(option);
@@ -200,8 +200,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 		FoleyConfig next = new FoleyConfig(volume.get(), rain.get(), wind.get(), thunder.get(), water.get(), fire.get(),
 				lava.get(), drips.get(), strikes.get(), footsteps.get(), birds.get(), crickets.get(), frogs.get(),
 				minecarts.get(), doors.get(), chests.get(), redstone.get(), boats.get(), sculk.get(),
-				caveAtmosphere.get(), rarerSpecies.get(), voiced);
-		if (!next.equals(initial)) FoleyClient.apply(next);
+				caveAtmosphere.get(), rarerSpecies.get(), underwater.get(), voiced);		if (!next.equals(initial)) FoleyClient.apply(next);
 		super.removed();
 	}
 }

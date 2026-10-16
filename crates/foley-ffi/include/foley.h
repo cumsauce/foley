@@ -35,12 +35,16 @@
  * 20: active structures (M21): `FOLEY_SHOT_SCULK_RING`, a triggered low-Q
  *     tone for sculk sensors.
  * 21: cave atmosphere (M12), `foley_bed_create` of `FOLEY_BED_CAVE` and a
- *     bed's `CaveScene` (depth, mass, openness, drips, gain); and more
- *     birds (M13): 57-species `Birds` enum (48 biome-roster species plus
- *     the nine originals appended), per-biome rosters; the
- *     `FOLEY_SHOT_BIRDSONG` size argument widens to cover the catalogue.
+ *     bed's `CaveScene` (depth, mass, openness, drips, gain); more birds
+ *     (M13): 57-species `Birds` enum (48 biome-roster species plus the
+ *     nine originals appended), per-biome rosters; the
+ *     `FOLEY_SHOT_BIRDSONG` size argument widens to cover the catalogue;
+ *     underwater ambience (M14): `FOLEY_BED_UNDERWATER`, a listener-state
+ *     bed of bubbles and a pressure tone, fading over 1 s on emerging.
+ * 22: `foley_set_submerged` for the global 1 kHz low-pass on every Foley
+ *     stream (not voices) while the head is under.
  */
-#define FOLEY_ABI_VERSION 21
+#define FOLEY_ABI_VERSION 22
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -62,6 +66,8 @@
  * - thunder: the air's temperature (°C) and relative humidity (percent),
  *   and the listener's exposure to the sky (0 to 1). Each flash is added
  *   with `foley_bed_strike`.
+ * - underwater: the level (0 to 1); the controller glides this from the
+ *   listener's depth and movement. Silent above sea level.
  */
 #define FOLEY_BED_RAIN 0
 
@@ -80,6 +86,11 @@
  *   (0 to 1), drip rate (0 to 1), gain (0 to 1).
  */
 #define FOLEY_BED_CAVE 6
+
+/**
+ * - underwater: the listener's level under the surface (0 to 1).
+ */
+#define FOLEY_BED_UNDERWATER 7
 
 /**
  * One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
@@ -240,6 +251,13 @@
  * Opaque handle to a bed: a sound made as it plays, endlessly.
  */
 typedef struct FoleyBed FoleyBed;
+
+/**
+ * Sets whether the listener's head is submerged. While `true`, every other
+ * Foley stream plays through a 1 kHz low-pass; the underwater bed itself is
+ * not filtered. Any thread, cheap.
+ */
+void foley_set_submerged(bool submerged);
 
 /**
  * Returns [`FOLEY_ABI_VERSION`]. Safe to call before anything else.

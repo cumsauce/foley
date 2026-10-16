@@ -1,6 +1,7 @@
 package io.github.cumsauce.foley.natives;
 
 import static java.lang.foreign.ValueLayout.ADDRESS;
+import static java.lang.foreign.ValueLayout.JAVA_BOOLEAN;
 import static java.lang.foreign.ValueLayout.JAVA_BYTE;
 import static java.lang.foreign.ValueLayout.JAVA_FLOAT;
 import static java.lang.foreign.ValueLayout.JAVA_INT;
@@ -22,7 +23,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class NativeBridge {
 	/** Must equal {@code FOLEY_ABI_VERSION} in {@code foley.h}. */
-	public static final int ABI_VERSION = 21;
+	public static final int ABI_VERSION = 22;
 	/** Surfaces rain lands on, in the order its scene takes them. */
 	public static final int SURFACES = 7;
 	public static final int SAMPLE_RATE = 48_000;
@@ -35,6 +36,8 @@ public final class NativeBridge {
 	public static final int BED_THUNDER = 5;
 	/** Cave atmosphere (M12): depth, mass, openness, drips, gain. */
 	public static final int BED_CAVE = 6;
+	/** M14: bubbles rising past the ear and a low pressure tone while the head is under. */
+	public static final int BED_UNDERWATER = 7;
 	/** One-shot kinds ({@code FOLEY_SHOT_*}). */
 	public static final int SHOT_DRIP_INTO_WATER = 0;
 	public static final int SHOT_DRIP_ON_STONE = 1;
@@ -74,6 +77,7 @@ public final class NativeBridge {
 	private final MethodHandle bedRender;
 	private final MethodHandle bedDestroy;
 	private final MethodHandle bedStrike;
+	private final MethodHandle setSubmerged;
 	private final MethodHandle renderOneShot;
 	private final MethodHandle renderContact;
 	private final MethodHandle renderContactCustom;
@@ -95,6 +99,8 @@ public final class NativeBridge {
 		bedDestroy = linker.downcallHandle(find(library, "foley_bed_destroy"), FunctionDescriptor.ofVoid(ADDRESS));
 		bedStrike = linker.downcallHandle(find(library, "foley_bed_strike"),
 				FunctionDescriptor.of(JAVA_INT, ADDRESS, JAVA_FLOAT, JAVA_FLOAT, JAVA_FLOAT, JAVA_LONG), critical);
+		setSubmerged = linker.downcallHandle(find(library, "foley_set_submerged"),
+				FunctionDescriptor.ofVoid(JAVA_BOOLEAN));
 		renderOneShot = linker.downcallHandle(find(library, "foley_render_one_shot"),
 				FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_FLOAT, JAVA_LONG, ADDRESS, SIZE_T, ADDRESS));
 		renderContact = linker.downcallHandle(find(library, "foley_render_contact"),
@@ -142,6 +148,11 @@ public final class NativeBridge {
 
 	public void bedDestroy(MemorySegment bed) {
 		invoke(bedDestroy, bed);
+	}
+
+	/** Sets whether the listener's head is under water; while true, every other Foley stream gets a 1 kHz low-pass. */
+	public void setSubmerged(boolean submerged) {
+		invoke(setSubmerged, submerged);
 	}
 
 	/** A flash striking the ground at ({@code x}, {@code y}, {@code z}) blocks from the listener, for a thunder bed. */

@@ -38,49 +38,52 @@ import java.nio.file.Path;
  * @param sculk      active structures (M21): sculk sensor ring
  * @param caveAtmosphere cave atmosphere (M12): ceiling drips and a sub-bass rumble underground; off by default
  * @param rarerSpecies rare birdsong (M13): Kori bustard, golden eagle, alpine chough (off by default)
+ * @param underwater underwater ambience (M14): bubbles rising past the ear and a low pressure tone when the head is under
  * @param voices     which mobs Foley voices (M6, M7), a bit each in {@code Voices.GROUPS}' order; none by default
  */
 public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunder, boolean water, boolean fire,
 		boolean lava, boolean drips, boolean strikes, boolean footsteps, boolean birds, boolean crickets,
 		boolean frogs, boolean minecarts, boolean doors, boolean chests, boolean redstone, boolean boats,
-		boolean sculk, boolean caveAtmosphere, boolean rarerSpecies, long voices) {
+		boolean sculk, boolean caveAtmosphere, boolean rarerSpecies, boolean underwater, long voices) {
 	public static final FoleyConfig DEFAULT = new FoleyConfig(100, true, true, true, true, true, true, true, true, true,
-			true, true, true, true, true, true, true, true, true, false, false, 0);
-	/** Everything on, every mob's voice too. */
-	public static final FoleyConfig ALL = DEFAULT.withVoices(~0L).withCaveAtmosphere(true).withRarerSpecies(true);
+			true, true, true, true, true, true, true, true, true, false, false, true, 0);	/** Everything on, every mob's voice too. */
+	public static final FoleyConfig ALL = DEFAULT.withVoices(~0L).withCaveAtmosphere(true).withRarerSpecies(true)
+			.withUnderwater(true);
 	/** Everything off. */
 	public static final FoleyConfig NONE = new FoleyConfig(100, false, false, false, false, false, false, false, false,
-			false, false, false, false, false, false, false, false, false, false, false, false, 0);
-
+			false, false, false, false, false, false, false, false, false, false, false, false, false, 0);
 	/** These settings with the mob voices in {@code mask} ({@code Voices.GROUPS} bits). */
 	public FoleyConfig withVoices(long mask) {
 		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
-				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, mask);
-	}
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, underwater, mask);	}
 
 	/** These settings with the wind on or off. */
 	public FoleyConfig withWind(boolean on) {
 		return new FoleyConfig(volume, rain, on, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
-				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, voices);
-	}
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, underwater, voices);	}
 
 	/** These settings with flowing water on or off. */
 	public FoleyConfig withWater(boolean on) {
 		return new FoleyConfig(volume, rain, wind, thunder, on, fire, lava, drips, strikes, footsteps, birds, crickets,
-				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, voices);
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, underwater, voices);
 	}
 
 	/** These settings with the cave atmosphere on or off. */
 	public FoleyConfig withCaveAtmosphere(boolean on) {
 		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
-				frogs, minecarts, doors, chests, redstone, boats, sculk, on, rarerSpecies, voices);
+				frogs, minecarts, doors, chests, redstone, boats, sculk, on, rarerSpecies, underwater, voices);
 	}
 
 	/** These settings with {@code rarerSpecies} on or off. */
 	public FoleyConfig withRarerSpecies(boolean on) {
 		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
-				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, on, voices);
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, on, underwater, voices);
 	}
+
+	/** These settings with the underwater ambience on or off. */
+	public FoleyConfig withUnderwater(boolean on) {
+		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
+				frogs, minecarts, doors, chests, redstone, boats, sculk, caveAtmosphere, rarerSpecies, on, voices);	}
 
 	/** Whether Foley voices the group at {@code index} in {@code Voices.GROUPS}. */
 	public boolean voice(int index) {
@@ -125,8 +128,7 @@ public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunde
 				flag(json, "frogs", d.frogs), flag(json, "minecarts", d.minecarts), flag(json, "doors", d.doors),
 				flag(json, "chests", d.chests), flag(json, "redstone", d.redstone), flag(json, "boats", d.boats),
 				flag(json, "sculk", d.sculk), flag(json, "caveAtmosphere", d.caveAtmosphere),
-				flag(json, "rarerSpecies", d.rarerSpecies), voices(json));
-	}
+				flag(json, "rarerSpecies", d.rarerSpecies), flag(json, "underwater", d.underwater), voices(json));	}
 
 	JsonObject toJson() {
 		JsonObject json = new JsonObject();
@@ -151,7 +153,7 @@ public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunde
 		json.addProperty("sculk", sculk);
 		json.addProperty("caveAtmosphere", caveAtmosphere);
 		json.addProperty("rarerSpecies", rarerSpecies);
-		JsonObject mobs = new JsonObject();
+		json.addProperty("underwater", underwater);		JsonObject mobs = new JsonObject();
 		for (int i = 0; i < MOBS.size(); i++) mobs.addProperty(MOBS.get(i), voice(i));
 		json.add("voices", mobs);
 		return json;

@@ -6380,4 +6380,13 @@
 			}
 		]
 	}
+,
+	"underwater_pressure": {
+		"subtitle": "subtitles.foley.underwater",
+		"sounds": [
+			"foley:generated/underwater_pressure_0",
+			"foley:generated/underwater_pressure_1",
+			"foley:generated/underwater_pressure_2",
+			"foley:generated/underwater_pressure_3"		]
+	}
 }

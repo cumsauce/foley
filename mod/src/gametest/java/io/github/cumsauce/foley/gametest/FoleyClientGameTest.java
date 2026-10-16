@@ -273,8 +273,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 						settings.drips(), settings.strikes(), settings.footsteps(), settings.birds(),
 						settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(), settings.chests(),
 						settings.redstone(), settings.boats(), settings.sculk(), settings.caveAtmosphere(),
-						settings.rarerSpecies(), 1 << 2));
-				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.SHEEP_AMBIENT, SoundSource.NEUTRAL, 1f,
+						settings.rarerSpecies(), settings.underwater(), 1 << 2));				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.SHEEP_AMBIENT, SoundSource.NEUTRAL, 1f,
 						1.5f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),
 						mc.player.getZ()));
 				FoleyClient.apply(settings);
@@ -295,7 +294,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
 					false, settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
 					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
-					settings.caveAtmosphere(), settings.rarerSpecies(), settings.voices())));
+					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.voices())));
 			if (context.computeOnClient(mc -> FoleyClient.wants(
 					io.github.cumsauce.foley.config.FoleyConfig::birds))) {
 				FoleyClient.apply(settings);
@@ -316,9 +315,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 						settings.wind(), settings.thunder(), settings.water(), settings.fire(), settings.lava(),
 						settings.drips(), settings.strikes(), settings.footsteps(), settings.birds(),
 						settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(), settings.chests(),
-						settings.redstone(), settings.boats(), settings.sculk(), settings.caveAtmosphere(),
-						settings.rarerSpecies(),
-						1L << io.github.cumsauce.foley.audio.Voices.ADDON_GROUP));
+						settings.redstone(), settings.boats(), settings.sculk(),
+						settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(),						1L << io.github.cumsauce.foley.audio.Voices.ADDON_GROUP));
 				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.DOLPHIN_AMBIENT, SoundSource.NEUTRAL,
 						1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),
 						mc.player.getZ()));
@@ -334,8 +332,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
 					settings.birds(), settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
 					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
-					settings.caveAtmosphere(), settings.rarerSpecies(),
-					(1 << 5) | (1 << 10))));
+					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(),					(1 << 5) | (1 << 10))));
 			singleplayer.getServer().runCommand("summon zombie ~3 ~ ~ {NoAI:1b,PersistenceRequired:1b}");
 			try {
 				context.waitFor(mc -> FoleyClient.breathing().breaths() > 0, 10 * 20);
@@ -361,8 +358,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
 					settings.birds(), settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
 					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
-					settings.caveAtmosphere(), settings.rarerSpecies(),
-					chosen)));
+					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(),					chosen)));
 			int beforeAnimals = FoleyClient.replaced();
 			int beforeRedirect = io.github.cumsauce.foley.audio.Voices.redirected();
 			context.runOnClient(mc -> {
@@ -399,8 +395,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			int beforeMuted = FoleyClient.replaced();
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, 0L)));
-			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CHEST_OPEN,
+					false, false, false, false, false, false, false, false, false, false, false, false, 0L)));			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CHEST_OPEN,
 					SoundSource.BLOCKS, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX() + 4,
 					mc.player.getY(), mc.player.getZ())));
 			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
@@ -479,6 +474,32 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			} catch (RuntimeException | AssertionError e) {
 				throw new AssertionError("the generated drip never played", e);
 			}
+
+			// M14 underwater ambience: with the player under water, the bed plays. With the toggle off, it stops.
+			singleplayer.getServer().runCommand("weather clear");
+			singleplayer.getServer().runCommand("tp @s ~ 55 ~");
+			singleplayer.getServer().runCommand("fill ~-3 ~-1 ~-3 ~3 ~3 ~3 water");
+			try {
+				context.waitFor(mc -> {
+					var u = FoleyClient.underwater();
+					if (u == null || u.sound() == null) return false;
+					return mc.getSoundManager().isActive(u.sound())
+							&& u.sound().rendered() > NativeBridge.SAMPLE_RATE / 2;
+				}, 30 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("the underwater bed never played: "
+						+ (FoleyClient.underwater() == null ? "off" : FoleyClient.underwater().sound()), e);
+			}
+			context.runOnClient(mc -> FoleyClient.apply(settings.withUnderwater(false)));
+			try {
+				context.waitFor(mc -> {
+					var u = FoleyClient.underwater();
+					return u != null && (u.sound() == null || !mc.getSoundManager().isActive(u.sound()));
+				}, 10 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("the underwater bed didn't stop when the toggle was off", e);
+			}
+			context.runOnClient(mc -> FoleyClient.apply(settings));
 		}
 	}
 
