@@ -123,6 +123,12 @@
 #define FOLEY_SHOT_SCULK_RING 16
 
 /**
+ * A village bell's ring: `size` is the bowl's Q (0.5 to 20); higher Q rings
+ * longer. The bell rings at ~440 Hz with two inharmonic overtones (M20).
+ */
+#define FOLEY_SHOT_BELL 17
+
+/**
  * Primitives for `foley_render_primitive`, and the floats each takes, in
  * order:
  *

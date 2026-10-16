@@ -16,10 +16,10 @@ mod no_alloc;
 use foley_synth::{
     Call, Contact, CreatureCall, CreatureSpec, Fire, FireScene, Lava, LavaScene, Material,
     MaterialProps, Mob, Plant, Rain, RainScene, SAMPLE_RATE, Surface, Thunder, ThunderScene, Water,
-    WaterScene, Wind, WindScene, birdsong, brush, bubble, buzz, cicadas, contact, contact_with,
-    creature_voice, crickets, drip_into_water, drip_on_stone, flush, fracture, fracture_with, frog,
-    gust, howl, ice_singing, lava_drip, noise_burst, owl, sculk_ring, settling_stone, surf, to_pcm,
-    tone, voice, woodpecker,
+    WaterScene, Wind, WindScene, bell, birdsong, brush, bubble, buzz, cicadas, contact,
+    contact_with, creature_voice, crickets, drip_into_water, drip_on_stone, flush, fracture,
+    fracture_with, frog, gust, howl, ice_singing, lava_drip, noise_burst, owl, sculk_ring,
+    settling_stone, surf, to_pcm, tone, voice, woodpecker,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -103,6 +103,9 @@ pub const FOLEY_SHOT_BUZZ: i32 = 15;
 /// A sculk sensor's triggered tone: `size` is the bowl's Q (0.5 to 20);
 /// higher Q rings longer.
 pub const FOLEY_SHOT_SCULK_RING: i32 = 16;
+/// A village bell's ring: `size` is the bowl's Q (0.5 to 20); higher Q rings
+/// longer. The bell rings at ~440 Hz with two inharmonic overtones (M20).
+pub const FOLEY_SHOT_BELL: i32 = 17;
 
 /// Primitives for `foley_render_primitive`, and the floats each takes, in
 /// order:
@@ -512,11 +515,12 @@ pub unsafe extern "C" fn foley_render_one_shot(
             FOLEY_SHOT_FLUSH => flush(seed),
             FOLEY_SHOT_BUZZ if (0.0..=1.0).contains(&size) => buzz(size as u32, seed),
             FOLEY_SHOT_SCULK_RING if (0.5..=20.0).contains(&size) => sculk_ring(size, seed),
+            FOLEY_SHOT_BELL if (0.5..=20.0).contains(&size) => bell(size, seed),
             FOLEY_SHOT_CRICKETS | FOLEY_SHOT_BIRDSONG | FOLEY_SHOT_FROG | FOLEY_SHOT_SURF
             | FOLEY_SHOT_CICADAS | FOLEY_SHOT_BRUSH | FOLEY_SHOT_BUZZ => {
                 return Err(FfiError::invalid("size out of range"));
             }
-            FOLEY_SHOT_SCULK_RING => {
+            FOLEY_SHOT_SCULK_RING | FOLEY_SHOT_BELL => {
                 return Err(FfiError::invalid("size out of range"));
             }
             _ => return Err(FfiError::invalid("unknown one-shot kind")),
@@ -1496,6 +1500,7 @@ mod tests {
             (FOLEY_SHOT_FLUSH, 0.0),
             (FOLEY_SHOT_BUZZ, 1.0),
             (FOLEY_SHOT_SCULK_RING, 6.0),
+            (FOLEY_SHOT_BELL, 8.0),
         ] {
             let mut needed = 0;
             // SAFETY: a null buffer with capacity 0 is not written.
