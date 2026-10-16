@@ -56,7 +56,10 @@ public final class FoleyScreen extends OptionsSubScreen {
 	private final OptionInstance<Boolean> snowyHush;
 	private final OptionInstance<Boolean> mangroveDrone;
 	private final OptionInstance<Boolean> village;
-	private final List<OptionInstance<Boolean>> voices = new java.util.ArrayList<>();
+	private final OptionInstance<Boolean> settling;
+	private final OptionInstance<Boolean> mobBrushes;
+	private final OptionInstance<Boolean> peacefulBreathing;
+	private final OptionInstance<Boolean> ashDrift;	private final List<OptionInstance<Boolean>> voices = new java.util.ArrayList<>();
 
 	/** The settings over {@code parent}, or an alert if Foley's synthesis isn't running. */
 	public static Screen open(Screen parent) {
@@ -105,7 +108,10 @@ public final class FoleyScreen extends OptionsSubScreen {
 		snowyHush = added("foley.settings.snowyHush", config.snowyHush());
 		mangroveDrone = added("foley.settings.mangroveDrone", config.mangroveDrone());
 		village = added("foley.settings.village", config.village());
-		for (int i = 0; i < io.github.cumsauce.foley.audio.Voices.GROUPS.size(); i++) {
+		settling = added("foley.settings.settling", config.settling());
+		mobBrushes = added("foley.settings.mob_brushes", config.mobBrushes());
+		peacefulBreathing = added("foley.settings.peaceful_breathing", config.peacefulBreathing());
+		ashDrift = added("foley.settings.ash_drift", config.ashDrift());		for (int i = 0; i < io.github.cumsauce.foley.audio.Voices.GROUPS.size(); i++) {
 			String mob = io.github.cumsauce.foley.audio.Voices.GROUPS.get(i);
 			voices.add(new OptionInstance<>("foley.settings.voice." + mob,
 					OptionInstance.cachedConstantTooltip(Component.translatable("foley.settings.voice.tooltip")),
@@ -164,6 +170,10 @@ public final class FoleyScreen extends OptionsSubScreen {
 		list.addSmall(caveColors, deepDark);
 		list.addSmall(snowyHush, mangroveDrone);
 		list.addSmall(village, null);
+
+		list.addHeader(Component.translatable("foley.settings.section.subtle_layers"));
+		list.addSmall(settling, mobBrushes);
+		list.addSmall(peacefulBreathing, ashDrift);
 
 		list.addHeader(Component.translatable("foley.settings.section.voices"));
 		list.addBig(note(Component.translatable("foley.settings.voices.note")));
@@ -230,6 +240,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 				minecarts.get(), doors.get(), chests.get(), redstone.get(), boats.get(), sculk.get(),
 				caveAtmosphere.get(), rarerSpecies.get(), underwater.get(), aeolian.get(), biomeBeds.get(),
 				desertBeds.get(), mushroomHum.get(), caveColors.get(), deepDark.get(), snowyHush.get(),
-				mangroveDrone.get(), village.get(), voiced);		if (!next.equals(initial)) FoleyClient.apply(next);
-		super.removed();	}
-}
+				mangroveDrone.get(), village.get(), settling.get(), mobBrushes.get(), peacefulBreathing.get(), ashDrift.get(), voiced);
+		if (!next.equals(initial)) FoleyClient.apply(next);
+		super.removed();
+	}}

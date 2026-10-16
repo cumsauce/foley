@@ -11,9 +11,9 @@ class FoleyConfigTest {
 	@Test
 	void itRoundTrips() {
 		FoleyConfig changed = new FoleyConfig(40, false, true, false, true, false, true, false, true, false, true,
-				false, true, true, false, true, false, true, false, true, false, false, true, true, false, true, false, true, false, true, true,
-				(1L << 35) | 0b1010_0101);		assertEquals(changed, FoleyConfig.fromJson(changed.toJson()));
-	}
+				false, true, true, false, true, false, true, false, true, false, false, true, true, false, true, false, true, false, true, true, true, true, true, true,
+				(1L << 35) | 0b1010_0101);
+		assertEquals(changed, FoleyConfig.fromJson(changed.toJson()));	}
 
 	@Test
 	void missingOrBadValuesFallBackToTheirDefaults() {
@@ -70,5 +70,25 @@ class FoleyConfigTest {
 	void underwaterRoundTripsThroughJson() {
 		FoleyConfig changed = FoleyConfig.DEFAULT.withUnderwater(false);
 		assertFalse(changed.toJson().get("underwater").getAsBoolean());
-		assertFalse(FoleyConfig.fromJson(changed.toJson()).underwater());	}
+		assertFalse(FoleyConfig.fromJson(changed.toJson()).underwater());
+	}
+
+	void m22TogglesAreAppendedAndDefaultedOn() {
+		assertTrue(FoleyConfig.DEFAULT.settling());
+		assertTrue(FoleyConfig.DEFAULT.mobBrushes());
+		assertTrue(FoleyConfig.DEFAULT.peacefulBreathing());
+		assertTrue(FoleyConfig.DEFAULT.ashDrift());
+		assertFalse(FoleyConfig.NONE.settling());
+		assertFalse(FoleyConfig.NONE.mobBrushes());
+		assertFalse(FoleyConfig.NONE.peacefulBreathing());
+		assertFalse(FoleyConfig.NONE.ashDrift());
+		// Withers take effect and round-trip through JSON.
+		FoleyConfig changed = FoleyConfig.DEFAULT.withSettling(false).withMobBrushes(true)
+				.withPeacefulBreathing(false).withAshDrift(true);
+		assertEquals(changed, FoleyConfig.fromJson(changed.toJson()));
+		assertFalse(changed.settling());
+		assertTrue(changed.mobBrushes());
+		assertFalse(changed.peacefulBreathing());
+		assertTrue(changed.ashDrift());
+	}
 }

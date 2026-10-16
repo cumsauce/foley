@@ -10,7 +10,10 @@ import io.github.cumsauce.foley.audio.Breathing;
 import io.github.cumsauce.foley.audio.CaveController;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
 import io.github.cumsauce.foley.audio.UnderwaterController;
-import io.github.cumsauce.foley.config.FoleyConfig;
+import io.github.cumsauce.foley.audio.AshDrift;
+import io.github.cumsauce.foley.audio.MobBrushes;
+import io.github.cumsauce.foley.audio.PeacefulBreathing;
+import io.github.cumsauce.foley.audio.Settling;import io.github.cumsauce.foley.config.FoleyConfig;
 import io.github.cumsauce.foley.ui.BypassKey;
 import io.github.cumsauce.foley.ui.SoundOptionsButton;
 import io.github.cumsauce.foley.audio.Life;
@@ -52,7 +55,10 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable AeolianSources aeolian;
 	private static @Nullable BiomeController biomeController;
 	private static @Nullable VillageAmbience villageAmbience;
-	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
+	private static @Nullable Settling settling;
+	private static @Nullable MobBrushes mobBrushes;
+	private static @Nullable PeacefulBreathing peacefulBreathing;
+	private static @Nullable AshDrift ashDrift;	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
 	private static volatile boolean bypassed;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
 	private static final java.util.concurrent.atomic.AtomicInteger layered = new java.util.concurrent.atomic.AtomicInteger();
@@ -103,6 +109,25 @@ public final class FoleyClient implements ClientModInitializer {
 	public static @Nullable VillageAmbience villageAmbience() {
 		return villageAmbience;
 	}
+
+	/** M22: the settle tick under footsteps and block placement. */
+	public static @Nullable Settling settling() {
+		return settling;
+	}
+
+	/** M22: sheep, spiders and chickens brushing through plants. */
+	public static @Nullable MobBrushes mobBrushes() {
+		return mobBrushes;
+	}
+
+	/** M22: cows and sheep breathing quietly when Foley voices them. */
+	public static @Nullable PeacefulBreathing peacefulBreathing() {
+		return peacefulBreathing;
+	}
+
+	/** M22: ash and snow drifting during a storm. */
+	public static @Nullable AshDrift ashDrift() {
+		return ashDrift;	}
 
 	/** One-shots Foley may start in a tick; past it, the game's own sound plays alone. */
 	private static final int ONE_SHOTS_PER_TICK = 6;
@@ -253,7 +278,17 @@ public final class FoleyClient implements ClientModInitializer {
 		VillageAmbience villages = new VillageAmbience(loaded);
 		villageAmbience = villages;
 		ClientTickEvents.END_CLIENT_TICK.register(villages::tick);
-		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
+		Settling set = new Settling(loaded);
+		settling = set;
+		MobBrushes brushes = new MobBrushes();
+		mobBrushes = brushes;
+		ClientTickEvents.END_CLIENT_TICK.register(brushes::tick);
+		PeacefulBreathing quiet = new PeacefulBreathing();
+		peacefulBreathing = quiet;
+		ClientTickEvents.END_CLIENT_TICK.register(quiet::tick);
+		AshDrift drift = new AshDrift();
+		ashDrift = drift;
+		ClientTickEvents.END_CLIENT_TICK.register(drift::tick);		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
 		registerCommands(loaded);	}
 
 	/** A generated drip at the player's feet, a different one each time. */

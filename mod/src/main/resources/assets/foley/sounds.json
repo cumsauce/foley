@@ -6429,6 +6429,24 @@
 			"foley:generated/smith_anvil_0",
 			"foley:generated/smith_anvil_1",
 			"foley:generated/smith_anvil_2",
-			"foley:generated/smith_anvil_3"		]
-	}
+			"foley:generated/smith_anvil_3"
+		]
+	},
+	"settle_gravel": {
+		"subtitle": "subtitles.foley.settle",
+		"sounds": [
+			"foley:generated/settle_gravel_0",
+			"foley:generated/settle_gravel_1",
+			"foley:generated/settle_gravel_2",
+			"foley:generated/settle_gravel_3"
+		]
+	},
+	"ash_drift": {
+		"subtitle": "subtitles.foley.ash",
+		"sounds": [
+			"foley:generated/ash_drift_0",
+			"foley:generated/ash_drift_1",
+			"foley:generated/ash_drift_2",
+			"foley:generated/ash_drift_3"
+		]	}
 }
