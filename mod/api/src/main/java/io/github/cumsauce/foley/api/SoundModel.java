@@ -93,6 +93,13 @@ public sealed interface SoundModel {
 		}
 	}
 
+	/** A village bell's ring ({@code q} 0.5 to 20): a high-Q bowl at ~440 Hz with two inharmonic overtones (M20). */
+	record Bell(float q) implements SoundModel {
+		public Bell {
+			q = check("q", q, 0.5f, 20f);
+		}
+	}
+
 	/** A bubble's Minnaert ring ({@code radius_mm} 0.05 to 20), gone in tens of milliseconds. */
 	record Bubble(float radiusMm) implements SoundModel {
 		public Bubble {

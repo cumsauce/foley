@@ -34,7 +34,8 @@
  *     F3).
  * 20: active structures (M21): `FOLEY_SHOT_SCULK_RING`, a triggered low-Q
  *     tone for sculk sensors; M18's aeolian primitive is additive within
- *     the F2 integration API (`FOLEY_PRIMITIVE_AEOLIAN`).
+ *     the F2 integration API (`FOLEY_PRIMITIVE_AEOLIAN`); M20's
+ *     `FOLEY_SHOT_BELL` and village ambience (bell, murmur, smith).
  * 21: cave atmosphere (M12), `foley_bed_create` of `FOLEY_BED_CAVE` and a
  *     bed's `CaveScene` (depth, mass, openness, drips, gain); more birds
  *     (M13): 57-species `Birds` enum (48 biome-roster species plus the
@@ -156,6 +157,12 @@
  * higher Q rings longer.
  */
 #define FOLEY_SHOT_SCULK_RING 16
+
+/**
+ * A village bell's ring: `size` is the bowl's Q (0.5 to 20); higher Q rings
+ * longer. The bell rings at ~440 Hz with two inharmonic overtones (M20).
+ */
+#define FOLEY_SHOT_BELL 17
 
 /**
  * Primitives for `foley_render_primitive`, and the floats each takes, in

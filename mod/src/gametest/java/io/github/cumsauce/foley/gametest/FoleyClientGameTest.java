@@ -274,8 +274,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 						settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(), settings.chests(),
 						settings.redstone(), settings.boats(), settings.sculk(), settings.caveAtmosphere(),
 						settings.rarerSpecies(), settings.underwater(), settings.aeolian(), true, true, true, true,
-						true, true, true, 1 << 2));
-				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.SHEEP_AMBIENT, SoundSource.NEUTRAL, 1f,
+						true, true, true, settings.village(), 1 << 2));				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.SHEEP_AMBIENT, SoundSource.NEUTRAL, 1f,
 						1.5f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),						mc.player.getZ()));
 				FoleyClient.apply(settings);
 			});
@@ -297,7 +296,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
 					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
 					settings.biomeBeds(), settings.desertBeds(), settings.mushroomHum(), settings.caveColors(),
-					settings.deepDark(), settings.snowyHush(), settings.mangroveDrone(), settings.voices())));
+					settings.deepDark(), settings.snowyHush(), settings.mangroveDrone(), settings.village(),
+					settings.voices())));
 			if (context.computeOnClient(mc -> FoleyClient.wants(
 					io.github.cumsauce.foley.config.FoleyConfig::birds))) {
 				FoleyClient.apply(settings);
@@ -320,9 +320,10 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 						settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(), settings.chests(),
 						settings.redstone(), settings.boats(), settings.sculk(),
 						settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
-						true, true, true, true, true, true, true, 1L << io.github.cumsauce.foley.audio.Voices.ADDON_GROUP));
-				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.DOLPHIN_AMBIENT, SoundSource.NEUTRAL,						1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),
-						mc.player.getZ()));
+						true, true, true, true, true, true, true, settings.village(),
+						1L << io.github.cumsauce.foley.audio.Voices.ADDON_GROUP));
+				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.DOLPHIN_AMBIENT, SoundSource.NEUTRAL,
+						1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),						mc.player.getZ()));
 				FoleyClient.apply(settings);
 			});
 			if (FoleyClient.replaced() != beforeDolphin + 1)
@@ -336,9 +337,9 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.birds(), settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
 					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
 					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
-					true, true, true, true, true, true, true, (1 << 5) | (1 << 10))));
-			singleplayer.getServer().runCommand("summon zombie ~3 ~ ~ {NoAI:1b,PersistenceRequired:1b}");			try {
-				context.waitFor(mc -> FoleyClient.breathing().breaths() > 0, 10 * 20);
+					true, true, true, true, true, true, true, settings.village(), (1 << 5) | (1 << 10))));
+			singleplayer.getServer().runCommand("summon zombie ~3 ~ ~ {NoAI:1b,PersistenceRequired:1b}");
+			try {				context.waitFor(mc -> FoleyClient.breathing().breaths() > 0, 10 * 20);
 			} catch (RuntimeException | AssertionError e) {
 				throw new AssertionError("the zombie never breathed", e);
 			}
@@ -362,9 +363,9 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.birds(), settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
 					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
 					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
-					true, true, true, true, true, true, true, chosen)));
-			int beforeAnimals = FoleyClient.replaced();			int beforeRedirect = io.github.cumsauce.foley.audio.Voices.redirected();
-			context.runOnClient(mc -> {
+					true, true, true, true, true, true, true, settings.village(), chosen)));
+			int beforeAnimals = FoleyClient.replaced();
+			int beforeRedirect = io.github.cumsauce.foley.audio.Voices.redirected();			context.runOnClient(mc -> {
 				for (var event : java.util.List.of(SoundEvents.HORSE_AMBIENT, SoundEvents.GOAT_SCREAMING_AMBIENT,
 						SoundEvents.WITCH_CELEBRATE, SoundEvents.BEE_LOOP)) {
 					mc.getSoundManager().play(new SimpleSoundInstance(event, SoundSource.NEUTRAL, 1f, 1f,
@@ -399,8 +400,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, 0L)));
-			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CHEST_OPEN,
+					false, false, false, false, false, false, false, 0L)));			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CHEST_OPEN,
 					SoundSource.BLOCKS, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX() + 4,					mc.player.getY(), mc.player.getZ())));
 			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
 			if (FoleyClient.replaced() != beforeMuted) {
@@ -476,7 +476,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false,
 					0L)));
 			singleplayer.getServer().waitFor(server -> server.getTickCount() > 100, 200);
 			if (FoleyClient.aeolian().played() != beforeMutedAeolian) {
@@ -503,7 +503,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false,
+					false, false, false, false, false, false, false,
 					0L)));
 			try {
 				context.waitFor(mc -> FoleyClient.biome() != null
@@ -516,6 +516,24 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			if (FoleyClient.replaced() < beforeBiome) {
 				throw new AssertionError("M19 biome bed reduced replaced counter (it should only replace game sounds)");
 			}
+			// Village ambience (M20): a placed bell rings and murmurs; all off silences it.
+			var villages = java.util.Objects.requireNonNull(io.github.cumsauce.foley.FoleyClient.villageAmbience(),
+					"village ambience not loaded");
+			int beforeVillage = villages.played();
+			singleplayer.getServer().runCommand("setblock ~5 ~ ~ bell[attachment=floor,facing=north]");
+			context.waitFor(client -> villages.played() > beforeVillage, 100);
+			int villageMuted = villages.played();
+			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
+					settings.volume(), false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false,
+					0L)));
+			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
+			if (villages.played() != villageMuted) {
+				throw new AssertionError("M20 played when its toggle was off");
+			}
+			singleplayer.getServer().runCommand("setblock ~5 ~ ~ air");
+			context.runOnClient(mc -> FoleyClient.apply(settings));
 			// The settings, where players look first: Options → Music & Sounds → Foley.
 			context.setScreen(() -> new SoundOptionsScreen(null, Minecraft.getInstance().options));
 			// The button is inside the screen's options list, where clickScreenButton doesn't look.

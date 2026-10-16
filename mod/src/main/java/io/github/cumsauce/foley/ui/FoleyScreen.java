@@ -54,7 +54,10 @@ public final class FoleyScreen extends OptionsSubScreen {
 	private final OptionInstance<Boolean> caveColors;
 	private final OptionInstance<Boolean> deepDark;
 	private final OptionInstance<Boolean> snowyHush;
-	private final OptionInstance<Boolean> mangroveDrone;	private final List<OptionInstance<Boolean>> voices = new java.util.ArrayList<>();
+	private final OptionInstance<Boolean> mangroveDrone;
+	private final OptionInstance<Boolean> village;
+	private final List<OptionInstance<Boolean>> voices = new java.util.ArrayList<>();
+
 	/** The settings over {@code parent}, or an alert if Foley's synthesis isn't running. */
 	public static Screen open(Screen parent) {
 		Minecraft minecraft = Minecraft.getInstance();
@@ -101,6 +104,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 		deepDark = added("foley.settings.deepDark", config.deepDark());
 		snowyHush = added("foley.settings.snowyHush", config.snowyHush());
 		mangroveDrone = added("foley.settings.mangroveDrone", config.mangroveDrone());
+		village = added("foley.settings.village", config.village());
 		for (int i = 0; i < io.github.cumsauce.foley.audio.Voices.GROUPS.size(); i++) {
 			String mob = io.github.cumsauce.foley.audio.Voices.GROUPS.get(i);
 			voices.add(new OptionInstance<>("foley.settings.voice." + mob,
@@ -159,6 +163,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 		list.addSmall(desertBeds, mushroomHum);
 		list.addSmall(caveColors, deepDark);
 		list.addSmall(snowyHush, mangroveDrone);
+		list.addSmall(village, null);
 
 		list.addHeader(Component.translatable("foley.settings.section.voices"));
 		list.addBig(note(Component.translatable("foley.settings.voices.note")));
@@ -225,7 +230,6 @@ public final class FoleyScreen extends OptionsSubScreen {
 				minecarts.get(), doors.get(), chests.get(), redstone.get(), boats.get(), sculk.get(),
 				caveAtmosphere.get(), rarerSpecies.get(), underwater.get(), aeolian.get(), biomeBeds.get(),
 				desertBeds.get(), mushroomHum.get(), caveColors.get(), deepDark.get(), snowyHush.get(),
-				mangroveDrone.get(), voiced);
-		if (!next.equals(initial)) FoleyClient.apply(next);
+				mangroveDrone.get(), village.get(), voiced);		if (!next.equals(initial)) FoleyClient.apply(next);
 		super.removed();	}
 }
