@@ -92,6 +92,8 @@
 	"foley.settings.voice.addon": "Addons' Creatures",
 	"subtitles.foley.breath": "Zombie breathes",
 	"subtitles.foley.snarl": "Zombie snarls",
+	"subtitles.foley.settle": "Gravel settles",
+	"subtitles.foley.ash": "Ash drifts",
 	"foley.settings.voice.cow": "Cows",
 	"foley.settings.voice.pig": "Pigs",
 	"foley.settings.voice.sheep": "Sheep",
@@ -129,5 +131,14 @@
 	"foley.settings.voice.guardian": "Guardians",
 	"foley.settings.voice.silverfish": "Silverfish, Endermites",
 	"foley.settings.voices.all_foley": "Voice All Mobs with Foley",
-	"foley.settings.voices.all_game": "Give All Mobs the Game's Voices"
+	"foley.settings.voices.all_game": "Give All Mobs the Game's Voices",
+	"foley.settings.section.subtle_layers": "Subtle Physical Layers",
+	"foley.settings.settling": "Settling Ticks",
+	"foley.settings.settling.tooltip": "A tiny delayed tick after footsteps and block placement on gravel, sand or snow.",
+	"foley.settings.mob_brushes": "Mob Brushes",
+	"foley.settings.mob_brushes.tooltip": "Sheep, spiders and chickens brushing through plants as they move.",
+	"foley.settings.peaceful_breathing": "Peaceful Mob Breathing",
+	"foley.settings.peaceful_breathing.tooltip": "Cows and sheep breathe quietly when Foley voices them.",
+	"foley.settings.ash_drift": "Ash and Snow Drift",
+	"foley.settings.ash_drift.tooltip": "A faint high-frequency wash during blizzards and ash storms."
 }
