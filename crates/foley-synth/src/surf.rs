@@ -2,7 +2,11 @@
 //! a shingle/foam wash under `outdoors::surf` grains scheduled by
 //! storm x exposure. Tests first; implementation follows.
 
-use crate::{BandPass, Rng, SAMPLE_RATE};
+use crate::{BandPass, Bubble, Rng, SAMPLE_RATE};
+
+/// How many wave grains can sound at once — also the size of the free
+/// buffer pool, so a spawn on the audio thread never allocates.
+const MAX_GRAINS: usize = 16;
 
 /// What the Java side tells the shore bed about the listener.
 #[derive(Debug, Clone, Copy)]
@@ -36,6 +40,11 @@ pub struct Surf {
     /// Seconds until the next surge starts.
     until_surge: f32,
     grains: Vec<Grain>,
+    /// Free wave buffers: refilled by `outdoors::surf_into` and returned as
+    /// grains finish, so spawning a wave costs no allocation.
+    pool: Vec<Vec<f32>>,
+    /// Scratch for `outdoors::surf_into`, 256 bubble slots like the one-shot's.
+    bubbles: Vec<Bubble>,
     rng: Rng,
     wash: [BandPass; 3],
 }
@@ -53,7 +62,12 @@ impl Surf {
             },
             // The first wave breaks the moment the bed starts.
             until_surge: 0.0,
-            grains: Vec::new(),
+            // Pre-sized: pushes on the audio thread must never reallocate.
+            grains: Vec::with_capacity(MAX_GRAINS),
+            pool: (0..MAX_GRAINS)
+                .map(|_| vec![0.0f32; crate::outdoors::SURF_LEN])
+                .collect(),
+            bubbles: Vec::with_capacity(256),
             rng: Rng::new(seed ^ 0x5F17),
             wash: [
                 BandPass::new(900.0, 0.5),
@@ -88,12 +102,21 @@ impl Surf {
             let w1 = self.wash[2].process(n);
             let w2 = self.wash[1].process(w1);
             let mut sum = wash_level * self.wash[0].process(w2);
-            // Overlapping grains, summed; each retires when its buffer ends.
+            // Overlapping grains, summed; each retires when its buffer ends,
+            // handing the buffer back to the pool for the next wave.
             for grain in &mut self.grains {
                 sum += grain.gain * grain.data[grain.pos];
                 grain.pos += 1;
             }
-            self.grains.retain(|g| g.pos < g.data.len());
+            let mut i = 0;
+            while i < self.grains.len() {
+                if self.grains[i].pos >= self.grains[i].data.len() {
+                    let grain = self.grains.remove(i);
+                    self.pool.push(grain.data);
+                } else {
+                    i += 1;
+                }
+            }
             // Soft-clip so any overlap stays in range.
             *sample = sum / (1.0 + sum.abs());
         }
@@ -106,19 +129,25 @@ impl Surf {
     }
 
     fn spawn_grain(&mut self) {
-        if self.grains.len() >= 16 {
+        // The pool has one buffer per grain slot, so an empty pool is the
+        // old `grains.len() >= 16` guard — and a spawn never allocates.
+        let Some(mut data) = self.pool.pop() else {
             return;
-        }
+        };
         let seed = self.seed ^ self.counter.wrapping_mul(0x9E37_79B9_7F4A_7C15);
         self.counter += 1;
-        let mut data = crate::outdoors::surf(self.scene.height, seed);
+        crate::outdoors::surf_into(self.scene.height, seed, &mut data, &mut self.bubbles);
         // Fade the buffer's tail so a grain ending under a newer one never clicks.
         let fade = (0.05 * SAMPLE_RATE as f32) as usize;
         let n = data.len();
         for (i, s) in data.iter_mut().enumerate().skip(n.saturating_sub(fade)) {
             *s *= (n - 1 - i) as f32 / fade as f32;
         }
-        let gain = 0.12 * self.scene.height.clamp(0.2, 3.0);
+        // Waves attenuate with distance from the water: full level at the
+        // edge (`shore = 1`), a floor of 0.4 still audible far away since
+        // `height > 0` already gates full silence.
+        let shore = self.scene.shore.clamp(0.0, 1.0);
+        let gain = 0.12 * self.scene.height.clamp(0.2, 3.0) * (0.4 + 0.6 * shore);
         self.grains.push(Grain { data, pos: 0, gain });
     }
 }
@@ -265,6 +294,39 @@ mod tests {
         assert!(
             max_step < 0.5,
             "a click at a grain boundary, max step {max_step}"
+        );
+    }
+
+    #[test]
+    fn waves_far_from_the_water_are_quieter() {
+        // Same height and storm; only proximity differs. A player 20-32 blocks
+        // out must hear the crash clearly attenuated, but never silenced
+        // (the bed only goes quiet when `height <= 0`).
+        let r = |v: &[f32]| (v.iter().map(|x| x * x).sum::<f32>() / v.len() as f32).sqrt();
+        let mut at_water = Surf::new(8);
+        at_water.set_scene(SurfScene {
+            height: 2.2,
+            shore: 1.0,
+            storm: 1.0,
+            exposure: 1.0,
+        });
+        let mut inland = Surf::new(8);
+        inland.set_scene(SurfScene {
+            height: 2.2,
+            shore: 0.1,
+            storm: 1.0,
+            exposure: 1.0,
+        });
+        let near = render_secs(&mut at_water, 12.0);
+        let far = render_secs(&mut inland, 12.0);
+        let (rn, rf) = (r(&near), r(&far));
+        assert!(
+            rf > 0.02 * rn,
+            "the far shore must still be live, rms {rf} vs {rn}"
+        );
+        assert!(
+            rf < 0.6 * rn,
+            "waves 20-odd blocks out must be clearly quieter, rms {rf} vs {rn}"
         );
     }
 

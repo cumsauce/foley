@@ -27,6 +27,10 @@ class SurfControllerTest {
 	void surgeRateRisesWithStormAndWind() {
 		assertTrue(SurfController.surgeRate(1f, 1f) > SurfController.surgeRate(0f, 0f));
 		assertTrue(SurfController.surgeRate(1f, 0f) > 0f);
+		// The endpoints the surge mapping promises: one wave every 12 s calm,
+		// every 2 s in a full storm (the Rust interval's 12 - 10*storm*exposure).
+		assertEquals(1f / 12f, SurfController.surgeRate(0f, 0f), 1e-6, "calm cadence");
+		assertEquals(0.5f, SurfController.surgeRate(1f, 1f), 1e-6, "storm cadence");
 	}
 
 	@Test

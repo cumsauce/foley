@@ -1215,7 +1215,7 @@ mod tests {
     #[test]
     fn the_audio_thread_never_allocates() {
         let rain = |rate: f32| [rate, 0.4, 0.2, 0.1, 0.1, 0.1, 0.05, 0.05, 2.0, 4.0];
-        let beds: [(i32, Vec<Vec<f32>>); 9] = [
+        let beds: [(i32, Vec<Vec<f32>>); 10] = [
             (
                 FOLEY_BED_RAIN,
                 vec![rain(5.0).to_vec(), rain(150.0).to_vec(), rain(0.0).to_vec()],
@@ -1260,6 +1260,10 @@ mod tests {
                     vec![3.0, 0.4, 50.0, 0.6],
                     vec![4.0, 0.8, 0.0, 0.0],
                 ],
+            ),
+            (
+                FOLEY_BED_SURF,
+                vec![vec![1.0, 1.0, 1.0, 1.0], vec![2.2, 0.1, 0.5, 0.5]],
             ),
         ];
         // The counter itself works.
