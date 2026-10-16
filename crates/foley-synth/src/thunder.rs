@@ -1,5 +1,5 @@
 use crate::{LowPass, Rng, SAMPLE_RATE, absorption_cutoff};
-use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
+use std::sync::mpsc::{Receiver, SyncSender, TryRecvError, TrySendError, sync_channel};
 
 const SPEED_OF_SOUND: f32 = 343.0;
 const ATMOSPHERE: f32 = 101_325.0;
@@ -268,25 +268,55 @@ impl Thunder {
         let _ = std::thread::Builder::new()
             .name("foley-thunder".into())
             .spawn(move || {
+                // The audio thread only ever uses try_send/try_recv on these
+                // channels, and std's mpsc locks a waker only while a peer is
+                // BLOCKED on the other end (`SyncWaker::notify` fast-paths on
+                // an atomic when nothing is registered). So this thread must
+                // never block on either channel: a blocking recv() or send()
+                // here would register this thread and make the audio thread
+                // take a mutex — a real lock on the audio thread, which
+                // RealtimeSanitizer catches. Poll instead. (A recv_timeout or
+                // recv with a deadline still registers.)
                 // Ends when the bed is let go.
-                for job in inbox {
-                    match job {
-                        Job::Strike {
-                            base,
-                            seed,
-                            celsius,
-                            humidity,
-                        } => {
-                            // A strike that fails to make comes back silent, so
-                            // it's still counted off and thunder carries on.
-                            let sound =
-                                std::panic::catch_unwind(|| strike(base, seed, celsius, humidity))
-                                    .unwrap_or_default();
-                            if made.send(sound).is_err() {
-                                return;
-                            }
+                let mut pending: Option<Vec<f32>> = None;
+                loop {
+                    let mut progress = false;
+                    if let Some(sound) = pending.take() {
+                        match made.try_send(sound) {
+                            Ok(()) => progress = true,
+                            Err(TrySendError::Full(sound)) => pending = Some(sound),
+                            Err(TrySendError::Disconnected(_)) => return,
                         }
-                        Job::Free(sound) => drop(sound),
+                    }
+                    if pending.is_none() {
+                        match inbox.try_recv() {
+                            Ok(Job::Free(sound)) => {
+                                drop(sound);
+                                progress = true;
+                            }
+                            Ok(Job::Strike {
+                                base,
+                                seed,
+                                celsius,
+                                humidity,
+                            }) => {
+                                // A strike that fails to make comes back
+                                // silent, so it's still counted off and
+                                // thunder carries on.
+                                pending = Some(
+                                    std::panic::catch_unwind(|| {
+                                        strike(base, seed, celsius, humidity)
+                                    })
+                                    .unwrap_or_default(),
+                                );
+                                progress = true;
+                            }
+                            Err(TryRecvError::Empty) => {}
+                            Err(TryRecvError::Disconnected) => return,
+                        }
+                    }
+                    if !progress {
+                        std::thread::sleep(std::time::Duration::from_millis(1));
                     }
                 }
             });
