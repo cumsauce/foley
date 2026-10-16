@@ -5290,5 +5290,77 @@
 				"attenuation_distance": 8
 			}
 		]
+	},
+	"door_wood": {
+		"subtitle": "subtitles.foley.door",
+		"sounds": [
+			"foley:generated/door_wood_0",
+			"foley:generated/door_wood_1",
+			"foley:generated/door_wood_2",
+			"foley:generated/door_wood_3"
+		]
+	},
+	"door_iron": {
+		"subtitle": "subtitles.foley.door",
+		"sounds": [
+			"foley:generated/door_iron_0",
+			"foley:generated/door_iron_1",
+			"foley:generated/door_iron_2",
+			"foley:generated/door_iron_3"
+		]
+	},
+	"chest_open": {
+		"subtitle": "subtitles.foley.chest",
+		"sounds": [
+			"foley:generated/chest_open_0",
+			"foley:generated/chest_open_1",
+			"foley:generated/chest_open_2",
+			"foley:generated/chest_open_3"
+		]
+	},
+	"shulker_open": {
+		"subtitle": "subtitles.foley.chest",
+		"sounds": [
+			"foley:generated/shulker_open_0",
+			"foley:generated/shulker_open_1",
+			"foley:generated/shulker_open_2",
+			"foley:generated/shulker_open_3"
+		]
+	},
+	"redstone_click": {
+		"subtitle": "subtitles.foley.redstone",
+		"sounds": [
+			"foley:generated/redstone_click_0",
+			"foley:generated/redstone_click_1",
+			"foley:generated/redstone_click_2",
+			"foley:generated/redstone_click_3"
+		]
+	},
+	"minecart_wheel": {
+		"subtitle": "subtitles.foley.minecart",
+		"sounds": [
+			"foley:generated/minecart_wheel_0",
+			"foley:generated/minecart_wheel_1",
+			"foley:generated/minecart_wheel_2",
+			"foley:generated/minecart_wheel_3"
+		]
+	},
+	"boat_lap": {
+		"subtitle": "subtitles.foley.boat",
+		"sounds": [
+			"foley:generated/boat_lap_0",
+			"foley:generated/boat_lap_1",
+			"foley:generated/boat_lap_2",
+			"foley:generated/boat_lap_3"
+		]
+	},
+	"sculk_ring": {
+		"subtitle": "subtitles.foley.sculk",
+		"sounds": [
+			"foley:generated/sculk_ring_0",
+			"foley:generated/sculk_ring_1",
+			"foley:generated/sculk_ring_2",
+			"foley:generated/sculk_ring_3"
+		]
 	}
 }
