@@ -155,7 +155,7 @@ impl Surf {
     }
 
     /// Spawns the next wave. The render cost is one full-grain synthesis on
-    /// the frames that spawn: measured worst-case ≈11 ms per 0.25 s pull
+    /// the frames that spawn: measured worst-case ≈11 ms per 0.5 s pull
     /// (≈24× realtime headroom; first ≈7.9 ms, ~109/800 renders over 500 µs).
     /// If the pull size ever shrinks, revisit this — amortise the synthesis
     /// into a resumable state machine.

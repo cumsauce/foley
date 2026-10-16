@@ -296,8 +296,15 @@ impl UnderwaterLpf {
 
     /// The next sample: low-pass at [`UNDERWATER_LPF_HZ`], then back-mix in
     /// the dry signal as `mix` rises from 0 to 1 (a quarter-second ease-in).
+    /// A non-finite input counts as silence: one bad sample must not poison
+    /// `y` — and so every later sample, dry path included — for good.
     fn process(&mut self, x: f32, mix: f32) -> f32 {
+        let x = if x.is_finite() { x } else { 0.0 };
         self.y += self.a * (x - self.y);
+        // Flush subnormals, like `foley_dsp`'s filter does.
+        if self.y.abs() < 1e-20 {
+            self.y = 0.0;
+        }
         mix * self.y + (1.0 - mix) * x
     }
 }
@@ -340,6 +347,16 @@ mod underwater_lpf_tests {
                 "mix 0 must be unity: {x} became {sample}"
             );
         }
+    }
+
+    #[test]
+    fn a_non_finite_sample_does_not_permanently_silence_the_filter() {
+        let mut lpf = UnderwaterLpf::new();
+        let nan_out = lpf.process(f32::NAN, 0.0);
+        assert!(nan_out.is_finite(), "NaN in must not leave as {nan_out}");
+        let next = lpf.process(1.0, 0.0);
+        assert_eq!(next, 1.0, "the filter must recover on the very next sample");
+        assert!(next.is_finite());
     }
 
     #[test]
@@ -591,9 +608,11 @@ fn apply(synth: &mut Synth, p: &[f32]) -> Result<(), FfiError> {
 }
 
 /// Whether the param at `index` is a choice, not an amount, so it's taken at
-/// once rather than glided: a rain bed's roof surface and room size.
+/// once rather than glided: a rain bed's roof surface and room size, and a
+/// biome bed's kind.
 fn is_choice(synth: &Synth, index: usize) -> bool {
-    matches!(synth, Synth::Rain(_)) && index > FOLEY_SURFACES
+    (matches!(synth, Synth::Rain(_)) && index > FOLEY_SURFACES)
+        || (matches!(synth, Synth::Biome(_)) && index == 0)
 }
 
 /// Renders the next `frames` samples of `bed` into `out`, as 16-bit PCM.
@@ -692,6 +711,9 @@ fn render_bed(bed: &mut FoleyBed, out: &mut [i16]) -> Result<(), FfiError> {
             0.0
         };
         for (out, sample) in out.iter_mut().zip(block.iter()) {
+            // One non-finite sample from any synth must not poison the
+            // envelope, the guard or the LPF state below.
+            let sample = if sample.is_finite() { *sample } else { 0.0 };
             bed.envelope = sample.abs().max(bed.envelope * 0.99996);
             let wanted = (BED_CEILING / bed.envelope.max(1e-6)).min(1.0);
             let rate = if wanted < bed.guard { 0.01 } else { 0.0001 };
@@ -699,7 +721,7 @@ fn render_bed(bed: &mut FoleyBed, out: &mut [i16]) -> Result<(), FfiError> {
             // Ease in/out at ~250 ms.
             bed.underwater_mix +=
                 (target_mix - bed.underwater_mix) * (1.0 / (0.25 * SAMPLE_RATE as f32));
-            let filtered = bed.underwater.process(*sample, bed.underwater_mix);
+            let filtered = bed.underwater.process(sample, bed.underwater_mix);
             *out = to_pcm(filtered * bed.guard);
         }
     }
@@ -847,11 +869,15 @@ pub unsafe extern "C" fn foley_render_one_shot(
             FOLEY_SHOT_BUZZ if (0.0..=1.0).contains(&size) => buzz(size as u32, seed),
             FOLEY_SHOT_SCULK_RING if (0.5..=20.0).contains(&size) => sculk_ring(size, seed),
             FOLEY_SHOT_BELL if (0.5..=20.0).contains(&size) => bell(size, seed),
-            FOLEY_SHOT_CRICKETS | FOLEY_SHOT_BIRDSONG | FOLEY_SHOT_FROG | FOLEY_SHOT_SURF
-            | FOLEY_SHOT_CICADAS | FOLEY_SHOT_BRUSH | FOLEY_SHOT_BUZZ => {
-                return Err(FfiError::invalid("size out of range"));
-            }
-            FOLEY_SHOT_SCULK_RING | FOLEY_SHOT_BELL => {
+            FOLEY_SHOT_CRICKETS
+            | FOLEY_SHOT_BIRDSONG
+            | FOLEY_SHOT_FROG
+            | FOLEY_SHOT_SURF
+            | FOLEY_SHOT_CICADAS
+            | FOLEY_SHOT_BRUSH
+            | FOLEY_SHOT_BUZZ
+            | FOLEY_SHOT_SCULK_RING
+            | FOLEY_SHOT_BELL => {
                 return Err(FfiError::invalid("size out of range"));
             }
             _ => return Err(FfiError::invalid("unknown one-shot kind")),
@@ -1215,6 +1241,7 @@ mod tests {
     #[test]
     fn the_audio_thread_never_allocates() {
         let rain = |rate: f32| [rate, 0.4, 0.2, 0.1, 0.1, 0.1, 0.05, 0.05, 2.0, 4.0];
+        // keep in sync with ALL_BEDS
         let beds: [(i32, Vec<Vec<f32>>); 10] = [
             (
                 FOLEY_BED_RAIN,
@@ -1268,8 +1295,8 @@ mod tests {
         ];
         // The counter itself works.
         assert!(allocations(|| drop(std::hint::black_box(vec![1u8]))) > 0);
-        // As the game reads it: 0.25 s at a time.
-        let mut pcm = vec![0i16; 12_000];
+        // As the game reads it: 0.5 s at a time.
+        let mut pcm = vec![0i16; 24_000];
         for (kind, scenes) in beds {
             let mut bed = std::ptr::null_mut();
             // SAFETY: `bed` is writable, every pointer is valid for its
@@ -1289,6 +1316,7 @@ mod tests {
                                 FOLEY_OK
                             );
                         }
+                        rtsan_standalone::realtime_enter();
                         for _ in 0..40 {
                             assert_eq!(
                                 foley_bed_render(bed, pcm.as_mut_ptr(), pcm.len()),
@@ -1331,19 +1359,34 @@ mod tests {
         pcm
     }
 
+    /// Every bed kind with a scene that renders sound — one list, so a new bed
+    /// can't slip past either test that needs it. (THUNDER is silent until
+    /// struck; the checks that need sound skip it and `thunder_is_struck`
+    /// covers it.)
+    const ALL_BEDS: &[(i32, &[f32])] = &[
+        (
+            FOLEY_BED_RAIN,
+            &[10.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
+        ),
+        (FOLEY_BED_WIND, &[12.0, 1.0, 0.5]),
+        (FOLEY_BED_WATER, &[5.0, 5.0, 1.0]),
+        (FOLEY_BED_FIRE, &[4.0, 1.0]),
+        (FOLEY_BED_LAVA, &[20.0, 1.0]),
+        (FOLEY_BED_THUNDER, &[20.0, 70.0, 1.0]),
+        (FOLEY_BED_CAVE, &[1.0, 1.0, 0.0, 0.5, 1.0]),
+        (FOLEY_BED_UNDERWATER, &[1.0f32]),
+        (FOLEY_BED_BIOME, &[0.0f32, 1.0, 0.0, 1.0]),
+        (FOLEY_BED_SURF, &[1.0, 1.0, 0.5, 0.5]),
+    ];
+
     #[test]
     fn every_bed_renders_pcm() {
-        let rain = [10.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0];
-        for (kind, params) in [
-            (FOLEY_BED_RAIN, &rain[..]),
-            (FOLEY_BED_WIND, &[12.0, 1.0, 0.5][..]),
-            (FOLEY_BED_WATER, &[5.0, 5.0, 1.0][..]),
-            (FOLEY_BED_FIRE, &[4.0, 1.0][..]),
-            (FOLEY_BED_LAVA, &[20.0, 1.0][..]),
-            (FOLEY_BED_CAVE, &[1.0, 1.0, 0.0, 0.5, 1.0][..]),
-            (FOLEY_BED_UNDERWATER, &[1.0f32][..]),
-            (FOLEY_BED_SURF, &[1.0, 1.0, 0.5, 0.5][..]),
-        ] {
+        debug_assert_eq!(ALL_BEDS.len(), (FOLEY_BED_SURF + 1) as usize);
+        for &(kind, params) in ALL_BEDS {
+            if kind == FOLEY_BED_THUNDER {
+                // Silent until struck; `thunder_is_struck` covers it.
+                continue;
+            }
             assert!(render(kind, params).iter().any(|&s| s != 0), "bed {kind}");
         }
         let mut bed = std::ptr::null_mut();
@@ -1360,6 +1403,35 @@ mod tests {
                 FOLEY_ERR_INVALID_ARGUMENT,
                 "exposure over 1"
             );
+            foley_bed_destroy(bed);
+        }
+    }
+
+    /// A biome bed must snap `kind` immediately: gliding it would rebuild the
+    /// synth's state for every intermediate kind (Desert→Snow sounds 1, 2, 3,
+    /// 4 before settling on 5).
+    #[test]
+    fn a_biome_beds_kind_snaps_rather_than_glides() {
+        let mut bed = std::ptr::null_mut();
+        // SAFETY: `bed` is writable, every pointer is valid for its length,
+        // and the bed is freed last.
+        unsafe {
+            assert_eq!(foley_bed_create(FOLEY_BED_BIOME, 7, &mut bed), FOLEY_OK);
+            let desert = [0.0f32, 1.0, 0.0, 1.0];
+            assert_eq!(
+                foley_bed_set_scene(bed, desert.as_ptr(), desert.len()),
+                FOLEY_OK
+            );
+            let mut pcm = vec![0i16; 512];
+            assert_eq!(foley_bed_render(bed, pcm.as_mut_ptr(), pcm.len()), FOLEY_OK);
+            let snow = [5.0f32, 1.0, 0.0, 1.0];
+            assert_eq!(
+                foley_bed_set_scene(bed, snow.as_ptr(), snow.len()),
+                FOLEY_OK
+            );
+            let mut pcm = vec![0i16; 128];
+            assert_eq!(foley_bed_render(bed, pcm.as_mut_ptr(), pcm.len()), FOLEY_OK);
+            assert_eq!((*bed).heard[0], 5.0, "kind must snap on the first block");
             foley_bed_destroy(bed);
         }
     }
