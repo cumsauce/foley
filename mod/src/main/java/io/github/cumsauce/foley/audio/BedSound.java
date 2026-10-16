@@ -226,6 +226,8 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 	private final class Stream implements AudioStream {
 		private final MemorySegment bed;
 		private boolean closed;
+		/** Whether the render failure has been logged: once per stream, not per buffer. */
+		private boolean warned;
 		private final AtomicReference<float @Nullable []> pending = new AtomicReference<>();
 		private final Queue<Strike> flashes = new ConcurrentLinkedQueue<>();
 
@@ -279,7 +281,21 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 			ByteBuffer buffer = scratch.clear().limit(bytes);
 			if (closed) return buffer.limit(0);
 			catchUp();
-			bridge.bedRender(bed, MemorySegment.ofBuffer(buffer));
+			try {
+				bridge.bedRender(bed, MemorySegment.ofBuffer(buffer));
+			} catch (RuntimeException e) {
+				// Never let a failure escape read(): the source stops for good if it
+				// does, and this bed would stay silent for the whole session. Feed
+				// silence instead (every frame defined) and log once.
+				for (int i = 0; i < bytes; i += 2) {
+					buffer.putShort(i, (short) 0);
+				}
+				if (!warned) {
+					warned = true;
+					FoleyClient.LOGGER.warn("Foley bed render failed; feeding silence", e);
+				}
+				return buffer;
+			}
 			rendered += bytes / 2;
 			return buffer;
 		}

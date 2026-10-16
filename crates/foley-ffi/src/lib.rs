@@ -295,6 +295,81 @@ impl UnderwaterLpf {
     }
 }
 
+#[cfg(test)]
+mod underwater_lpf_tests {
+    use super::*;
+
+    /// Deterministic pseudo-noise, so a failure always reproduces.
+    fn noise(i: u32) -> f32 {
+        let bits = i.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+        (bits >> 8) as f32 / (1 << 24) as f32 - 1.0
+    }
+
+    #[test]
+    fn stays_finite_as_the_mix_ramps() {
+        let mut lpf = UnderwaterLpf::new();
+        let mut held = 0.0f32;
+        for i in 0..8_192u32 {
+            // Step input on even frames, pseudo-noise on odd ones, with the
+            // mix eased from 0 to 1 across the run.
+            if i % 512 == 0 {
+                held = if held == 0.0 { 1.0 } else { -0.75 };
+            }
+            let input = if i % 2 == 0 { held } else { noise(i) };
+            let mix = i as f32 / 8_191.0;
+            let sample = lpf.process(input, mix);
+            assert!(sample.is_finite(), "non-finite {sample} at {i} (mix {mix})");
+        }
+    }
+
+    #[test]
+    fn mix_zero_passes_the_signal_through_unchanged() {
+        let mut lpf = UnderwaterLpf::new();
+        for i in 0..4_096u32 {
+            let x = (i as f32 * 0.31).sin() * 1.5 - 0.5;
+            let sample = lpf.process(x, 0.0);
+            assert!(
+                (sample - x).abs() <= 1e-6,
+                "mix 0 must be unity: {x} became {sample}"
+            );
+        }
+    }
+
+    #[test]
+    fn mix_one_is_a_one_kilohertz_low_pass() {
+        let step = |hz: f32| core::f32::consts::TAU * hz / SAMPLE_RATE as f32;
+        // (rms in, rms out) over the tail of a second, once settled.
+        let tone_rms = |hz: f32| {
+            let mut lpf = UnderwaterLpf::new();
+            let step = step(hz);
+            let mut sum_in = 0.0f64;
+            let mut sum_out = 0.0f64;
+            for i in 0..44_100u32 {
+                let x = (step * i as f32).sin();
+                let y = lpf.process(x, 1.0);
+                if i >= 8_192 {
+                    sum_in += f64::from(x * x);
+                    sum_out += f64::from(y * y);
+                }
+            }
+            let n = f64::from(44_100 - 8_192);
+            ((sum_in / n).sqrt(), (sum_out / n).sqrt())
+        };
+
+        let (slow_in, slow_out) = tone_rms(100.0);
+        assert!(
+            slow_out > 0.9 * slow_in,
+            "100 Hz must pass: out {slow_out} vs in {slow_in}"
+        );
+
+        let (fast_in, fast_out) = tone_rms(5_000.0);
+        assert!(
+            fast_out < 0.5 * fast_in,
+            "5 kHz must be attenuated: out {fast_out} vs in {fast_in}"
+        );
+    }
+}
+
 /// Returns [`FOLEY_ABI_VERSION`]. Safe to call before anything else.
 #[unsafe(no_mangle)]
 pub extern "C" fn foley_abi_version() -> u32 {
@@ -499,6 +574,8 @@ fn is_choice(synth: &Synth, index: usize) -> bool {
 }
 
 /// Renders the next `frames` samples of `bed` into `out`, as 16-bit PCM.
+/// Every call that fails leaves `out` all-zero for `frames` samples (when
+/// `out` itself is valid), so a caller never plays a stale tail.
 ///
 /// # Safety
 /// `bed` must be live and not used on another thread during the call; `out`
@@ -508,64 +585,151 @@ pub unsafe extern "C" fn foley_bed_render(bed: *mut FoleyBed, out: *mut i16, fra
     guard(|| {
         // SAFETY: the caller guarantees `bed` is live and used by this thread
         // alone.
-        let bed = unsafe { bed.as_mut() }.ok_or_else(|| FfiError::invalid("bed is null"))?;
+        let bed = unsafe { bed.as_mut() }.ok_or_else(|| FfiError::invalid("bed is null"));
         // SAFETY: the caller guarantees `out` is writable for `frames`.
-        let out = unsafe { slice_mut_arg(out, frames, "out") }?;
-        let step = 1.0 - (-(GLIDE_BLOCK as f32) / (GLIDE_TIME * SAMPLE_RATE as f32)).exp();
-        let n = bed.params;
-        for out in out.chunks_mut(GLIDE_BLOCK) {
-            let block = &mut bed.scratch[..out.len()];
-            if bed.heard[..n] != bed.target[..n] {
-                for (i, (heard, target)) in
-                    bed.heard[..n].iter_mut().zip(&bed.target[..n]).enumerate()
-                {
-                    *heard = if is_choice(&bed.synth, i) || (*target - *heard).abs() < 1e-4 {
-                        *target
-                    } else {
-                        *heard + (*target - *heard) * step
-                    };
+        let out = unsafe { slice_mut_arg(out, frames, "out") };
+        // `out` must come back fully defined on every path that fails after
+        // this point: a stale or half-rendered tail would be heard as the
+        // tail of the previous read. The bed's error still wins, as when it
+        // was checked first.
+        let (bed, out) = match (bed, out) {
+            (Ok(bed), Ok(out)) => (bed, out),
+            (Err(error), out) => {
+                if let Ok(out) = out {
+                    out.fill(0);
                 }
-                // In range: between two scenes that were.
-                apply(&mut bed.synth, &bed.heard[..n])?;
+                return Err(error);
             }
-            match &mut bed.synth {
-                Synth::Rain(synth) => synth.render(block),
-                Synth::Wind(synth) => synth.render(block),
-                Synth::Water(synth) => synth.render(block),
-                Synth::Fire(synth) => synth.render(block),
-                Synth::Lava(synth) => synth.render(block),
-                Synth::Thunder(synth) => synth.render(block),
-                Synth::Cave(synth) => synth.render(block),
-                Synth::Underwater(synth) => synth.render(block),
-                Synth::Biome(synth) => synth.render(block),
+            (Ok(_), Err(error)) => return Err(error),
+        };
+        // Whatever the render does — failing mid-glide or panicking inside a
+        // synth — `out` comes back fully defined; a panic is re-raised for
+        // `guard` to report unchanged as `FOLEY_ERR_PANIC`.
+        let rendered =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| render_bed(bed, out)));
+        match rendered {
+            Ok(rendered) => {
+                if rendered.is_err() {
+                    out.fill(0);
+                }
+                rendered
             }
-            // The level guard: the envelope rises at once and falls over
-            // about half a second; the gain follows it down quickly and back
-            // up slowly.
-            // The underwater LPF (M14): eased in over about a quarter second
-            // so a sudden dive doesn't click. Skipped for the underwater bed
-            // itself (already underwater). Mob voices are unaffected (they
-            // never go through here).
-            let submerged = SUBMERGED.load(core::sync::atomic::Ordering::Relaxed);
-            let target_mix = if submerged && !matches!(bed.synth, Synth::Underwater(_)) {
-                1.0
-            } else {
-                0.0
-            };
-            for (out, sample) in out.iter_mut().zip(block.iter()) {
-                bed.envelope = sample.abs().max(bed.envelope * 0.99996);
-                let wanted = (BED_CEILING / bed.envelope.max(1e-6)).min(1.0);
-                let rate = if wanted < bed.guard { 0.01 } else { 0.0001 };
-                bed.guard += (wanted - bed.guard) * rate;
-                // Ease in/out at ~250 ms.
-                bed.underwater_mix +=
-                    (target_mix - bed.underwater_mix) * (1.0 / (0.25 * SAMPLE_RATE as f32));
-                let filtered = bed.underwater.process(*sample, bed.underwater_mix);
-                *out = to_pcm(filtered * bed.guard);
+            Err(payload) => {
+                out.fill(0);
+                std::panic::resume_unwind(payload)
             }
         }
-        Ok(())
     })
+}
+
+/// The body of [`foley_bed_render`]: glides towards the scene last heard,
+/// renders it, applies the level guard and the underwater low-pass, into
+/// `out`. Fails only when a mid-glide scene fails validation; the caller
+/// silences `out` in that case.
+fn render_bed(bed: &mut FoleyBed, out: &mut [i16]) -> Result<(), FfiError> {
+    let step = 1.0 - (-(GLIDE_BLOCK as f32) / (GLIDE_TIME * SAMPLE_RATE as f32)).exp();
+    let n = bed.params;
+    for out in out.chunks_mut(GLIDE_BLOCK) {
+        let block = &mut bed.scratch[..out.len()];
+        if bed.heard[..n] != bed.target[..n] {
+            for (i, (heard, target)) in bed.heard[..n].iter_mut().zip(&bed.target[..n]).enumerate()
+            {
+                *heard = if is_choice(&bed.synth, i) || (*target - *heard).abs() < 1e-4 {
+                    *target
+                } else {
+                    *heard + (*target - *heard) * step
+                };
+            }
+            // In range: between two scenes that were.
+            apply(&mut bed.synth, &bed.heard[..n])?;
+        }
+        match &mut bed.synth {
+            Synth::Rain(synth) => synth.render(block),
+            Synth::Wind(synth) => synth.render(block),
+            Synth::Water(synth) => synth.render(block),
+            Synth::Fire(synth) => synth.render(block),
+            Synth::Lava(synth) => synth.render(block),
+            Synth::Thunder(synth) => synth.render(block),
+            Synth::Cave(synth) => synth.render(block),
+            Synth::Underwater(synth) => synth.render(block),
+            Synth::Biome(synth) => synth.render(block),
+        }
+        // The level guard: the envelope rises at once and falls over
+        // about half a second; the gain follows it down quickly and back
+        // up slowly.
+        // The underwater LPF (M14): eased in over about a quarter second
+        // so a sudden dive doesn't click. Skipped for the underwater bed
+        // itself (already underwater). Mob voices are unaffected (they
+        // never go through here).
+        let submerged = SUBMERGED.load(core::sync::atomic::Ordering::Relaxed);
+        let target_mix = if submerged && !matches!(bed.synth, Synth::Underwater(_)) {
+            1.0
+        } else {
+            0.0
+        };
+        for (out, sample) in out.iter_mut().zip(block.iter()) {
+            bed.envelope = sample.abs().max(bed.envelope * 0.99996);
+            let wanted = (BED_CEILING / bed.envelope.max(1e-6)).min(1.0);
+            let rate = if wanted < bed.guard { 0.01 } else { 0.0001 };
+            bed.guard += (wanted - bed.guard) * rate;
+            // Ease in/out at ~250 ms.
+            bed.underwater_mix +=
+                (target_mix - bed.underwater_mix) * (1.0 / (0.25 * SAMPLE_RATE as f32));
+            let filtered = bed.underwater.process(*sample, bed.underwater_mix);
+            *out = to_pcm(filtered * bed.guard);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod render_contract_tests {
+    use super::*;
+
+    /// A live bed of `kind` with a fixed seed. Leaked: the handle costs
+    /// nothing and the test never outlives the process.
+    fn bed(kind: i32) -> *mut FoleyBed {
+        let mut bed: *mut FoleyBed = std::ptr::null_mut();
+        // SAFETY: `bed` points at a writable slot for the returned handle.
+        assert_eq!(unsafe { foley_bed_create(kind, 7, &mut bed) }, FOLEY_OK);
+        assert!(!bed.is_null());
+        bed
+    }
+
+    #[test]
+    fn a_failed_render_leaves_the_buffer_fully_defined() {
+        let _bed = bed(FOLEY_BED_RAIN);
+        let mut buffer = [0x5a5a_i16; 512];
+        // SAFETY: null `bed` is refused; `buffer` is writable for 512 frames.
+        let code =
+            unsafe { foley_bed_render(std::ptr::null_mut(), buffer.as_mut_ptr(), buffer.len()) };
+        assert_eq!(code, FOLEY_ERR_INVALID_ARGUMENT);
+        assert!(
+            buffer.iter().all(|sample| *sample == 0),
+            "a failed render must silence every frame, not leave a stale tail"
+        );
+    }
+
+    #[test]
+    fn a_null_out_is_refused() {
+        let _bed = bed(FOLEY_BED_RAIN);
+        // SAFETY: null `out` must be refused before anything is written.
+        let code = unsafe { foley_bed_render(_bed, std::ptr::null_mut(), 512) };
+        assert_eq!(code, FOLEY_ERR_INVALID_ARGUMENT);
+    }
+
+    #[test]
+    fn a_successful_render_writes_every_frame() {
+        let _bed = bed(FOLEY_BED_RAIN);
+        let mut buffer = [0x5a5a_i16; 512];
+        // SAFETY: `_bed` is live and `buffer` is writable for 512 frames.
+        let code = unsafe { foley_bed_render(_bed, buffer.as_mut_ptr(), buffer.len()) };
+        assert_eq!(code, FOLEY_OK);
+        assert!(
+            buffer.iter().all(|sample| *sample != 0x5a5a),
+            "every frame must be written by a successful render"
+        );
+    }
 }
 
 /// A flash of lightning striking the ground at (`x`, `y`, `z`) metres from
