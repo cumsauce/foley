@@ -189,16 +189,62 @@ mod tests {
     }
 
     #[test]
+    fn the_foam_wash_is_heard_between_waves() {
+        // With no storm the next surge is 12 s away and the first grain has
+        // ended by ~7 s, so 8..11 s holds only the continuous foam/shingle wash.
+        fn between_waves_rms(shore: f32) -> f32 {
+            let mut s = Surf::new(7);
+            s.set_scene(SurfScene {
+                height: 1.0,
+                shore,
+                storm: 0.0,
+                exposure: 0.0,
+            });
+            let out = render_secs(&mut s, 12.0);
+            let a = (8.0 * crate::SAMPLE_RATE as f32) as usize;
+            let b = (11.0 * crate::SAMPLE_RATE as f32) as usize;
+            let w = &out[a..b];
+            (w.iter().map(|x| x * x).sum::<f32>() / w.len() as f32).sqrt()
+        }
+        let at_water = between_waves_rms(1.0);
+        assert!(
+            at_water > 1e-4,
+            "the foam wash must be heard between waves, rms {at_water}"
+        );
+        // The wash scales with `shore`: at the water's edge it laps; ashore it is gone.
+        let inland = between_waves_rms(0.0);
+        assert!(
+            inland == 0.0,
+            "with no proximity to the water there is no wash, rms {inland}"
+        );
+    }
+
+    #[test]
     fn waves_keep_coming_without_a_moving_listener() {
         // No scene change after the first: the cycle must not stall.
         let mut s = Surf::new(4);
         s.set_scene(scene(1.0, 1.0, 1.0));
         let out = render_secs(&mut s, 120.0);
+        let rms = |v: &[f32]| (v.iter().map(|x| x * x).sum::<f32>() / v.len() as f32).sqrt();
         let last = &out[out.len() - crate::SAMPLE_RATE as usize..];
-        let rms = (last.iter().map(|x| x * x).sum::<f32>() / last.len() as f32).sqrt();
         assert!(
-            rms > 1e-3,
-            "waves must keep arriving while standing still, rms {rms}"
+            rms(last) > 1e-3,
+            "waves must keep arriving while standing still, rms {}",
+            rms(last)
+        );
+        // Arrivals, not just noise: every 10 s stretch must contain a surge
+        // (a scheduler that fires once and stalls would leave only the wash).
+        let win = (crate::SAMPLE_RATE / 10) as usize;
+        let surge = 0.010;
+        let mut arrivals = 0;
+        for seg in out.chunks(10 * crate::SAMPLE_RATE as usize) {
+            if seg.chunks(win).any(|c| rms(c) > surge) {
+                arrivals += 1;
+            }
+        }
+        assert!(
+            arrivals >= 12,
+            "a surge must arrive in each of the 12 ten-second stretches, got {arrivals}"
         );
     }
 
