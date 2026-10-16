@@ -281,9 +281,10 @@ struct UnderwaterLpf {
 
 impl UnderwaterLpf {
     fn new() -> Self {
-        let mut lpf = UnderwaterLpf::default();
-        lpf.a = 1.0 - (-core::f32::consts::TAU * UNDERWATER_LPF_HZ / SAMPLE_RATE as f32).exp();
-        lpf
+        UnderwaterLpf {
+            a: 1.0 - (-core::f32::consts::TAU * UNDERWATER_LPF_HZ / SAMPLE_RATE as f32).exp(),
+            ..Default::default()
+        }
     }
 
     /// The next sample: low-pass at [`UNDERWATER_LPF_HZ`], then back-mix in

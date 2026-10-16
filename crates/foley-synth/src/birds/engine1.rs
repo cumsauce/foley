@@ -1,3 +1,4 @@
+#![allow(dead_code, clippy::type_complexity)] // kept verbatim after fd68243 migrated the original 9 birds to engine 2
 //! Engine 1 (M10b): the original 9 species' implementation, kept verbatim
 //! for the correlation test in [`super::tests`] that pins engine 2's
 //! migration to within an audible tolerance. The modern [`crate::bird_call`]
