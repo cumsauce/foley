@@ -11,8 +11,10 @@ use std::f32::consts::TAU;
 use crate::dsp::{add_at, normalize, smooth};
 use crate::{BandPass, LowPass, Rng, SAMPLE_RATE};
 
+pub mod catalog;
 pub mod engine1;
 pub mod engine2;
+#[allow(unused_imports)]
 pub use engine2::*;
 
 /// The birds Foley knows. The original 9 species, kept for ABI compatibility;
@@ -57,6 +59,148 @@ impl Bird {
     /// By its index in [`Bird::ALL`], wrapping round.
     pub fn of(index: u32) -> Bird {
         Bird::ALL[index as usize % Bird::ALL.len()]
+    }
+}
+
+/// The M13 bird catalogue (~50 species). The order is the C ABI's: an
+/// index into `Birds::ALL` is the `size` argument to `FOLEY_SHOT_BIRDSONG`.
+/// Adding a species at the end is fine; inserting in the middle is a
+/// breaking ABI change. [`crate::Birds::of`] reads the index.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Birds {
+    // Taiga, snowy taiga — 7
+    BorealOwl,
+    GreatGreyOwl,
+    CommonRaven,
+    SpruceGrouse,
+    PineGrosbeak,
+    BorealChickadee,
+    VariedThrush,
+    // Plains, sunflower plains — 4
+    WesternMeadowlark,
+    HornedLark,
+    Dickcissel,
+    Bobolink,
+    // Forest, birch, flower forest, old-growth birch — 4
+    WoodThrush,
+    HermitThrush,
+    ScarletTanager,
+    RedEyedVireo,
+    // Jungle — 5
+    KeelBilledToucan,
+    MontezumaOropendola,
+    ClayColoredThrush,
+    GreatTinamou,
+    CrestedGuan,
+    // Savanna — 4
+    LilacBreastedRoller,
+    RedBilledHornbill,
+    KoriBustard,
+    SouthernYellowBilledHornbill,
+    // Badlands / mesa — 4
+    CactusWren,
+    CurveBilledThrasher,
+    GreaterRoadrunner,
+    Pyrrhuloxia,
+    // Desert — 2
+    GilaWoodpecker,
+    Verdin,
+    // Snowy tundra, ice spikes, snowy beach — 3
+    SnowyOwl,
+    SnowBunting,
+    WillowPtarmigan,
+    // Cherry grove — 4
+    Uguisu,
+    Mejiro,
+    VariedTit,
+    EurasianTreeSparrow,
+    // Mangrove swamp, swamp — 4
+    RedWingedBlackbird,
+    CommonYellowthroat,
+    ProthonotaryWarbler,
+    Limpkin,
+    // Mountain — 4
+    ClarkNutcracker,
+    GoldenEagle,
+    AlpineChough,
+    GreyCrownedRosyFinch,
+    // Beach, stony shore — 2
+    CommonTern,
+    Sanderling,
+    // Mushroom fields — 1
+    MushroomTrill,
+}
+
+impl Birds {
+    /// Every species in ABI order.
+    pub const ALL: [Birds; 48] = [
+        // Taiga, snowy taiga
+        Birds::BorealOwl,
+        Birds::GreatGreyOwl,
+        Birds::CommonRaven,
+        Birds::SpruceGrouse,
+        Birds::PineGrosbeak,
+        Birds::BorealChickadee,
+        Birds::VariedThrush,
+        // Plains, sunflower plains
+        Birds::WesternMeadowlark,
+        Birds::HornedLark,
+        Birds::Dickcissel,
+        Birds::Bobolink,
+        // Forest, birch, flower forest, old-growth birch
+        Birds::WoodThrush,
+        Birds::HermitThrush,
+        Birds::ScarletTanager,
+        Birds::RedEyedVireo,
+        // Jungle
+        Birds::KeelBilledToucan,
+        Birds::MontezumaOropendola,
+        Birds::ClayColoredThrush,
+        Birds::GreatTinamou,
+        Birds::CrestedGuan,
+        // Savanna
+        Birds::LilacBreastedRoller,
+        Birds::RedBilledHornbill,
+        Birds::KoriBustard,
+        Birds::SouthernYellowBilledHornbill,
+        // Badlands / mesa
+        Birds::CactusWren,
+        Birds::CurveBilledThrasher,
+        Birds::GreaterRoadrunner,
+        Birds::Pyrrhuloxia,
+        // Desert
+        Birds::GilaWoodpecker,
+        Birds::Verdin,
+        // Snowy tundra, ice spikes, snowy beach
+        Birds::SnowyOwl,
+        Birds::SnowBunting,
+        Birds::WillowPtarmigan,
+        // Cherry grove
+        Birds::Uguisu,
+        Birds::Mejiro,
+        Birds::VariedTit,
+        Birds::EurasianTreeSparrow,
+        // Mangrove swamp, swamp
+        Birds::RedWingedBlackbird,
+        Birds::CommonYellowthroat,
+        Birds::ProthonotaryWarbler,
+        Birds::Limpkin,
+        // Mountain
+        Birds::ClarkNutcracker,
+        Birds::GoldenEagle,
+        Birds::AlpineChough,
+        Birds::GreyCrownedRosyFinch,
+        // Beach, stony shore
+        Birds::CommonTern,
+        Birds::Sanderling,
+        // Mushroom fields
+        Birds::MushroomTrill,
+    ];
+
+    /// By its index in [`Birds::ALL`]. Panics if out of range; callers should
+    /// check [`FOLEY_SHOT_BIRDSONG`] size bounds first.
+    pub fn of(index: u32) -> Birds {
+        Birds::ALL[index as usize % Birds::ALL.len()]
     }
 }
 
@@ -562,6 +706,23 @@ mod tests {
                 let v2 = bird_call(bird, seed);
                 let corr = pearson(&v1, &v2);
                 assert!(corr > 0.9, "{bird:?} seed {seed}: corr {corr:.3}");
+            }
+        }
+    }
+
+    /// The full M13 catalogue: every `Birds::*` renders, bounded, finite, of
+    /// the right duration. ~50 species × 6 seeds = ~300 renderings.
+    #[test]
+    fn every_catalogue_bird_is_finite_bounded_and_short() {
+        for bird in Birds::ALL {
+            for seed in 0..6 {
+                let s = catalog::birdsong2(bird, seed);
+                assert!(
+                    s.iter().all(|x| x.is_finite() && x.abs() <= 0.5),
+                    "{bird:?} seed {seed}"
+                );
+                assert!(s.len() > SAMPLE_RATE as usize / 8, "{bird:?}");
+                assert!(s.len() < 8 * SAMPLE_RATE as usize, "{bird:?} {}", s.len());
             }
         }
     }

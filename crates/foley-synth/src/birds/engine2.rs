@@ -113,7 +113,6 @@ pub fn rattle(centre_hz: f32, rate_hz: f32, seconds: f32, rng: &mut Rng) -> Vec<
 pub fn croak(pulse_count: usize, base_hz: f32, breath_db: f32, rng: &mut Rng) -> Vec<f32> {
     let rate = SAMPLE_RATE as f32;
     let mut out = Vec::new();
-    let mut at = 0.0f32;
     let mut noise = BandPass::new(base_hz, 1.5);
     let breath = (breath_db / 20.0).exp();
     for _ in 0..pulse_count {
@@ -132,7 +131,6 @@ pub fn croak(pulse_count: usize, base_hz: f32, breath_db: f32, rng: &mut Rng) ->
         for _ in 0..gap_n {
             out.push(0.05 * noise.process(rng.signed()));
         }
-        at += pulse_dur + gap;
     }
     normalize(out, 0.5)
 }
@@ -208,6 +206,7 @@ pub enum SegmentKind {
         am_hz: f32,
     },
     /// A single broadband chip (see [`chip`]).
+    #[allow(dead_code)]
     Chip { centre_hz: f32, q: f32 },
     /// A rattle of chips (see [`rattle`]).
     Rattle { centre_hz: f32, rate_hz: f32 },
