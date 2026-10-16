@@ -23,14 +23,20 @@ public final class CaveController {
 	private static final int SAMPLE_EVERY = 10;
 	/** Below this openness, the bed is heard. Above 0.2 the bed fades out (matches the old exposure threshold). */
 	private static final float SHUT_IN = 0.2f;
+	/** A running bed stops only at this wider openness: the hysteresis band so threshold chatter can't flap it. */
+	private static final float SHUT_IN_STOP = SHUT_IN + 0.08f;
 	/** How many blocks below the surface the ear has to be before the bed turns on. */
 	private static final int MIN_DEPTH = 8;
+	/** A running bed stops only shallower than this: the hysteresis band for the depth threshold. */
+	private static final int MIN_DEPTH_STOP = MIN_DEPTH - 2;
 	/** A column scan: how many blocks above the ear to look for stone mass. */
 	private static final int COLUMN_TOP = 60;
 
 	private final NativeBridge bridge;
 	private @Nullable BedSound<CaveScene> sound;
 	private CaveScene scene = CaveScene.SILENT;
+	/** Whether the cave bed currently wants to be heard — hysteresis state (see {@link #heard}). */
+	private boolean heard;
 	private int ticks;
 
 	public CaveController(NativeBridge bridge) {
@@ -47,10 +53,12 @@ public final class CaveController {
 
 	public void tick(Minecraft minecraft) {
 		if (minecraft.level == null || minecraft.player == null) {
+			heard = false;
 			stop(minecraft);
 			return;
 		}
 		if (!FoleyClient.wants(FoleyConfig::caveAtmosphere)) {
+			heard = false;
 			stop(minecraft);
 			return;
 		}
@@ -60,7 +68,8 @@ public final class CaveController {
 			return;
 		}
 		scene = sample(minecraft);
-		if (scene.depth() < MIN_DEPTH || scene.openness() > SHUT_IN) {
+		heard = heard(heard, scene.depth(), scene.openness());
+		if (!heard) {
 			stop(minecraft);
 			return;
 		}
@@ -71,6 +80,17 @@ public final class CaveController {
 		} else {
 			sound.setScene(scene);
 		}
+	}
+
+	/**
+	 * Hysteresis for "the cave bed is heard": it turns on only clearly shut in (depth at least
+	 * {@link #MIN_DEPTH}, openness at most {@link #SHUT_IN}) and turns off only clearly out (shallower
+	 * than {@link #MIN_DEPTH_STOP} or more open than {@link #SHUT_IN_STOP}) — a depth or openness
+	 * hovering around a single threshold must not flap the bed on and off.
+	 */
+	static boolean heard(boolean wasHeard, float depth, float openness) {
+		if (wasHeard) return depth >= MIN_DEPTH_STOP && openness <= SHUT_IN_STOP;
+		return depth >= MIN_DEPTH && openness <= SHUT_IN;
 	}
 
 	private void stop(Minecraft minecraft) {

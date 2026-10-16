@@ -19,17 +19,27 @@ import org.jspecify.annotations.Nullable;
  * the bed's level glide.
  *
  * <p>Head-in-water is determined by the fluid at the ear position: only water
- * (not lava, not air, not any other fluid) puts the listener under.
+ * (not lava, not air, not any other fluid) puts the listener under. The native
+ * SUBMERGED flag — which low-passes every other Foley bed at 1 kHz — is latched
+ * with hysteresis (it holds through brief dry ticks so a wave cannot flap it)
+ * and is only raised while Foley's underwater ambience is wanted by the config.
  */
 public final class UnderwaterController {
 	/** The depth (in blocks below sea level) at which the bed's level reaches 1. */
 	private static final float MAX_DEPTH = 30f;
+	/** Ticks the submerged flag holds after the ear leaves water, so wave troughs don't flap the low-pass. */
+	static final int DRY_LINGER = 20;
 	/** Ticks per sample. Two ticks a second matches {@link PlacedBeds} and {@link WindController}. */
 	private static final int SAMPLE_EVERY = 10;
 
 	private final NativeBridge bridge;
 	private UnderwaterScene scene = UnderwaterScene.DRY;
-	private int ticks;
+	/** Whether the fluid at the ear is water, sampled straight from the world. */
+	private boolean wet;
+	/** The latched submerged flag handed to the native side: wet, or not yet dry for {@link #DRY_LINGER} ticks. */
+	private boolean submerged;
+	/** Ticks since the ear last touched water. */
+	private int dryFor;
 	private @Nullable BedSound<UnderwaterScene> sound;
 	/** Ticks since the bed last heard dry: stop fading it 1 s after the listener emerged. */
 	private int fading;
@@ -51,18 +61,42 @@ public final class UnderwaterController {
 	public void tick(Minecraft minecraft) {
 		if (minecraft.level == null || minecraft.player == null) {
 			scene = UnderwaterScene.DRY;
+			wet = false;
+			dryFor = 0;
+			submerged = false;
 			stop(minecraft);
 			bridge.setSubmerged(false);
 			return;
 		}
 		scene = sample(minecraft);
-		boolean submerged = scene.level() > 0f;
-		bridge.setSubmerged(submerged);
-		if (!FoleyClient.wants(FoleyConfig::underwater) || !submerged) {
+		dryFor = wet ? 0 : Math.min(dryFor + 1, DRY_LINGER + 1);
+		submerged = latchedSubmerged(submerged, wet, dryFor);
+		boolean wanted = FoleyClient.wants(FoleyConfig::underwater);
+		bridge.setSubmerged(submergedFlag(wanted, submerged));
+		if (!wanted || scene.level() <= 0f) {
 			stop(minecraft);
 			return;
 		}
 		keep(minecraft);
+	}
+
+	/**
+	 * The native SUBMERGED flag: only while Foley's underwater ambience is wanted <em>and</em> the listener
+	 * is (latched as) submerged. With the underwater setting off — or Foley itself bypassed — a wet ear
+	 * must not low-pass every other Foley bed at 1 kHz.
+	 */
+	static boolean submergedFlag(boolean underwaterWanted, boolean submergedNow) {
+		return underwaterWanted && submergedNow;
+	}
+
+	/**
+	 * Hysteresis for the submerged flag: it latches the moment the ear is in water and only lets go after
+	 * {@link #DRY_LINGER} ticks fully dry. Bobbing at the surface — wet one tick, dry the next — must not
+	 * flap the flag (and with it every other bed's low-pass) sample by sample.
+	 */
+	static boolean latchedSubmerged(boolean wasSubmerged, boolean wet, int dryFor) {
+		if (wet) return true;
+		return wasSubmerged && dryFor <= DRY_LINGER;
 	}
 
 	private void keep(Minecraft minecraft) {
@@ -90,10 +124,11 @@ public final class UnderwaterController {
 	/**
 	 * Samples the world: the listener's depth below sea level (clamped to
 	 * {@value #MAX_DEPTH}), scaled to a 0..=1 level. The head must be in water for any of
-	 * it. Sea level is 62 in the Overworld (the vanilla default) — read from the
-	 * dimension so the Nether and other dimensions stay silent.
+	 * it — that wetness also latches the native submerged flag. Sea level is 62 in
+	 * the Overworld (the vanilla default) — read from the dimension so the Nether
+	 * and other dimensions stay silent.
 	 */
-	private static UnderwaterScene sample(Minecraft minecraft) {
+	private UnderwaterScene sample(Minecraft minecraft) {
 		ClientLevel level = minecraft.level;
 		var player = minecraft.player;
 		var eye = player.getEyePosition();
@@ -101,7 +136,8 @@ public final class UnderwaterController {
 		// being able to breathe: surfacing into a wave still muffles for a
 		// frame.)
 		var fluid = level.getFluidState(BlockPos.containing(eye));
-		if (!fluid.getType().isSame(Fluids.WATER)) return UnderwaterScene.DRY;
+		wet = fluid.getType().isSame(Fluids.WATER);
+		if (!wet) return UnderwaterScene.DRY;
 		float sea = level.getSeaLevel();
 		float depth = Math.max(0f, sea - (float) eye.y);
 		float amount = Math.min(1f, depth / MAX_DEPTH);
