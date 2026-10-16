@@ -408,6 +408,45 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			} catch (RuntimeException | AssertionError e) {
 				throw new AssertionError("the generated drip never played", e);
 			}
+
+			// Subtle physical layers (M22): peaceful-mob breathing plays when Foley voices cows; off when
+			// the toggle is off; all four toggles round-trip through JSON.
+			singleplayer.getServer().runCommand("summon cow ~ ~ ~ {NoAI:1b,PersistenceRequired:1b}");
+			context.runOnClient(mc -> FoleyClient.apply(settings.withVoices(
+					(1L << io.github.cumsauce.foley.audio.Voices.GROUPS.indexOf("cow"))
+							| (1L << io.github.cumsauce.foley.audio.Voices.GROUPS.indexOf("sheep")))
+					.withPeacefulBreathing(true)));
+			try {
+				context.waitFor(mc -> FoleyClient.peacefulBreathing() != null
+						&& FoleyClient.peacefulBreathing().breaths() > 0, 10 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("the cow never breathed", e);
+			}
+			singleplayer.getServer().runCommand("kill @e[type=cow]");
+			int beforeMutedBreath = context.computeOnClient(mc -> FoleyClient.peacefulBreathing().breaths());
+			context.runOnClient(mc -> FoleyClient.apply(settings.withVoices(0L).withPeacefulBreathing(false)));
+			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
+			int afterMutedBreath = context.computeOnClient(mc -> FoleyClient.peacefulBreathing().breaths());
+			if (afterMutedBreath != beforeMutedBreath) {
+				throw new AssertionError("peacefulBreathing toggle didn't silence the cow: " + beforeMutedBreath + " → "
+						+ afterMutedBreath);
+			}
+			// All four M22 toggles off: the new systems stay silent.
+			singleplayer.getServer().runCommand("summon cow ~ ~ ~ {NoAI:1b,PersistenceRequired:1b}");
+			singleplayer.getServer().runCommand("summon sheep ~ ~ ~ {NoAI:1b,PersistenceRequired:1b}");
+			int beforeMutedBreath22 = context.computeOnClient(mc -> FoleyClient.peacefulBreathing().breaths());
+			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
+					settings.volume(), false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false,
+					false, false, false, false, 0L)));
+			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 200);
+			if (FoleyClient.peacefulBreathing().breaths() != beforeMutedBreath22) {
+				throw new AssertionError("M22 played when its toggles were off (breaths delta="
+						+ (FoleyClient.peacefulBreathing().breaths() - beforeMutedBreath22) + ")");
+			}
+			singleplayer.getServer().runCommand("kill @e[type=cow]");
+			singleplayer.getServer().runCommand("kill @e[type=sheep]");
+			context.runOnClient(mc -> FoleyClient.apply(settings));
 		}
 	}
 
