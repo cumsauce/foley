@@ -2,6 +2,7 @@ package io.github.cumsauce.foley;
 
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import io.github.cumsauce.foley.audio.ActiveStructures;
+import io.github.cumsauce.foley.audio.BiomeController;
 import io.github.cumsauce.foley.audio.AddonSounds;
 import io.github.cumsauce.foley.audio.Breathing;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
@@ -42,6 +43,7 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable Life life;
 	private static @Nullable Breathing breathing;
 	private static @Nullable ActiveStructures activeStructures;
+	private static @Nullable BiomeController biomeController;
 	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
 	private static volatile boolean bypassed;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
@@ -73,6 +75,11 @@ public final class FoleyClient implements ClientModInitializer {
 	/** M21: minecarts, doors, chests, redstone, boats, sculk. */
 	public static @Nullable ActiveStructures activeStructures() {
 		return activeStructures;
+	}
+
+	/** M19: biome-specific beds (desert, mushroom, lush, dripstone, deep dark, snow, mangrove). */
+	public static @Nullable BiomeController biome() {
+		return biomeController;
 	}
 
 	/** One-shots Foley may start in a tick; past it, the game's own sound plays alone. */
@@ -204,6 +211,9 @@ public final class FoleyClient implements ClientModInitializer {
 		ActiveStructures structures = new ActiveStructures(loaded);
 		activeStructures = structures;
 		ClientTickEvents.END_CLIENT_TICK.register(structures::tick);
+		BiomeController biomeCtl = new BiomeController(loaded);
+		biomeController = biomeCtl;
+		ClientTickEvents.END_CLIENT_TICK.register(biomeCtl::tick);
 		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
 		registerCommands(loaded);
 	}
@@ -249,7 +259,8 @@ public final class FoleyClient implements ClientModInitializer {
 							c.getSource().sendFeedback(Component.literal(rain == null || wind == null || placed == null
 									? "Foley is off"
 									: rain.scene() + "\n" + wind.scene() + "\n" + placed.around().water() + "\n"
-											+ placed.around().fire() + "\n" + placed.around().lava()));
+											+ placed.around().fire() + "\n" + placed.around().lava() + "\n"
+											+ (biomeController == null ? "no biome" : biomeController.scene())));
 							return 1;
 						}))
 						.then(ClientCommands.literal("drip").executes(c -> {
