@@ -414,6 +414,79 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			}
 			context.runOnClient(mc -> FoleyClient.apply(settings));
 
+			// The surf bed (M17): at a shore it comes alive and Life fires no one-shot over a wave's old
+			// 6-to-12-second window — the wave schedule belongs to the bed now; far inland the bed stops.
+			// Water is the only Life toggle left on: every other Life call site is gated off, so any Life
+			// call in the window would have to be a wave (lake ice, the one unblocked cousin, needs
+			// freezing air and the superflat plains never have it).
+			context.runOnClient(mc -> FoleyClient.apply(
+					io.github.cumsauce.foley.config.FoleyConfig.NONE.withWater(true)));
+			// Three-wide water stripes with two of land between, 33 blocks round the player: every column
+			// the shore scan's 24 samples can pick is water with land two off, all inside its 32 radius.
+			int[] spot = context.computeOnClient(mc -> new int[] {
+					(int) Math.floor(mc.player.getX()), (int) Math.floor(mc.player.getZ())});
+			int ground = context.computeOnClient(mc -> mc.level.getHeight(
+					net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, spot[0], spot[1]));
+			try {
+				context.waitFor(mc -> mc.player != null && Math.abs(mc.player.getY() - ground) < 1.0, 10 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("the player never landed to hear the shore", e);
+			}
+			// A frog reply set off before the flip plays out ungated; let it drain before the count.
+			var drained = context.computeOnClient(mc -> mc.level.getGameTime());
+			context.waitFor(mc -> mc.level != null && mc.level.getGameTime() > drained + 60, 10 * 20);
+			for (int stripe = spot[1] - 16; stripe <= spot[1] + 16; stripe += 5) {
+				singleplayer.getServer().runCommand("fill " + (spot[0] - 16) + " " + ground + " " + stripe
+						+ " " + (spot[0] + 16) + " " + ground + " " + Math.min(stripe + 2, spot[1] + 16)
+						+ " minecraft:water");
+			}
+			try {
+				context.waitFor(mc -> {
+					var surf = FoleyClient.surf();
+					return surf != null && surf.scene().height() > 0f;
+				}, 15 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				var surf = FoleyClient.surf();
+				throw new AssertionError("the surf bed never came alive at the shore: "
+						+ (surf == null ? "off" : surf.scene()), e);
+			}
+			int beforeWaves = FoleyClient.life().calls();
+			var window = context.computeOnClient(mc -> mc.level.getGameTime());
+			context.waitFor(mc -> mc.level != null && mc.level.getGameTime() > window + 15 * 20, 20 * 20);
+			// Still live after the window — the scan is probabilistic, it may flicker, but it must be back.
+			try {
+				context.waitFor(mc -> {
+					var surf = FoleyClient.surf();
+					return surf != null && surf.scene().height() > 0f && surf.sound() != null;
+				}, 5 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				var surf = FoleyClient.surf();
+				throw new AssertionError("the surf bed died during the wave window: "
+						+ (surf == null ? "off" : surf.scene() + ", sound " + surf.sound()), e);
+			}
+			if (FoleyClient.life().calls() != beforeWaves) {
+				throw new AssertionError("M17 Life fired " + (FoleyClient.life().calls() - beforeWaves)
+						+ " one-shot(s) while the surf bed was live (waves belong to the bed now)");
+			}
+			// Far from any water, the bed stops. Absolute coordinates: runCommand's source may not sit
+			// at the player, so relative ones would resolve somewhere else entirely.
+			double[] dest = context.computeOnClient(mc -> new double[] {
+					mc.player.getX() + 200, mc.player.getY(), mc.player.getZ()});
+			singleplayer.getServer().runCommand("tp @p " + dest[0] + " " + dest[1] + " " + dest[2]);
+			try {
+				context.waitFor(mc -> {
+					var surf = FoleyClient.surf();
+					return mc.player != null && Math.abs(mc.player.getX() - spot[0]) > 100
+							&& mc.level != null && mc.level.hasChunkAt(mc.player.blockPosition())
+							&& surf != null && surf.scene().height() == 0f;
+				}, 10 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				var surf = FoleyClient.surf();
+				throw new AssertionError("the surf bed never stopped far inland: "
+						+ (surf == null ? "off" : surf.scene()), e);
+			}
+			context.runOnClient(mc -> FoleyClient.apply(settings));
+
 			// Cave atmosphere (M12): underground, the cave bed plays; on the surface, it stops. Switches off the toggle
 			// mid-cave and the bed stops.
 			singleplayer.getServer().runCommand("tp @p ~ -50 ~");
