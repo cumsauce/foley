@@ -403,6 +403,32 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			} catch (RuntimeException | AssertionError e) {
 				throw new AssertionError("the generated drip never played", e);
 			}
+
+			// M14 underwater ambience: with the player under water, the bed plays. With the toggle off, it stops.
+			singleplayer.getServer().runCommand("weather clear");
+			singleplayer.getServer().runCommand("tp @s ~ 55 ~");
+			singleplayer.getServer().runCommand("fill ~-3 ~-1 ~-3 ~3 ~3 ~3 water");
+			try {
+				context.waitFor(mc -> {
+					var u = FoleyClient.underwater();
+					if (u == null || u.sound() == null) return false;
+					return mc.getSoundManager().isActive(u.sound())
+							&& u.sound().rendered() > NativeBridge.SAMPLE_RATE / 2;
+				}, 30 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("the underwater bed never played: "
+						+ (FoleyClient.underwater() == null ? "off" : FoleyClient.underwater().sound()), e);
+			}
+			context.runOnClient(mc -> FoleyClient.apply(settings.withUnderwater(false)));
+			try {
+				context.waitFor(mc -> {
+					var u = FoleyClient.underwater();
+					return u != null && (u.sound() == null || !mc.getSoundManager().isActive(u.sound()));
+				}, 10 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("the underwater bed didn't stop when the toggle was off", e);
+			}
+			context.runOnClient(mc -> FoleyClient.apply(settings));
 		}
 	}
 
