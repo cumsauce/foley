@@ -9,7 +9,7 @@ class FoleyConfigTest {
 	@Test
 	void itRoundTrips() {
 		FoleyConfig changed = new FoleyConfig(40, false, true, false, true, false, true, false, true, false, true,
-				false, true, true, false, true, false, true, false, (1L << 35) | 0b1010_0101);
+				false, true, true, false, true, false, true, false, true, (1L << 35) | 0b1010_0101);
 		assertEquals(changed, FoleyConfig.fromJson(changed.toJson()));
 	}
 
@@ -21,6 +21,7 @@ class FoleyConfigTest {
 		assertEquals(FoleyConfig.DEFAULT.rain(), read.rain());
 		assertEquals(false, read.frogs());
 		assertEquals(FoleyConfig.DEFAULT.birds(), read.birds());
+		assertEquals(true, read.village());
 		assertEquals(0, read.voices());
 		var voiced = JsonParser.parseString("{\"voices\": {\"sheep\": true, \"cat\": true, \"dragon\": true}}")
 				.getAsJsonObject();
