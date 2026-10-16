@@ -15,12 +15,12 @@ mod no_alloc;
 
 use foley_synth::{
     Biome, BiomeScene, Birds, Call, Cave, CaveScene, Contact, CreatureCall, CreatureSpec, Fire,
-    FireScene, Lava, LavaScene, Material, MaterialProps, Mob, Plant, Rain, RainScene,
-    SAMPLE_RATE, Surface, Thunder, ThunderScene, Underwater, UnderwaterScene, Water, WaterScene,
-    Wind, WindScene, aeolian, bell, birdsong2, brush, bubble, buzz, cicadas, contact,
-    contact_with, creature_voice, crickets, drip_into_water, drip_on_stone, flush, fracture,
-    fracture_with, frog, gust, howl, ice_singing, lava_drip, noise_burst, owl, sculk_ring,
-    settling_stone, surf, to_pcm, tone, voice, woodpecker,
+    FireScene, Lava, LavaScene, Material, MaterialProps, Mob, Plant, Rain, RainScene, SAMPLE_RATE,
+    Surface, Thunder, ThunderScene, Underwater, UnderwaterScene, Water, WaterScene, Wind,
+    WindScene, aeolian, bell, birdsong2, brush, bubble, buzz, cicadas, contact, contact_with,
+    creature_voice, crickets, drip_into_water, drip_on_stone, flush, fracture, fracture_with, frog,
+    gust, howl, ice_singing, lava_drip, noise_burst, owl, sculk_ring, settling_stone, surf, to_pcm,
+    tone, voice, woodpecker,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -215,7 +215,8 @@ enum Synth {
     Thunder(Thunder),
     Cave(Cave),
     Underwater(Underwater),
-    Biome(Biome),}
+    Biome(Biome),
+}
 
 /// Opaque handle to a bed: a sound made as it plays, endlessly.
 #[derive(Debug)]
@@ -318,7 +319,8 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
             FOLEY_BED_THUNDER => Synth::Thunder(Thunder::new()),
             FOLEY_BED_CAVE => Synth::Cave(Cave::new(seed)),
             FOLEY_BED_UNDERWATER => Synth::Underwater(Underwater::new(seed)),
-            FOLEY_BED_BIOME => Synth::Biome(Biome::new(seed)),            _ => return Err(FfiError::invalid("unknown bed kind")),
+            FOLEY_BED_BIOME => Synth::Biome(Biome::new(seed)),
+            _ => return Err(FfiError::invalid("unknown bed kind")),
         };
         *out = Box::into_raw(Box::new(FoleyBed {
             synth,
@@ -379,7 +381,8 @@ fn apply(synth: &mut Synth, p: &[f32]) -> Result<(), FfiError> {
         Synth::Fire(_) | Synth::Lava(_) => 2,
         Synth::Cave(_) => 5,
         Synth::Underwater(_) => 1,
-        Synth::Biome(_) => 4,    };
+        Synth::Biome(_) => 4,
+    };
     if p.len() != wanted {
         return Err(FfiError::invalid("wrong number of params for this bed"));
     }
@@ -482,7 +485,8 @@ fn apply(synth: &mut Synth, p: &[f32]) -> Result<(), FfiError> {
                 intensity,
                 sub,
                 gain,
-            });        }
+            });
+        }
     }
     Ok(())
 }
@@ -532,7 +536,8 @@ pub unsafe extern "C" fn foley_bed_render(bed: *mut FoleyBed, out: *mut i16, fra
                 Synth::Thunder(synth) => synth.render(block),
                 Synth::Cave(synth) => synth.render(block),
                 Synth::Underwater(synth) => synth.render(block),
-                Synth::Biome(synth) => synth.render(block),            }
+                Synth::Biome(synth) => synth.render(block),
+            }
             // The level guard: the envelope rises at once and falls over
             // about half a second; the gain follows it down quickly and back
             // up slowly.

@@ -2,8 +2,8 @@
 //! that dominates what is heard (docs/PLAN.md), at [`SAMPLE_RATE`], mono.
 
 mod aeolian;
-mod biome;
 mod bell;
+mod biome;
 mod birds;
 mod dsp;
 mod life;
@@ -23,8 +23,8 @@ pub use foley_dsp::{
 };
 
 pub use crate::aeolian::aeolian;
-pub use crate::biome::{Biome, BiomeKind, BiomeScene};
 pub use crate::bell::bell;
+pub use crate::biome::{Biome, BiomeKind, BiomeScene};
 pub use crate::birds::catalog::birdsong2;
 pub use crate::birds::{Bird, Birds, bird_call};
 pub use crate::life::{birdsong, crickets, dolbear_chirps_per_minute, frog};
