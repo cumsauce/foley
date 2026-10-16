@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.FloatArgumentType;
 import io.github.cumsauce.foley.audio.ActiveStructures;
 import io.github.cumsauce.foley.audio.AddonSounds;
 import io.github.cumsauce.foley.audio.Breathing;
+import io.github.cumsauce.foley.audio.CaveController;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
 import io.github.cumsauce.foley.config.FoleyConfig;
 import io.github.cumsauce.foley.ui.BypassKey;
@@ -40,6 +41,7 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable PlacedBeds placed;
 	private static @Nullable ThunderController thunder;
 	private static @Nullable Life life;
+	private static @Nullable CaveController cave;
 	private static @Nullable Breathing breathing;
 	private static @Nullable ActiveStructures activeStructures;
 	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
@@ -135,6 +137,11 @@ public final class FoleyClient implements ClientModInitializer {
 		return life;
 	}
 
+	/** M12: the cave bed, or null if Foley is off. */
+	public static @Nullable CaveController cave() {
+		return cave;
+	}
+
 	/** The zombies' breathing, or null if Foley is off. */
 	public static @Nullable Breathing breathing() {
 		return breathing;
@@ -197,6 +204,9 @@ public final class FoleyClient implements ClientModInitializer {
 		Life living = new Life();
 		life = living;
 		ClientTickEvents.END_CLIENT_TICK.register(living::tick);
+		CaveController caveBed = new CaveController(loaded);
+		cave = caveBed;
+		ClientTickEvents.END_CLIENT_TICK.register(caveBed::tick);
 		Breathing breaths = new Breathing();
 		breathing = breaths;
 		ClientTickEvents.END_CLIENT_TICK.register(breaths::tick);
@@ -249,7 +259,8 @@ public final class FoleyClient implements ClientModInitializer {
 							c.getSource().sendFeedback(Component.literal(rain == null || wind == null || placed == null
 									? "Foley is off"
 									: rain.scene() + "\n" + wind.scene() + "\n" + placed.around().water() + "\n"
-											+ placed.around().fire() + "\n" + placed.around().lava()));
+											+ placed.around().fire() + "\n" + placed.around().lava() + "\n"
+											+ (cave == null ? "CaveScene[off]" : cave.scene())));
 							return 1;
 						}))
 						.then(ClientCommands.literal("drip").executes(c -> {
