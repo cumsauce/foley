@@ -102,7 +102,7 @@ public final class SurfController {
 		if (shore == null) {
 			// A probe can miss a thin shoreline: keep the last scene for a few samples rather than
 			// flapping the bed off and on again with a fresh seed.
-			if (lastShore != null && ++misses < MISSES_TO_STOP) return scene;
+			if (lastShore != null && holdsOnMiss(++misses)) return scene;
 			lastShore = null;
 			misses = 0;
 			return SurfScene.SILENT;
@@ -143,6 +143,16 @@ public final class SurfController {
 	 */
 	public static float exposureFor(float windSpeed) {
 		return Math.clamp(windSpeed / GALE, 0f, 1f);
+	}
+
+	/**
+	 * Whether a probe that found no shore should hold the last scene rather than go silent.
+	 * {@value #MISSES_TO_STOP} consecutive misses silence the bed: one random probe can miss a
+	 * thin shoreline, and flapping the bed off and on restarts it with a fresh seed. Pure, so
+	 * the latch can be pinned without a client.
+	 */
+	static boolean holdsOnMiss(int consecutiveMisses) {
+		return consecutiveMisses < MISSES_TO_STOP;
 	}
 
 	/**

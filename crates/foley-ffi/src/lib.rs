@@ -1381,7 +1381,7 @@ mod tests {
 
     #[test]
     fn every_bed_renders_pcm() {
-        debug_assert_eq!(ALL_BEDS.len(), (FOLEY_BED_SURF + 1) as usize);
+        const _: () = assert!(ALL_BEDS.len() == (FOLEY_BED_SURF + 1) as usize);
         for &(kind, params) in ALL_BEDS {
             if kind == FOLEY_BED_THUNDER {
                 // Silent until struck; `thunder_is_struck` covers it.

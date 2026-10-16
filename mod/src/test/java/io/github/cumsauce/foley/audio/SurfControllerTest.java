@@ -1,6 +1,8 @@
 package io.github.cumsauce.foley.audio;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -39,5 +41,13 @@ class SurfControllerTest {
 	void exposureClampsBeyondFullStormAndBelowStillAir() {
 		assertEquals(1f, SurfController.exposureFor(60f), 1e-6);
 		assertEquals(0f, SurfController.exposureFor(-1f), 1e-6);
+	}
+
+	@Test
+	void a_probe_miss_holds_the_last_scene_for_a_few_samples_then_silences() {
+		assertTrue(SurfController.holdsOnMiss(0), "a first miss holds the scene");
+		assertTrue(SurfController.holdsOnMiss(1), "a second miss holds the scene");
+		assertTrue(SurfController.holdsOnMiss(2), "a third miss holds the scene");
+		assertFalse(SurfController.holdsOnMiss(3), "the third consecutive miss silences the bed");
 	}
 }
