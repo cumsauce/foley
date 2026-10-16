@@ -11,7 +11,14 @@ use std::f32::consts::TAU;
 use crate::dsp::{add_at, normalize, smooth};
 use crate::{BandPass, LowPass, Rng, SAMPLE_RATE};
 
-/// The birds Foley knows.
+pub mod catalog;
+pub mod engine1;
+pub mod engine2;
+#[allow(unused_imports)]
+pub use engine2::*;
+
+/// The birds Foley knows. The original 9 species, kept for ABI compatibility;
+/// engine 2's [`crate::Birds`] enumeration covers the M13 catalogue.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Bird {
     /// American crow: a few loud, harsh caws.
@@ -52,6 +59,170 @@ impl Bird {
     /// By its index in [`Bird::ALL`], wrapping round.
     pub fn of(index: u32) -> Bird {
         Bird::ALL[index as usize % Bird::ALL.len()]
+    }
+}
+
+/// The M13 bird catalogue (~50 species). The order is the C ABI's: an
+/// index into `Birds::ALL` is the `size` argument to `FOLEY_SHOT_BIRDSONG`.
+/// Adding a species at the end is fine; inserting in the middle is a
+/// breaking ABI change. [`crate::Birds::of`] reads the index.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Birds {
+    // Taiga, snowy taiga — 7
+    BorealOwl,
+    GreatGreyOwl,
+    CommonRaven,
+    SpruceGrouse,
+    PineGrosbeak,
+    BorealChickadee,
+    VariedThrush,
+    // Plains, sunflower plains — 4
+    WesternMeadowlark,
+    HornedLark,
+    Dickcissel,
+    Bobolink,
+    // Forest, birch, flower forest, old-growth birch — 4
+    WoodThrush,
+    HermitThrush,
+    ScarletTanager,
+    RedEyedVireo,
+    // Jungle — 5
+    KeelBilledToucan,
+    MontezumaOropendola,
+    ClayColoredThrush,
+    GreatTinamou,
+    CrestedGuan,
+    // Savanna — 4
+    LilacBreastedRoller,
+    RedBilledHornbill,
+    KoriBustard,
+    SouthernYellowBilledHornbill,
+    // Badlands / mesa — 4
+    CactusWren,
+    CurveBilledThrasher,
+    GreaterRoadrunner,
+    Pyrrhuloxia,
+    // Desert — 2
+    GilaWoodpecker,
+    Verdin,
+    // Snowy tundra, ice spikes, snowy beach — 3
+    SnowyOwl,
+    SnowBunting,
+    WillowPtarmigan,
+    // Cherry grove — 4
+    Uguisu,
+    Mejiro,
+    VariedTit,
+    EurasianTreeSparrow,
+    // Mangrove swamp, swamp — 4
+    RedWingedBlackbird,
+    CommonYellowthroat,
+    ProthonotaryWarbler,
+    Limpkin,
+    // Mountain — 4
+    ClarkNutcracker,
+    GoldenEagle,
+    AlpineChough,
+    GreyCrownedRosyFinch,
+    // Beach, stony shore — 2
+    CommonTern,
+    Sanderling,
+    // Mushroom fields — 1
+    MushroomTrill,
+    // The nine originals (M5), appended so their indices never shift:
+    // Life's loon, gull, crow and jay specials live here. They delegate to
+    // the migrated `bird_call`, keeping the calls players know.
+    Crow,
+    Dove,
+    Robin,
+    Cardinal,
+    Chickadee,
+    HerringGull,
+    CommonLoon,
+    Jay,
+    Warbler,
+}
+
+impl Birds {
+    /// Every species in ABI order.
+    pub const ALL: [Birds; 57] = [
+        // Taiga, snowy taiga
+        Birds::BorealOwl,
+        Birds::GreatGreyOwl,
+        Birds::CommonRaven,
+        Birds::SpruceGrouse,
+        Birds::PineGrosbeak,
+        Birds::BorealChickadee,
+        Birds::VariedThrush,
+        // Plains, sunflower plains
+        Birds::WesternMeadowlark,
+        Birds::HornedLark,
+        Birds::Dickcissel,
+        Birds::Bobolink,
+        // Forest, birch, flower forest, old-growth birch
+        Birds::WoodThrush,
+        Birds::HermitThrush,
+        Birds::ScarletTanager,
+        Birds::RedEyedVireo,
+        // Jungle
+        Birds::KeelBilledToucan,
+        Birds::MontezumaOropendola,
+        Birds::ClayColoredThrush,
+        Birds::GreatTinamou,
+        Birds::CrestedGuan,
+        // Savanna
+        Birds::LilacBreastedRoller,
+        Birds::RedBilledHornbill,
+        Birds::KoriBustard,
+        Birds::SouthernYellowBilledHornbill,
+        // Badlands / mesa
+        Birds::CactusWren,
+        Birds::CurveBilledThrasher,
+        Birds::GreaterRoadrunner,
+        Birds::Pyrrhuloxia,
+        // Desert
+        Birds::GilaWoodpecker,
+        Birds::Verdin,
+        // Snowy tundra, ice spikes, snowy beach
+        Birds::SnowyOwl,
+        Birds::SnowBunting,
+        Birds::WillowPtarmigan,
+        // Cherry grove
+        Birds::Uguisu,
+        Birds::Mejiro,
+        Birds::VariedTit,
+        Birds::EurasianTreeSparrow,
+        // Mangrove swamp, swamp
+        Birds::RedWingedBlackbird,
+        Birds::CommonYellowthroat,
+        Birds::ProthonotaryWarbler,
+        Birds::Limpkin,
+        // Mountain
+        Birds::ClarkNutcracker,
+        Birds::GoldenEagle,
+        Birds::AlpineChough,
+        Birds::GreyCrownedRosyFinch,
+        // Beach, stony shore
+        Birds::CommonTern,
+        Birds::Sanderling,
+        // Mushroom fields
+        Birds::MushroomTrill,
+        // The nine originals (M5)
+        Birds::Crow,
+        Birds::Dove,
+        Birds::Robin,
+        Birds::Cardinal,
+        Birds::Chickadee,
+        Birds::HerringGull,
+        Birds::CommonLoon,
+        Birds::Jay,
+        Birds::Warbler,
+    ];
+
+    /// By its index in [`Birds::ALL`]. Panics if out of range; callers should
+    /// check [`FOLEY_SHOT_BIRDSONG`] size bounds first.
+    pub fn of(index: u32) -> Birds {
+        Birds::ALL[index as usize % Birds::ALL.len()]
     }
 }
 
@@ -97,7 +268,7 @@ fn contour_at(contour: &[(f32, f32)], t: f32) -> f32 {
 /// A whistled note, `seconds` long, gliding along `contour`: a sine with a
 /// touch of its second harmonic (what the trachea lets through), a little
 /// wavering, swelling in over `attack` seconds and out over `release`.
-fn whistle(
+pub(crate) fn whistle_internal(
     contour: &[(f32, f32)],
     seconds: f32,
     harmonic: f32,
@@ -260,7 +431,7 @@ fn loon(rng: &mut Rng) -> Vec<f32> {
     for contour in &notes[..1 + (rng.unit() * 3.0) as usize] {
         let contour: Vec<(f32, f32)> = contour.iter().map(|&(t, k)| (t, k * f)).collect();
         let seconds = 1.6 + 0.6 * rng.unit();
-        let note = whistle(&contour, seconds, 0.3, (0.15, 0.4), rng);
+        let note = whistle_internal(&contour, seconds, 0.3, (0.15, 0.4), rng);
         add_at(&mut out, (at * rate) as usize, &note, 1.0);
         at += seconds + 0.3;
     }
@@ -283,7 +454,7 @@ fn warbler(rng: &mut Rng) -> Vec<f32> {
             vec![(0.0, 6200.0 * k), (0.5, 4300.0 * k), (1.0, 5200.0 * k)]
         };
         let seconds = if last { 0.16 } else { 0.08 };
-        let note = whistle(&contour, seconds, 0.05, (0.008, 0.02), rng);
+        let note = whistle_internal(&contour, seconds, 0.05, (0.008, 0.02), rng);
         add_at(&mut out, (at * rate) as usize, &note, 1.0);
         at += seconds + 0.12 * (1.0 - 0.07 * i as f32);
     }
@@ -320,7 +491,7 @@ fn dove(rng: &mut Rng) -> Vec<f32> {
     let mut breath = BandPass::new(f, 4.0);
     for (start, length, contour) in notes {
         let contour: Vec<(f32, f32)> = contour.iter().map(|&(t, k)| (t, k * f)).collect();
-        let mut note = whistle(
+        let mut note = whistle_internal(
             &contour,
             length * (1.0 + 0.05 * rng.signed()),
             0.1,
@@ -366,7 +537,7 @@ fn robin(rng: &mut Rng) -> Vec<f32> {
         last = kind;
         for contour in &kinds[kind] {
             let seconds = 0.09 + 0.05 * rng.unit();
-            let note = whistle(contour, seconds, 0.2, (0.01, 0.025), rng);
+            let note = whistle_internal(contour, seconds, 0.2, (0.01, 0.025), rng);
             add_at(
                 &mut out,
                 (at * rate) as usize,
@@ -395,14 +566,14 @@ fn cardinal(rng: &mut Rng) -> Vec<f32> {
     let repeats = 3 + (rng.unit() * 4.0) as usize;
     let seconds = 0.22 + 0.08 * rng.unit();
     for _ in 0..repeats {
-        let note = whistle(&cheer, seconds, 0.05, (0.015, 0.04), rng);
+        let note = whistle_internal(&cheer, seconds, 0.05, (0.015, 0.04), rng);
         add_at(&mut out, (at * rate) as usize, &note, 1.0);
         at += seconds + 0.08 + 0.05 * rng.unit();
     }
     if rng.unit() < 0.6 {
         let birdy = [(0.0, 2200.0 * k), (0.6, 3900.0 * k), (1.0, 3300.0 * k)];
         for _ in 0..5 + (rng.unit() * 5.0) as usize {
-            let note = whistle(&birdy, 0.07, 0.05, (0.008, 0.015), rng);
+            let note = whistle_internal(&birdy, 0.07, 0.05, (0.008, 0.015), rng);
             add_at(&mut out, (at * rate) as usize, &note, 0.85);
             at += 0.11;
         }
@@ -419,14 +590,14 @@ fn chickadee(rng: &mut Rng) -> Vec<f32> {
     let k = 0.95 + 0.1 * rng.unit();
     let mut out = Vec::new();
     if rng.unit() < 0.6 {
-        let fee = whistle(
+        let fee = whistle_internal(
             &[(0.0, 4000.0 * k), (1.0, 3900.0 * k)],
             0.35,
             0.02,
             (0.03, 0.05),
             rng,
         );
-        let bee = whistle(
+        let bee = whistle_internal(
             &[
                 (0.0, 3500.0 * k),
                 (0.15, 3350.0 * k),
@@ -442,14 +613,14 @@ fn chickadee(rng: &mut Rng) -> Vec<f32> {
         add_at(&mut out, (0.47 * rate) as usize, &bee, 0.8);
         return normalize(out, 0.3);
     }
-    let chick = whistle(
+    let chick = whistle_internal(
         &[(0.0, 7000.0 * k), (1.0, 4500.0 * k)],
         0.04,
         0.0,
         (0.005, 0.01),
         rng,
     );
-    let a = whistle(
+    let a = whistle_internal(
         &[(0.0, 4200.0 * k), (1.0, 3200.0 * k)],
         0.035,
         0.0,
@@ -532,5 +703,49 @@ mod tests {
         );
         let robin = pitch(&bird_call(Bird::Robin, 1));
         assert!((1500.0..4500.0).contains(&robin), "robin {robin} Hz");
+    }
+
+    /// Pearson correlation coefficient between two PCM streams aligned to the
+    /// shorter length. A perfect copy gives 1.0; a noisy version might dip
+    /// below 0.9; total independence is near 0.
+    fn pearson(a: &[f32], b: &[f32]) -> f32 {
+        let n = a.len().min(b.len());
+        let (a, b) = (&a[..n], &b[..n]);
+        let p1: f32 = a.iter().map(|x| x * x).sum();
+        let p2: f32 = b.iter().map(|x| x * x).sum();
+        let cov: f32 = a.iter().zip(b).map(|(x, y)| x * y).sum();
+        let denom = (p1.sqrt() * p2.sqrt()).max(1e-9);
+        cov / denom
+    }
+
+    /// Engine 2's migration of the original 9 must correlate with engine 1
+    /// above 0.9 on every (bird, seed) pair, by the spec.
+    #[test]
+    fn engine2_matches_engine1_within_audible_tolerance() {
+        for bird in Bird::ALL {
+            for seed in 0..6 {
+                let v1 = engine1::bird_call(bird, seed);
+                let v2 = bird_call(bird, seed);
+                let corr = pearson(&v1, &v2);
+                assert!(corr > 0.9, "{bird:?} seed {seed}: corr {corr:.3}");
+            }
+        }
+    }
+
+    /// The full M13 catalogue: every `Birds::*` renders, bounded, finite, of
+    /// the right duration. ~50 species × 6 seeds = ~300 renderings.
+    #[test]
+    fn every_catalogue_bird_is_finite_bounded_and_short() {
+        for bird in Birds::ALL {
+            for seed in 0..6 {
+                let s = catalog::birdsong2(bird, seed);
+                assert!(
+                    s.iter().all(|x| x.is_finite() && x.abs() <= 0.5),
+                    "{bird:?} seed {seed}"
+                );
+                assert!(s.len() > SAMPLE_RATE as usize / 8, "{bird:?}");
+                assert!(s.len() < 8 * SAMPLE_RATE as usize, "{bird:?} {}", s.len());
+            }
+        }
     }
 }

@@ -296,6 +296,67 @@ Mods can now have their creatures voiced by Foley's synthesis.
 
 Each of M7–M11 is one release, ordered by how often players hear the mobs (spawn weights, where they live, how loud they are), so each release covers as much as it can. Every mob stays switchable between Foley's voice and the game's.
 
+12. **M12 Cave atmosphere.** A placed bed that gives being underground its sonic identity: a sparse multi-position drip bed with Earshot's reverb and a deep subsonic rumble that grows with depth and the mass of stone above, so deep caves feel enclosed rather than merely quiet. The existing sparse `Life.caves()` is removed in favour of the bed. **Exit:** standing 50 m below surface in a dripstone cave, distant drips are heard from multiple positions and a low rumble is felt; the bed fades as the player approaches the surface or steps outside; vanilla caves with no exposure hear no wind but keep the bed.
+
+13. **M13 More birds.** The syrinx engine 2 and a catalogue grown from nine temperate North American species to ~35, with per-biome rosters modelled on the real bird calls that would live in each biome.
+    - **Engine 2:** the syrinx model gains frequency modulation (warbles, bobolink's burble), rapid AM-modulated sweeps (trills), inhaled chips, rattles, croaks, hoots, and a `Phrase` builder so each species is described by a sequence of segments rather than hand-coded.
+    - **Per biome, modelled on the real call:**
+      - taiga, snowy taiga: boreal owl, great grey owl, common raven, spruce grouse (drumming, the existing woodpecker model), pine grosbeak, boreal chickadee, varied thrush;
+      - plains, sunflower plains: western meadowlark, horned lark, dickcissel, bobolink;
+      - forest, flower forest, birch, old-growth birch: wood thrush, hermit thrush, scarlet tanager, red-eyed vireo;
+      - jungle: keel-billed toucan, Montezuma oropendola, clay-colored thrush, great tinamou, crested guan;
+      - savanna: lilac-breasted roller, red-billed hornbill, Kori bustard, southern yellow-billed hornbill;
+      - badlands, mesa, eroded badlands, wooded badlands: cactus wren, curve-billed thrasher, greater roadrunner, pyrrhuloxia;
+      - desert, desert hills, desert lakes: greater roadrunner, cactus wren, Gila woodpecker, verdin;
+      - snowy tundra, ice spikes, snowy beach: snowy owl, snow bunting, willow ptarmigan;
+      - cherry grove: Japanese bush warbler (uguisu), Japanese white-eye (mejiro), varied tit, Eurasian tree sparrow;
+      - mangrove swamp, swamp: red-winged blackbird, common yellowthroat, prothonotary warbler, limpkin;
+      - mountain (jagged peaks, stony peaks, meadow, grove): Clark's nutcracker, golden eagle, alpine chough, grey-crowned rosy finch;
+      - beach, stony shore: common tern, sanderling (the gull stays);
+      - mushroom fields: a fictional soft "moo-oo-oo" trill, since no real analog fits.
+    - **Per-biome rosters:** `pickBird` is replaced by a biome-keyed roster of (species, weight) pairs, generated alongside `VoiceTable` so the catalogue is data, not code. **Exit:** a plains biome sounds like a plains biome; a savanna doesn't sound like a desert; a taiga doesn't sound like a forest; a mushroom biome has its soft trill.
+
+M12 and M13 are environment, not mob voices, so they're ordered by what fills the most silent biomes: cave atmosphere (the Overworld's emptiest region) before the catalogue expansion.
+
+14. **M14 Underwater ambience.** A listener state that takes over when the head is submerged: a bed of bubbles rising past the ear (rate ∝ depth × movement speed), a low pressure tone at the bottom of deep oceans, and a global low-pass on every Foley sound while the head is under. **Exit:** standing on the ocean floor, the world is muffled, bubbles rise past, deeper water pushes a low tone into the mix; emerging above the surface restores Foley's air within 1 s.
+
+15. **M15 Nether ambience.** Wind is off in the Nether per M1, but nothing has replaced it; mob voices land in M10, and the dimension's identity comes from its environment. A handful of placed beds, weighted by sub-biome: a low hot ambient roar that never quite stops; basalt delta clatter (M4 modal impacts at a slow Poisson rate); soul sand valley's ash hiss (band-passed noise modulated by soul fire); warped forest and crimson groves' insect chorus (a bed of cicada-like drones at the warped tempo); a continuous lava-lake rumble that's louder than the Overworld's because lakes are denser. **Exit:** a basalt delta sounds like clatter; a soul sand valley sounds like ash; a warped forest has its chorus; lava lakes are felt everywhere.
+
+16. **M16 End ambience.** Sparse and eerie: a low ambient drone (slowly modulated sub-100 Hz tone, the canonical "space" sound); a very low faint whisper of pseudo-speech far off (endermen whispering at the central pillar, played at low extents); the ender dragon's wings and roars as a placed bed at the central island (a subsonic wingbeat bed with the dragon's roar laid in at a slow Poisson rate). **Exit:** on the central island the whisper is around you; flying through the outer islands the drone is there alone; near the dragon's perch the wingbeats rise; killing the dragon silences the wingbeat and roar beds but not the drone.
+
+17. **M17 Surf as a placed bed.** The `surf()` model exists and is fired as one-shots from `Life` every 6 to 12 s, so a stormy shore sounds discrete ("crash… crash… crash"). Turn it into a placed bed so the breaking surges are continuous, the texture is denser in a higher U, and storm surges are layered on top. Three height options × continuous = drop from a low lapping to a 3 m wave every couple of seconds; storms add an extra low roar. **Exit:** a stormy beach is continuous surf, not discrete crashes.
+
+18. **M18 Aeolian tones wired to placement.** M1's wind bed has the Strouhal `0.2·U/d` model for fences, bars and leaves listed in its plan but never wired to objects in the world. M18 places aeolian sources at every iron bar, fence, lantern, bell and bamboo within 24 blocks of the ear, with the right Strouhal frequency for each, and adds a soft ring from bells and lanterns in proportion to the wind speed. Leaves rustling already exists in M1's turbulence; it gets tied to leaf-bearing blocks in the round rather than a generic exposure factor. **Exit:** standing next to a fence in the wind sings; a bell rings in a storm; a bamboo grove howls.
+
+19. **M19 Biome-specific beds.** Some biomes still sound like every other biome. M19 adds the missing beds:
+    - **Desert / badlands / desert hills / desert lakes:** dry sand hiss underfoot (granular bed, not one-shot footsteps), a hollow wind in the open plain, optional dust devils (small vortex rings, level ∝ U⁵, only when U > 8 m/s);
+    - **Mushroom fields:** a low, strange ambient hum unique to the biome;
+    - **Lush cave / dripstone cave:** the cave bed stays (M12), but each gets its own colour (lush: a faint, soft high-frequency "dripping" hiss from the moss; dripstone: more drips, less rumble);
+    - **Deep dark:** silence is part of the design, but a very low subsonic hum and the scuttling of sensors as one-shots every 30 s or so;
+    - **Snowy / ice spikes / frozen ocean:** a "hush" bed — high-frequency absorption (above 4 kHz cut by a slow LPF) layered into the wind bed only in cold biomes, so snow absorbs the highs;
+    - **Mangrove swamp:** a humid insect drone — band-passed noise at 4 kHz, level proportional to mangrove leaf count within 24 blocks, layered under the frogs and crickets already there.
+    **Exit:** each biome listed sounds distinct; the open-air biomes (plains, savanna, taiga) keep their M13 identity.
+
+20. **M20 Village ambience.** Villagers have voices (M6/M7/M8) but no village-level ambience that makes a town feel alive from a distance: a distant murmur of voices and animal calls (lower passband, panned to the village bell); the village bell itself (one of the most recognisable vanilla sounds, not replaced or layered); smith sounds (anvil ring, hammer blows); scattered chicken / cow / sheep / wolf placed at the village's structures, not by mob spawning. The village's centre (the bell block) is its anchor. **Exit:** a village heard from 50 m away is recognisably a village: bell + murmur + a chicken here, an anvil there; the bell rings more often in a storm; the smith's anvil is heard across the village.
+
+21. **M21 Active structures.** Sounds from objects that exist in the world that Foley doesn't touch:
+    - **Minecarts on rails:** the rhythmic clatter (regular and powered) and the rush when passing. The wheel-impact modal model already exists from M4; M21 wires it to minecarts and renders per-rail-type one-shots;
+    - **Doors:** wooden doors open and close with stick–slip hinge creaks (M7 already has the model); iron doors and trapdoors get metallic creaks (M4's metal modes);
+    - **Chests / trapped chests / shulker boxes:** opening and closing with a small puff of air (the existing drips model with a different envelope); trapped chests get a faint redstone click;
+    - **Redstone:** a faint mechanical click when a repeater or comparator changes state, especially in clock circuits;
+    - **Boats:** water lapping at the hull (a small placed bed per boat) and creaking wood;
+    - **Sculk sensors:** they vibrate; the surrounding sculk should ring softly (a triggered bed of low-Q tones played from the sensor and from nearby sculk blocks).
+    **Exit:** a minecart system is heard before it's seen; an old wooden door creaks; a shulker clicks open; a redstone clock has a quiet rhythm; a sculk sensor "talks" to nearby sculk.
+
+22. **M22 Subtle physical layers.** Density rather than new models:
+    - **Settling after footsteps and block placement:** a tiny delayed tick (10 to 30 ms after the footfall's thud) for gravel shifts, sand settles, snow brushes;
+    - **Mob brushes through plants:** only the player brushes today (the `Brush` class); sheep wading through tall grass, a spider on cobwebs, a chicken in a flower field;
+    - **Peaceful-mob breathing:** only zombies breathe when close (M7); cows in a barn at night, sheep in a pen — very quiet, very warm;
+    - **Ash and snow drifting:** almost inaudible but the right *texture* — high-frequency bandpassed noise at very low level during a blizzard or ash storm.
+    **Exit:** the world feels lived-in: footsteps settle, mobs interact with their world, peaceful nights are warm, blizzards and ash storms have texture.
+
+M14–M22 extend the environment work, ordered by what fills the largest remaining gaps: M14 is a listener state that applies globally underwater; M15/M17 fill the most-listened dimensions and the model-already-there-but-not-wired case (the small wins); M16/M18/M19 fill the biome gaps; M20/M21/M22 fill the world's quieter infrastructure.
+
 ## M8 and M9 results: everyday animals and rarer Overworld hostiles (2026-10-12)
 
 - **The engine grew:**
@@ -396,6 +457,223 @@ Each of M7–M11 is one release, ordered by how often players hear the mobs (spa
 - *Four decades of digital waveguides*, 2026: https://arxiv.org/pdf/2604.12878
 - NonverbalTTS, 2025: https://arxiv.org/html/2507.13155
 - NVBench, 2026: https://arxiv.org/html/2604.16211v2
+
+## M12 plan: cave atmosphere
+
+A placed bed for being underground. `Life.caves()` currently does only one thing — a 4 %/s settling stone or a 15 %/s drip in a random air cell 6–20 m away — so deep caves are mostly silent holes. The plan has long called for *"cave atmosphere layer over the game's own sounds and music"* (line 40), but the bed itself was never built.
+
+**Approach.**
+
+A new placed bed kind, `FOLEY_BED_CAVE`, sharing the placed-bed pattern of water/fire/lava. At most one running. Its scene sampler reads:
+
+- **Depth:** blocks below surface, from the heightmap over the ear.
+- **Stone mass above:** the count of solid blocks in a column from the ear up to the sky.
+- **Openness to sky:** already computed for `WindScene`. Above ~0.2, the cave bed fades out over 2 s — outside sound takes over.
+- **Drip rate:** derived from waterlogged blocks and stalactites in the column. A dry cave (no water, no dripstone) gets a quieter rumble only.
+
+The bed itself is two layers mixed:
+
+- **A multi-position drip bed.** A sparse Poisson process of drips at 3 to 5 randomly chosen ceiling positions within 24 blocks, each with a randomised phase, panned. Earshot's reverb colours the early tail; if Earshot is absent, a small built-in early-reflections model (comb-filter delays) stands in.
+- **A sub-bass rumble.** Band-passed noise below 80 Hz, modulated in level by depth × stone mass. Deeper and deeper-stone means a more present rumble; in a shallow cave the rumble is below threshold and the drips alone are heard.
+
+A small wrinkle: the existing `Life.caves()` and the bed shouldn't fight each other. `Life.caves()` is removed in M12 — its settling-stone and drip one-shots are folded into the bed (settling stones still trigger as one-shots at random, but only when the bed is running, and they replace the bed's drip layer momentarily to vary the texture).
+
+**Settings.**
+
+A new toggle, *Cave atmosphere*, alongside *Wind*, *Birds*, *Crickets*, *Frogs*. Off by default for players who already find caves too noisy with the reverb Earshot gives them.
+
+**Exit criteria.**
+
+- A player standing 50 m below surface in a dripstone cave hears drips from multiple positions and feels a low rumble; a plains cave 30 m down with no sky exposure has the drips and a quieter rumble; approaching the surface fades the bed out; opening the cave mouth (exposure > 0.2) silences it within 2 s.
+- A surface cave with a wide opening sounds like outside: the bed is silent, the wind plays.
+- The bed doesn't double-trigger: no two cave beds ever run at once.
+
+**Tests.**
+
+- Unit: the scene's depth/mass/exposure/drip-rate mappings match the spec; the bed cost stays under ~0.5 % of a core on the M3 VM.
+- Client gametest: spawn at y = -50 in a dripstone cave, check the cave bed is playing and the second one is refused; spawn at y = -30 in a plains cave with no exposure, check it's playing; reach the surface, check it fades; open the cave mouth, check it's silent.
+
+## M13 plan: more birds
+
+Nine species and a weighted pick by biome category is enough for "any one biome doesn't sound like another" — but the catalogue is temperate North American, and `pickBird` lumps very different biomes together (jungle, swamp and mangrove are one bracket; badlands, savanna and plains share the default). M13 expands the syrinx model to capture the calls of real birds that live in each biome, and gives each biome its own roster rather than a weighted pick from a global list.
+
+**Syrinx engine 2.**
+
+The current model (M5) uses van der Pol for the labia and a band-pass filter as the tract proxy. The new species need calls it can't make today:
+
+- **Frequency modulation.** A sinusoidal modulator on the labial frequency, depth and rate as parameters. The basis of every warble (wood thrush's middle phrase, the bobolink's burble).
+- **Trills.** Rapid AM-modulated sweeps, ~8 to 12 Hz. The hermit thrush's slow opening spiral; the pine warbler's run.
+- **Inhaled chips and rattles.** Very short broadband bursts (5 to 10 ms) at high pitch; a Poisson process of them is a rattle (snow bunting, varied thrush's second note).
+- **Croaks and rasps.** Short, low-pitch pulses with strong breath noise (hornbills, guan, roadrunner's clatter).
+- **Hoots.** Long pure-tone pulses with a slow decay (boreal owl, great grey owl, snowy owl).
+- **Drumming at different rates.** The existing `woodpecker()` covers most woodpeckers, but a Gila woodpecker's roll is faster than a pileated's; spruce grouse drumming is even faster. A `drum(rate_hz, decay_s)` helper exposes it.
+
+A new `Phrase` builder takes a list of segments of `[kind, parameters, duration]` and renders them in sequence. Each species is then a small handful of phrases picked by an RNG; the catalogue is descriptive rather than hand-coded. The 9 existing species are migrated to the new vocabulary and stay the same in spirit (M13 is engine + catalogue, not a rewrite of M5).
+
+**Species additions (9 → ~35), modelled on the real call of the species that would live in each biome:**
+
+- **Taiga, snowy taiga** — boreal owl (hoots, ~1 kHz, a "hoo-hoo-HOO-hoo" motif with a long first note), great grey owl (deeper, slower), common raven (a corvid croak, separate from the crow's caw), spruce grouse (drumming — the outdoor model with a faster rate), pine grosbeak (a soft three-note whistle with a rising third), boreal chickadee, varied thrush (single buzzy note, a pause, then a higher one).
+- **Plains, sunflower plains** — western meadowlark (flutey, two phrases with a slow trill in the second), horned lark (high tinkles from a perch, ~6 kHz), dickcissel (a chipped "dick-dick-cissel"), bobolink (a bubbly rattle of overlapping sweeps, ~250 to 600 ms).
+- **Forest, flower forest, birch, old-growth birch** — wood thrush (flutey spiral of three notes, the middle one trilled, the canonical "forest at dusk" call), hermit thrush (long slow spiral whistle, the most ethereal of the lot), scarlet tanager (a raspy "burry" call, like a robin with a sore throat), red-eyed vireo (short phrases strung with pauses; the vireo never seems to stop).
+- **Jungle** — keel-billed toucan (a frog-like croak repeated), Montezuma oropendola (a liquid bubbling phrase that drops in pitch), clay-colored thrush (a slow deliberate whistled phrase), great tinamou (a long pure whistle at ~1.5 kHz, rising and falling), crested guan (a low rasping cluck).
+- **Savanna** — lilac-breasted roller (a sharp rasping "krak-krak"), red-billed hornbill (a clucking series with a cackle), Kori bustard (a deep boom at ~250 Hz, very rare, only on warm mornings), southern yellow-billed hornbill (a reedy caw).
+- **Badlands, mesa, eroded badlands, wooded badlands** — cactus wren (a rapid churring series, ~10 syllables/s), curve-billed thrasher (a rapid whistled phrase with two repeats), greater roadrunner (a low coo series with a bill clatter), pyrrhuloxia (a whistled "wheat-er-chew-chee-chee-chee").
+- **Desert, desert hills, desert lakes** — greater roadrunner, cactus wren, Gila woodpecker (a rapid drumming roll, faster than the existing woodpecker), verdin (a high squeaky "see-see, hear-see").
+- **Snowy tundra, ice spikes, snowy beach** — snowy owl (hoots, with a higher-pitched female version sometimes heard alongside the male's lower one), snow bunting (a short rattle), willow ptarmigan (a low croak and a brief rattle).
+- **Cherry grove** — Japanese bush warbler (uguisu, a single prolonged "hooo" that wavers and then opens into a trill, the iconic cherry-blossom sound of Japan), Japanese white-eye (mejiro, a high rapid "chi-chi-chi" with a small whistle), varied tit (a fast "tsu-tsu-tsu"), Eurasian tree sparrow (a chirrup, more nasal than a house sparrow).
+- **Mangrove swamp, swamp** — red-winged blackbird (the "conk-la-ree" — a conk then a trill), common yellowthroat (a rolling "witchety-witchety-witchety"), prothonotary warbler (a clear rising whistle), limpkin (a long mournful wail, ~1 kHz, slightly quavering).
+- **Mountain (jagged peaks, stony peaks, meadow, grove)** — Clark's nutcracker (a "kraa-kraa-kraa" rattle), golden eagle (a high scream, rare, only above a height threshold), alpine chough (a high "chiff-chiff" in pairs), grey-crowned rosy finch (a soft trill).
+- **Beach, stony shore** — herring gull stays; common tern wins (a high "kee-yah"); sanderling (a short low trill, only when waves are large).
+- **Mushroom fields** — a fictional soft "moo-oo-oo" trill, half-bird-half-pipe-organ; no real analog fits, so invent something that suits the biome's strangeness.
+
+A few cross-biome species stay global: the common raven reuses the corvid model in taiga; the house-sparrow chirrup is the Eurasian tree sparrow in cherry grove; the gull stays in beach but doesn't bleed into other biomes.
+
+**Per-biome rosters.**
+
+`pickBird` is replaced by a roster table generated by `gen_birds.py` (alongside `gen_voices.py`). Each biome maps to a list of `(species, weight)` pairs; the table is data, not code. Biomes without a roster (river, deep ocean, frozen river) stay silent for birds, as they should — waterbirds are a follow-up.
+
+**Settings.**
+
+- The existing *Birds* toggle stays; no per-biome switches. The rosters are correct by biome.
+- A second toggle, *Rarer species*, gates the Kori bustard, golden eagle, alpine chough and the like, off by default — they're special and shouldn't crowd every visit to their biome.
+
+**Exit criteria.**
+
+- A plains biome at first light sounds like a plains biome (meadowlark, horned lark, dickcissel); a savanna doesn't sound like a desert (roller and hornbill instead of wren and roadrunner); a taiga doesn't sound like a forest (owls and varied thrush instead of wood thrush); a mushroom biome has its soft trill; a beach has the gull and tern; a coral reef stays silent.
+- Birds only sing from the right biomes: no cactus wren in a forest, no wood thrush in a taiga.
+- Engine 2 makes every existing call as well as the engine 1 version did: spectrograms of the nine originals are unchanged.
+
+**Tests.**
+
+- Unit: each new species renders, bounded and finite; same seed → same call; engine 2's renditions of the original nine match engine 1's within an audible tolerance (spectrogram correlation > 0.9 on each).
+- Gametest: at noon in each biome with the right weather, at least one species from its roster is heard within 60 s; in a coral reef and a river, no birds are heard.
+
+## M14 plan: underwater ambience
+
+A listener state, not a placed bed. When the player's head is submerged, every Foley sound gets a global low-pass filter (cutoff at 1 kHz, the canonical underwater muffle) and Foley adds three things on top:
+
+- **A bubble bed.** Bubbles rise past the camera at a rate ∝ depth × speed of movement, rendered from the existing `Bubble` primitive. Louder when starting from a still position — a sudden dive shakes them loose.
+- **A pressure tone.** A very low sinusoid (~50 Hz) under threshold at depth 0, rising in level with depth down to ~30 at the ocean floor. Above sea level: silent. Below: present.
+- **A muffled bed of distant water sounds.** The water/lava bed already plays under water per `PlacedBeds`, but the air-pocket sounds (bubble population, foam hiss) are dulled further.
+
+Emerging above the surface fades the bubble bed and pressure tone over 1 s and removes the low-pass on Foley's other sounds immediately. The mob voices already do this kind of muffled underwater thing, so they stay as the test for the filter.
+
+**Exit:** underwater the world is muffled, bubbles rise past, deep water pushes a low tone into the mix; emerging restores Foley's air within 1 s; surfacing while breathing resets cleanly (no double-fade).
+
+**Tests:** a player at y = 55 in the ocean hears bubbles and the pressure tone rises with depth; emerging drops them within 1 s; Earshot's underwater filter and Foley's play together cleanly without double-muffling.
+
+## M15 plan: Nether ambience
+
+The Nether has wind off per M1; mob voices land in M10. The dimension's identity comes from its environment, and it's silent in the wrong way.
+
+**Approach.** A handful of placed beds, weighted by sub-biome (the existing `Surroundings`/biome-aware sampler pattern):
+
+- **Hot ambient roar:** a low, broadband bed below 200 Hz, level proportional to the closest lava lake's size. Always on in the Nether, fading in to the bed as the player approaches lava.
+- **Basalt delta clatter:** M4 modal impacts on basalt tiles at a Poisson rate of ~1 a second per 4 basalt blocks. Limited to basalt deltas.
+- **Soul sand valley ash hiss:** band-passed noise modulated by the height of the nearest soul fire block; the higher the fire, the louder and higher-pitched the hiss.
+- **Warped forest / crimson grove chorus:** a bed of cicada-like drones at the warped tempo (fast, ~16 Hz, slightly off-pitch between individuals). Limited to warped forests and crimson groves.
+- **Continuous lava-lake rumble:** the lava bed already exists; M15 keeps it on at higher gain than the Overworld, since lakes are denser.
+
+The cave bed (M12) is silent in the Nether — Nether caves are open to the sky (sort of) and use the Nether's own beds instead. The skyless-but-open question is solved by an `isNether()` flag in `WindScene` and `CaveScene`.
+
+**Exit:** a basalt delta sounds like clatter; a soul sand valley sounds like ash; a warped forest has its chorus; lava lakes are felt everywhere; nether fortresses have the clank of piglins and bastions (those are mob voices for M10).
+
+**Tests:** spawn in each sub-biome, check the right bed plays; in a basalt delta the clatter is heard; in a warped forest the chorus is heard; cave bed is silent; spectrogram of the basalt delta clatter matches M4 modal impact on basalt.
+
+## M16 plan: End ambience
+
+Sparse and eerie. Three layers:
+
+- **A low ambient drone.** A slowly modulated sub-100 Hz tone, sine + a touch of breath noise. Always on in the End, level proportional to distance from the central pillar (closer = louder).
+- **Enderman whisper.** A very low faint pseudo-speech far off (the M7 ingressive pseudo-speech model, played at low extents and at the lowest of Foley's gain levels, so it's felt more than heard). Anchored to the central island.
+- **Dragon bed.** A subsonic wingbeat bed at the central island, with the dragon's roar (M10) laid in at a slow Poisson rate. The bed fades with distance from the pillar.
+
+**Exit:** on the central island the whisper is around you; flying through the outer islands the drone is there alone; near the dragon's perch the wingbeats rise; killing the dragon silences the wingbeat and roar beds but not the drone.
+
+**Tests:** spawn on the central island, check the whisper + dragon bed; fly to the outer End, check only the drone; the wingbeat bed stops when the dragon dies; respawning the dragon restores it.
+
+## M17 plan: surf as a placed bed
+
+The `surf()` model exists and is fired as one-shots from `Life` every 6 to 12 s. A stormy shore sounds discrete ("crash… crash… crash"). M17 turns it into a placed bed, sharing the M12 / M2 placed-bed pattern:
+
+- A single `FOLEY_BED_SURF` running while the player is on a shore near water.
+- The scene: distance to the nearest water block (or large water body), shore direction (a beach tag), storm level, wind speed (the wind bed already reports it).
+- The bed streams continuous drips with a slow modulation in level (the rise of the wave), punctuated by `surf()` crashing surges at a Poisson rate ∝ wind speed × storm level.
+- A calmer lake is the existing `surf(0.3, …)` looping at a low level; a stormy sea is `surf(2.2, …)` crashing every 2 s.
+
+**Exit:** a stormy beach is continuous surf, not discrete crashes; a lake laps quietly in light air; a calm sea has its slow surge.
+
+**Tests:** stand on a stormy beach, hear continuous surf with crashing surges; on a calm sea, hear only the slow surge; the one-shot firing from `Life` is removed (so the bed doesn't double up); surf on a freshwater lake is gentler than on a saltwater ocean at the same wind.
+
+## M18 plan: aeolian tones wired to placement
+
+M1's wind bed has the Strouhal `0.2·U/d` model for fences, bars and leaves listed in its plan but never wired to objects in the world.
+
+**Approach.** The wind scene gains an "aeolian structure" list: every iron bar, fence, lantern, bell and bamboo within 24 blocks of the ear, each with its characteristic diameter d, and the wind speed U at its height. Each one becomes a Strouhal whistle at `f ≈ 0.2·U/d`, panned to its position. The whistle is louder the higher U is; for U < 2 m/s it's silent.
+
+Leaves rustling already exists in M1's turbulence model but uses a generic exposure factor. M18 ties it to leaf-bearing blocks (every `BlockTags.LEAVES` in the round) instead — more leaves round you, louder the rustle.
+
+**Exit:** standing next to a fence in the wind sings; a bell rings in a storm; a bamboo grove howls; leaves in a tree rustle as the wind passes; spectrogram of the whistle shows the predicted Strouhal frequency.
+
+**Tests:** place a row of iron bars in the wind, hear the Strouhal whine; place a bell at a windy height, hear it ring; stand under a bamboo grove, hear the howl; for a known U and d, f is within 10 % of the Strouhal prediction.
+
+## M19 plan: biome-specific beds
+
+Some biomes still sound like every other biome. M19 adds:
+
+- **Desert / badlands / desert hills / desert lakes:** dry sand hiss underfoot — a granular bed, fired while the player walks on sand, level ∝ speed (the existing granular model from M5 footsteps, made continuous). A hollow wind: a higher-Q whistle of the M1 wind bed only in the open plain. Optional dust devils: small vortex rings rendered at a low Poisson rate (1 every 30 s), level ∝ U⁵, only when U > 8 m/s.
+- **Mushroom fields:** a low ambient hum unique to the biome — a slowly modulated tone at ~120 Hz with a soft overtone at 1.6×, very quiet, fading to silent outside the biome.
+- **Lush cave / dripstone cave:** the cave bed (M12) stays, but each gets a colour. Lush: a faint, soft high-frequency "dripping" hiss from the moss (band-passed noise at ~3 kHz, very low level, slow envelope). Dripstone: more drips, less rumble (drip rate × 2, rumble level × 0.5).
+- **Deep dark:** a very low subsonic hum (~30 Hz) and the scuttling of sensors as one-shots every 30 s or so, played at a random sculk sensor within 24 blocks. Otherwise the bed stays silent — silence is the design.
+- **Snowy / ice spikes / frozen ocean:** a "hush" bed — high-frequency absorption (above 4 kHz cut by a slow LPF) layered into the wind bed only in cold biomes, so snow absorbs the highs. The same LPF is applied to Foley's other beds in cold biomes.
+- **Mangrove swamp:** a humid insect drone — band-passed noise at 4 kHz, level proportional to mangrove leaf count within 24 blocks, layered under the existing frogs and crickets.
+
+**Exit:** each biome listed sounds distinct; the open-air biomes (plains, savanna, taiga) keep their M13 identity.
+
+**Tests:** spawn in each, check the right bed plays; in a desert hear the sand hiss walking and the hollow wind; in a mushroom field hear the hum; in a deep dark hear the hum and the sensor scuttles; the snowy hush is audible above 4 kHz in a cold biome, absent in a warm one.
+
+## M20 plan: village ambience
+
+A village heard from 50 m should sound like a village. The pieces:
+
+- **The village bell.** One of the most recognisable vanilla sounds; Foley doesn't currently replace or layer it. The bell is its own one-shot, played from the bell block; in a storm the bell rings more often (a real bell in a storm rings at random from sympathetic vibration).
+- **The village murmur.** A low, far-off layer of voices and animal calls, panned to the village's centre (the bell block). Each layer is a low-pass filter (cutoff at 800 Hz) of the relevant voice. Anchored to the village's centre; audible within 50 m of the village.
+- **Smith sounds.** An anvil ring (M4 modal) + a series of hammer-blow ticks at a slow Poisson rate, played from the smithy's location.
+- **Scattered animals.** A chicken here, a cow lowing there, a wolf howl — placed at the village's structures (chickens at coops, cows by fences), not by mob spawn. The bird model already places by trees; this is "place by structure".
+
+The village's centre (bell block) is the anchor: distance to the centre drives the bell's level and the murmur's panning. The murmur is one shared sound per village (not per mob), so a village doesn't sound like a chorus of 30 chickens.
+
+**Exit:** a village heard from 50 m away is recognisably a village: bell + murmur + a chicken here, an anvil there; the bell rings more often in a storm; the smith's anvil is heard across the village.
+
+**Tests:** spawn 50 m from a village, hear the bell + the murmur; at the smithy, hear the anvil ring; in a storm the bell rings more often; the murmur doesn't multiply with village size (it's panned, not summed).
+
+## M21 plan: active structures
+
+Sounds from objects that exist in the world that Foley doesn't touch:
+
+- **Minecarts on rails.** The wheel-impact modal model (M4) is wired to minecarts. Each minecart has a per-tick wheel-impact one-shot, louder when powered (powered-rail tick at 2× the level). The "rush" when a minecart goes past at speed is a single bed per minecart, gain ∝ speed.
+- **Doors.** Wooden doors open and close with stick–slip hinge creaks (M7's creak model). Iron doors and trapdoors get metallic creaks (M4's metal modes).
+- **Chests / trapped chests / shulker boxes.** Opening with a small puff of air (the existing drips model with a different envelope — short attack, slow decay). Trapped chests get a faint redstone click.
+- **Redstone.** A faint mechanical click when a repeater or comparator changes state, especially in clock circuits. A short stick–slip tick at every state change.
+- **Boats.** A small placed bed per boat, water lapping at the hull + creaking wood (M4 wood modes). Gain falls off the further the boat is from shore.
+- **Sculk sensors.** A triggered bed of low-Q tones played from the sensor and from nearby sculk blocks; the louder the trigger, the louder the ring.
+
+**Exit:** a minecart system is heard before it's seen; an old wooden door creaks; a shulker clicks open; a redstone clock has a quiet rhythm; a sculk sensor "talks" to nearby sculk.
+
+**Tests:** place a minecart on a rail, hear it roll past; open a chest, hear the puff; trigger a sculk sensor, hear it ring and the sculk around it; spectrogram of a redstone clock shows the ticks at the right rate; a wooden door and an iron door sound different.
+
+## M22 plan: subtle physical layers
+
+Density rather than new models:
+
+- **Settling after footsteps and block placement.** A tiny delayed tick (10 to 30 ms after the footfall's thud) for gravel shifts, sand settles, snow brushes. Plays on the same logic as the existing `Brush` class, but for ground materials. Off when the footstep is on solid stone.
+- **Mob brushes through plants.** Only the player brushes today (the `Brush` class). M22 extends the same scan to mobs: sheep wading through tall grass, a spider on cobwebs, a chicken in a flower field. Same plant classification, slower envelope (a mob moves slower through plants than a player running), quieter.
+- **Peaceful-mob breathing.** Only zombies breathe when close (M7). M22 adds breathing for cows, sheep, pigs and villagers at very low gain, only in enclosed spaces (a barn, a pen, a village at night). The breath is a soft inhalation, ~10 a minute, gain 0.05.
+- **Ash and snow drifting.** Almost inaudible but the right *texture* — high-frequency bandpassed noise at very low level during a blizzard or ash storm. Layered onto the wind bed's turbulence when the biome's weather is storming.
+
+**Exit:** the world feels lived-in: footsteps settle, mobs interact with their world, peaceful nights are warm, blizzards and ash storms have texture.
+
+**Tests:** walk through gravel, hear a delayed tick; a sheep walks through tall grass, hear a slower brush; stand outside a barn at night, hear a cow breathing very low; a blizzard has a high-frequency texture above the wind; the mob brush is quieter than the player's, never crowded.
 
 ## Risks
 

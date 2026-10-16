@@ -68,9 +68,9 @@ public final class SoundCodecs {
 	public static final MapCodec<Crickets> CRICKETS = RecordCodecBuilder.mapCodec(instance -> instance.group(
 			Codec.floatRange(-30f, 50f).fieldOf("celsius").forGetter(Crickets::celsius)).apply(instance, Crickets::new));
 
-	/** A bird's song ({@code species} 0 to 1000). */
+	/** A bird's song ({@code species} 0 to 50, the M13 catalogue's range). */
 	public static final MapCodec<Birdsong> BIRDSONG = RecordCodecBuilder.mapCodec(instance -> instance.group(
-			ExtraCodecs.intRange(0, 1000).fieldOf("species").forGetter(Birdsong::species)).apply(instance,
+			ExtraCodecs.intRange(0, 50).fieldOf("species").forGetter(Birdsong::species)).apply(instance,
 			Birdsong::new));
 
 	/** A frog ({@code length_cm} 2 to 20). */

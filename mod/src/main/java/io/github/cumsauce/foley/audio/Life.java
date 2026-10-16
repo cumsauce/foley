@@ -50,13 +50,21 @@ import org.jspecify.annotations.Nullable;
  * it: out in the open, or under trees (the wind's exposure and leaves).
  */
 public final class Life {
-	/** Birds, generated: {@code foley:bird_<n>}, in the native order. */
-	public static final int CROW = 0, DOVE = 1, ROBIN = 2, CARDINAL = 3, CHICKADEE = 4, GULL = 5, LOON = 6, JAY = 7,
-			WARBLER = 8;
-	public static final int SPECIES = 9;
-	/** How loud each sings: a crow carries, a dove is soft. */
-	// Crows and jays are harsh: rarer inland (see pickBird) and quieter, so a day in the woods stays easy.
-	private static final float[] BIRD_VOLUME = {0.45f, 0.4f, 0.35f, 0.4f, 0.3f, 0.6f, 0.7f, 0.35f, 0.3f};
+	/** The nine original birds (M5), now the tail of the M13 catalogue: {@code foley:bird_<n>}. */
+	public static final int CROW = 48, DOVE = 49, ROBIN = 50, CARDINAL = 51, CHICKADEE = 52, GULL = 53, LOON = 54,
+			JAY = 55, WARBLER = 56;
+	public static final int SPECIES = Birds.SPECIES;
+
+	/** How loud a bird sings: a gull carries over the surf, a dove is soft. */
+	private static float birdVolume(int species) {
+		return switch (species) {
+			case CROW -> 0.45f;
+			case GULL -> 0.6f;
+			case LOON -> 0.7f;
+			case JAY -> 0.35f;
+			default -> 0.4f;
+		};
+	}
 	/** When something loud (an explosion, thunder) last went off, System.nanoTime(). */
 	private static volatile long startledAt = Long.MIN_VALUE / 2;
 	/** Crickets are rendered for these temperatures (°C): {@code foley:crickets_<n>}. */
@@ -145,23 +153,29 @@ public final class Life {
 					&& random.nextFloat() < 0.12f * birdActivity(time) * snowy * exposure) {
 				if (perch == null || ticks > perchUntil || perch.distSqr(BlockPos.containing(eye)) > 48 * 48
 						|| random.nextFloat() < 0.3f) {
-					singer = pickBird(biome, celsius);
-					perch = singer == GULL
-							? find(level, eye, 40, state -> state.getFluidState().isSourceOfType(Fluids.WATER))
-							: find(level, eye, singer == CROW || singer == JAY ? 40 : 24,
-									state -> state.is(BlockTags.LEAVES));
-					perchUntil = ticks + 20 * (40 + random.nextInt(80));
+					String biomeKey = biome.unwrap().left().map(k -> k.identifier().toString()).orElse(null);
+					singer = BiomeRoster.pick(biomeKey, random.nextFloat(),
+							FoleyClient.wants(FoleyConfig::rarerSpecies));
+					if (singer >= 0) {
+						perch = singer == GULL
+								? find(level, eye, 40, state -> state.getFluidState().isSourceOfType(Fluids.WATER))
+								: find(level, eye, singer == CROW || singer == JAY ? 40 : 24,
+										state -> state.is(BlockTags.LEAVES));
+						perchUntil = ticks + 20 * (40 + random.nextInt(80));
+					} else {
+						perch = null;
+					}
 				}
-				if (perch != null) {
+				if (perch != null && singer >= 0) {
 					call(minecraft, "bird_" + singer, singer == GULL ? perch.above(4) : perch.above(),
-							BIRD_VOLUME[singer]);
+							birdVolume(singer));
 				}
 			}
 			// A loon wails across a lake at dusk and through the night.
 			if (FoleyClient.wants(FoleyConfig::birds) && (night || time >= 12000) && !raining && celsius > 0
 					&& celsius < 16 && !biome.is(BiomeTags.IS_OCEAN) && random.nextFloat() < 0.012f) {
 				BlockPos lake = find(level, eye, 48, state -> state.getFluidState().isSourceOfType(Fluids.WATER));
-				if (lake != null) call(minecraft, "bird_" + LOON, lake.above(), BIRD_VOLUME[LOON]);
+				if (lake != null) call(minecraft, "bird_" + LOON, lake.above(), birdVolume(LOON));
 			}
 			// Bees round flowers on a warm day; flies over a swamp.
 			boolean swampy = biome.is(Biomes.SWAMP) || biome.is(Biomes.MANGROVE_SWAMP);
@@ -328,31 +342,6 @@ public final class Life {
 		if (time >= 13500 && time < 22000) return 1;
 		if (time >= 22000 && time < 23500) return (23500 - time) / 1500f;
 		return 0;
-	}
-
-	/**
-	 * A bird that lives here, more or less likely by what the biome is like.
-	 */
-	private int pickBird(Holder<Biome> biome, float celsius) {
-		int[] weights; // crow, dove, robin, cardinal, chickadee, gull, loon (not by day), jay, warbler
-		if (biome.is(BiomeTags.IS_OCEAN) || biome.is(BiomeTags.IS_BEACH)) {
-			weights = new int[] {25, 15, 0, 0, 0, 60, 0, 0, 0};
-		} else if (biome.is(BiomeTags.IS_TAIGA) || celsius < 6) {
-			weights = new int[] {15, 0, 20, 0, 45, 0, 0, 10, 10};
-		} else if (biome.is(BiomeTags.IS_FOREST)) {
-			// Mostly songbirds: a crow or a jay now and then.
-			weights = new int[] {4, 12, 28, 18, 18, 0, 0, 5, 15};
-		} else if (biome.is(BiomeTags.IS_JUNGLE) || biome.is(Biomes.SWAMP) || biome.is(Biomes.MANGROVE_SWAMP)) {
-			weights = new int[] {15, 40, 0, 30, 0, 0, 0, 0, 15};
-		} else {
-			weights = new int[] {10, 32, 25, 13, 5, 0, 0, 3, 12};
-		}
-		int roll = random.nextInt(100);
-		for (int i = 0; i < weights.length; i++) {
-			roll -= weights[i];
-			if (roll < 0) return i;
-		}
-		return CROW;
 	}
 
 	private void call(Minecraft minecraft, String name, BlockPos at, float volume) {

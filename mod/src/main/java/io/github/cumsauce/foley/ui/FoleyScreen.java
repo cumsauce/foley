@@ -44,6 +44,8 @@ public final class FoleyScreen extends OptionsSubScreen {
 	private final OptionInstance<Boolean> redstone;
 	private final OptionInstance<Boolean> boats;
 	private final OptionInstance<Boolean> sculk;
+	private final OptionInstance<Boolean> caveAtmosphere;
+	private final OptionInstance<Boolean> rarerSpecies;
 	private final List<OptionInstance<Boolean>> voices = new java.util.ArrayList<>();
 
 	/** The settings over {@code parent}, or an alert if Foley's synthesis isn't running. */
@@ -81,6 +83,8 @@ public final class FoleyScreen extends OptionsSubScreen {
 		redstone = added("foley.settings.redstone", config.redstone());
 		boats = added("foley.settings.boats", config.boats());
 		sculk = added("foley.settings.sculk", config.sculk());
+		caveAtmosphere = added("foley.settings.caveAtmosphere", config.caveAtmosphere());
+		rarerSpecies = added("foley.settings.rarerSpecies", config.rarerSpecies());
 		for (int i = 0; i < io.github.cumsauce.foley.audio.Voices.GROUPS.size(); i++) {
 			String mob = io.github.cumsauce.foley.audio.Voices.GROUPS.get(i);
 			voices.add(new OptionInstance<>("foley.settings.voice." + mob,
@@ -119,13 +123,14 @@ public final class FoleyScreen extends OptionsSubScreen {
 		list.addHeader(Component.translatable("foley.settings.section.elements"));
 		list.addSmall(water, drips);
 		list.addSmall(fire, lava);
+		list.addSmall(caveAtmosphere, null);
 
 		list.addHeader(Component.translatable("foley.settings.section.contact"));
 		list.addSmall(strikes, footsteps);
 
 		list.addHeader(Component.translatable("foley.settings.section.life"));
 		list.addSmall(birds, crickets);
-		list.addSmall(frogs, null);
+		list.addSmall(frogs, rarerSpecies);
 
 		list.addHeader(Component.translatable("foley.settings.section.structures"));
 		list.addSmall(minecarts, doors);
@@ -194,7 +199,8 @@ public final class FoleyScreen extends OptionsSubScreen {
 		}
 		FoleyConfig next = new FoleyConfig(volume.get(), rain.get(), wind.get(), thunder.get(), water.get(), fire.get(),
 				lava.get(), drips.get(), strikes.get(), footsteps.get(), birds.get(), crickets.get(), frogs.get(),
-				minecarts.get(), doors.get(), chests.get(), redstone.get(), boats.get(), sculk.get(), false, voiced);
+				minecarts.get(), doors.get(), chests.get(), redstone.get(), boats.get(), sculk.get(),
+				caveAtmosphere.get(), rarerSpecies.get(), voiced);
 		if (!next.equals(initial)) FoleyClient.apply(next);
 		super.removed();
 	}

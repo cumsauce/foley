@@ -19,7 +19,8 @@ pub use foley_dsp::{
     absorption_db_per_m, helmholtz, minnaert_hz, plunge_radius, to_pcm,
 };
 
-pub use crate::birds::{Bird, bird_call};
+pub use crate::birds::catalog::birdsong2;
+pub use crate::birds::{Bird, Birds, bird_call};
 pub use crate::life::{birdsong, crickets, dolbear_chirps_per_minute, frog};
 pub use crate::modal::{
     Contact, Material, MaterialProps, contact, contact_with, fracture, fracture_with, hertz_time,
