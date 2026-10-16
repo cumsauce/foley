@@ -14,12 +14,12 @@ mod guard;
 mod no_alloc;
 
 use foley_synth::{
-    Call, Contact, CreatureCall, CreatureSpec, Fire, FireScene, Lava, LavaScene, Material,
-    MaterialProps, Mob, Plant, Rain, RainScene, SAMPLE_RATE, Surface, Thunder, ThunderScene, Water,
-    WaterScene, Wind, WindScene, birdsong, brush, bubble, buzz, cicadas, contact, contact_with,
-    creature_voice, crickets, drip_into_water, drip_on_stone, flush, fracture, fracture_with, frog,
-    gust, howl, ice_singing, lava_drip, noise_burst, owl, sculk_ring, settling_stone, surf, to_pcm,
-    tone, voice, woodpecker,
+    Biome, BiomeScene, Call, Contact, CreatureCall, CreatureSpec, Fire, FireScene, Lava, LavaScene,
+    Material, MaterialProps, Mob, Plant, Rain, RainScene, SAMPLE_RATE, Surface, Thunder,
+    ThunderScene, Water, WaterScene, Wind, WindScene, birdsong, brush, bubble, buzz, cicadas,
+    contact, contact_with, creature_voice, crickets, drip_into_water, drip_on_stone, flush,
+    fracture, fracture_with, frog, gust, howl, ice_singing, lava_drip, noise_burst, owl,
+    sculk_ring, settling_stone, surf, to_pcm, tone, voice, woodpecker,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -50,7 +50,9 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 ///     F3).
 /// 20: active structures (M21): `FOLEY_SHOT_SCULK_RING`, a triggered low-Q
 ///     tone for sculk sensors.
-pub const FOLEY_ABI_VERSION: u32 = 20;
+/// 21: biome-specific beds (M19): `FOLEY_BED_BIOME`, a per-biome streaming
+///     mixer (desert, mushroom, lush, dripstone, deep dark, snow, mangrove).
+pub const FOLEY_ABI_VERSION: u32 = 21;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -75,6 +77,12 @@ pub const FOLEY_BED_WATER: i32 = 2;
 pub const FOLEY_BED_FIRE: i32 = 3;
 pub const FOLEY_BED_LAVA: i32 = 4;
 pub const FOLEY_BED_THUNDER: i32 = 5;
+/// Biome-specific bed. The bed takes 4 floats: `kind` (0 to 6 — desert,
+/// mushroom, lush, dripstone, deep dark, snow, mangrove), `intensity` (0 to 1),
+/// `sub` (a kind-specific count: vortex rings per 30 s for desert, scuttle
+/// count for deep_dark, mangrove leaf count for mangrove, leaf exposure for
+/// snow), and `gain` (0 to 1) — a per-bed master gain.
+pub const FOLEY_BED_BIOME: i32 = 6;
 
 /// One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
 /// water drips (0.1 to 10), and unused for lava; the air's temperature in °C
@@ -179,6 +187,7 @@ enum Synth {
     Fire(Fire),
     Lava(Lava),
     Thunder(Thunder),
+    Biome(Biome),
 }
 
 /// Opaque handle to a bed: a sound made as it plays, endlessly.
@@ -230,6 +239,7 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
             FOLEY_BED_FIRE => Synth::Fire(Fire::new(seed)),
             FOLEY_BED_LAVA => Synth::Lava(Lava::new(seed)),
             FOLEY_BED_THUNDER => Synth::Thunder(Thunder::new()),
+            FOLEY_BED_BIOME => Synth::Biome(Biome::new(seed)),
             _ => return Err(FfiError::invalid("unknown bed kind")),
         };
         *out = Box::into_raw(Box::new(FoleyBed {
@@ -287,6 +297,7 @@ fn apply(synth: &mut Synth, p: &[f32]) -> Result<(), FfiError> {
         Synth::Rain(_) => 3 + FOLEY_SURFACES,
         Synth::Wind(_) | Synth::Water(_) | Synth::Thunder(_) => 3,
         Synth::Fire(_) | Synth::Lava(_) => 2,
+        Synth::Biome(_) => 4,
     };
     if p.len() != wanted {
         return Err(FfiError::invalid("wrong number of params for this bed"));
@@ -361,6 +372,27 @@ fn apply(synth: &mut Synth, p: &[f32]) -> Result<(), FfiError> {
                 exposure: gain(p[2])?,
             });
         }
+        Synth::Biome(biome) => {
+            let kind_idx = p[0].round() as i64;
+            if !(0..=6).contains(&kind_idx) {
+                return Err(FfiError::invalid("biome kind out of range"));
+            }
+            let kind = foley_synth::BiomeKind::from_index(kind_idx as u32)
+                .ok_or_else(|| FfiError::invalid("unknown biome kind"))?;
+            let intensity = gain(p[1])?;
+            let sub = if !(0.0..=200.0).contains(&p[2]) {
+                return Err(FfiError::invalid("sub out of range"));
+            } else {
+                p[2]
+            };
+            let gain = gain(p[3])?;
+            biome.set_scene(BiomeScene {
+                kind,
+                intensity,
+                sub,
+                gain,
+            });
+        }
     }
     Ok(())
 }
@@ -408,6 +440,7 @@ pub unsafe extern "C" fn foley_bed_render(bed: *mut FoleyBed, out: *mut i16, fra
                 Synth::Fire(synth) => synth.render(block),
                 Synth::Lava(synth) => synth.render(block),
                 Synth::Thunder(synth) => synth.render(block),
+                Synth::Biome(synth) => synth.render(block),
             }
             // The level guard: the envelope rises at once and falls over
             // about half a second; the gain follows it down quickly and back
@@ -873,7 +906,7 @@ mod tests {
     #[test]
     fn the_audio_thread_never_allocates() {
         let rain = |rate: f32| [rate, 0.4, 0.2, 0.1, 0.1, 0.1, 0.05, 0.05, 2.0, 4.0];
-        let beds: [(i32, Vec<Vec<f32>>); 6] = [
+        let beds: [(i32, Vec<Vec<f32>>); 7] = [
             (
                 FOLEY_BED_RAIN,
                 vec![rain(5.0).to_vec(), rain(150.0).to_vec(), rain(0.0).to_vec()],
@@ -905,6 +938,14 @@ mod tests {
             (
                 FOLEY_BED_THUNDER,
                 vec![vec![20.0, 70.0, 1.0], vec![5.0, 30.0, 0.2]],
+            ),
+            (
+                FOLEY_BED_BIOME,
+                vec![
+                    vec![0.0, 1.0, 0.0, 1.0],
+                    vec![3.0, 0.4, 50.0, 0.6],
+                    vec![4.0, 0.8, 0.0, 0.0],
+                ],
             ),
         ];
         // The counter itself works.

@@ -34,8 +34,10 @@
  *     F3).
  * 20: active structures (M21): `FOLEY_SHOT_SCULK_RING`, a triggered low-Q
  *     tone for sculk sensors.
+ * 21: biome-specific beds (M19): `FOLEY_BED_BIOME`, a per-biome streaming
+ *     mixer (desert, mushroom, lush, dripstone, deep dark, snow, mangrove).
  */
-#define FOLEY_ABI_VERSION 20
+#define FOLEY_ABI_VERSION 21
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -69,6 +71,15 @@
 #define FOLEY_BED_LAVA 4
 
 #define FOLEY_BED_THUNDER 5
+
+/**
+ * Biome-specific bed. The bed takes 4 floats: `kind` (0 to 6 — desert,
+ * mushroom, lush, dripstone, deep dark, snow, mangrove), `intensity` (0 to 1),
+ * `sub` (a kind-specific count: vortex rings per 30 s for desert, scuttle
+ * count for deep_dark, mangrove leaf count for mangrove, leaf exposure for
+ * snow), and `gain` (0 to 1) — a per-bed master gain.
+ */
+#define FOLEY_BED_BIOME 6
 
 /**
  * One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
