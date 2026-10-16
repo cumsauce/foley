@@ -11,7 +11,11 @@ use std::f32::consts::TAU;
 use crate::dsp::{add_at, normalize, smooth};
 use crate::{BandPass, LowPass, Rng, SAMPLE_RATE};
 
-/// The birds Foley knows.
+pub mod engine2;
+pub use engine2::*;
+
+/// The birds Foley knows. The original 9 species, kept for ABI compatibility;
+/// engine 2's [`crate::Birds`] enumeration covers the M13 catalogue.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Bird {
     /// American crow: a few loud, harsh caws.
@@ -97,7 +101,7 @@ fn contour_at(contour: &[(f32, f32)], t: f32) -> f32 {
 /// A whistled note, `seconds` long, gliding along `contour`: a sine with a
 /// touch of its second harmonic (what the trachea lets through), a little
 /// wavering, swelling in over `attack` seconds and out over `release`.
-fn whistle(
+pub(crate) fn whistle_internal(
     contour: &[(f32, f32)],
     seconds: f32,
     harmonic: f32,
@@ -260,7 +264,7 @@ fn loon(rng: &mut Rng) -> Vec<f32> {
     for contour in &notes[..1 + (rng.unit() * 3.0) as usize] {
         let contour: Vec<(f32, f32)> = contour.iter().map(|&(t, k)| (t, k * f)).collect();
         let seconds = 1.6 + 0.6 * rng.unit();
-        let note = whistle(&contour, seconds, 0.3, (0.15, 0.4), rng);
+        let note = whistle_internal(&contour, seconds, 0.3, (0.15, 0.4), rng);
         add_at(&mut out, (at * rate) as usize, &note, 1.0);
         at += seconds + 0.3;
     }
@@ -283,7 +287,7 @@ fn warbler(rng: &mut Rng) -> Vec<f32> {
             vec![(0.0, 6200.0 * k), (0.5, 4300.0 * k), (1.0, 5200.0 * k)]
         };
         let seconds = if last { 0.16 } else { 0.08 };
-        let note = whistle(&contour, seconds, 0.05, (0.008, 0.02), rng);
+        let note = whistle_internal(&contour, seconds, 0.05, (0.008, 0.02), rng);
         add_at(&mut out, (at * rate) as usize, &note, 1.0);
         at += seconds + 0.12 * (1.0 - 0.07 * i as f32);
     }
@@ -320,7 +324,7 @@ fn dove(rng: &mut Rng) -> Vec<f32> {
     let mut breath = BandPass::new(f, 4.0);
     for (start, length, contour) in notes {
         let contour: Vec<(f32, f32)> = contour.iter().map(|&(t, k)| (t, k * f)).collect();
-        let mut note = whistle(
+        let mut note = whistle_internal(
             &contour,
             length * (1.0 + 0.05 * rng.signed()),
             0.1,
@@ -366,7 +370,7 @@ fn robin(rng: &mut Rng) -> Vec<f32> {
         last = kind;
         for contour in &kinds[kind] {
             let seconds = 0.09 + 0.05 * rng.unit();
-            let note = whistle(contour, seconds, 0.2, (0.01, 0.025), rng);
+            let note = whistle_internal(contour, seconds, 0.2, (0.01, 0.025), rng);
             add_at(
                 &mut out,
                 (at * rate) as usize,
@@ -395,14 +399,14 @@ fn cardinal(rng: &mut Rng) -> Vec<f32> {
     let repeats = 3 + (rng.unit() * 4.0) as usize;
     let seconds = 0.22 + 0.08 * rng.unit();
     for _ in 0..repeats {
-        let note = whistle(&cheer, seconds, 0.05, (0.015, 0.04), rng);
+        let note = whistle_internal(&cheer, seconds, 0.05, (0.015, 0.04), rng);
         add_at(&mut out, (at * rate) as usize, &note, 1.0);
         at += seconds + 0.08 + 0.05 * rng.unit();
     }
     if rng.unit() < 0.6 {
         let birdy = [(0.0, 2200.0 * k), (0.6, 3900.0 * k), (1.0, 3300.0 * k)];
         for _ in 0..5 + (rng.unit() * 5.0) as usize {
-            let note = whistle(&birdy, 0.07, 0.05, (0.008, 0.015), rng);
+            let note = whistle_internal(&birdy, 0.07, 0.05, (0.008, 0.015), rng);
             add_at(&mut out, (at * rate) as usize, &note, 0.85);
             at += 0.11;
         }
@@ -419,14 +423,14 @@ fn chickadee(rng: &mut Rng) -> Vec<f32> {
     let k = 0.95 + 0.1 * rng.unit();
     let mut out = Vec::new();
     if rng.unit() < 0.6 {
-        let fee = whistle(
+        let fee = whistle_internal(
             &[(0.0, 4000.0 * k), (1.0, 3900.0 * k)],
             0.35,
             0.02,
             (0.03, 0.05),
             rng,
         );
-        let bee = whistle(
+        let bee = whistle_internal(
             &[
                 (0.0, 3500.0 * k),
                 (0.15, 3350.0 * k),
@@ -442,14 +446,14 @@ fn chickadee(rng: &mut Rng) -> Vec<f32> {
         add_at(&mut out, (0.47 * rate) as usize, &bee, 0.8);
         return normalize(out, 0.3);
     }
-    let chick = whistle(
+    let chick = whistle_internal(
         &[(0.0, 7000.0 * k), (1.0, 4500.0 * k)],
         0.04,
         0.0,
         (0.005, 0.01),
         rng,
     );
-    let a = whistle(
+    let a = whistle_internal(
         &[(0.0, 4200.0 * k), (1.0, 3200.0 * k)],
         0.035,
         0.0,
