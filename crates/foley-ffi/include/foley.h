@@ -32,8 +32,10 @@
  *     (the integration API, F2).
  * 17: other mods' creatures, `foley_render_creature` (the integration API,
  *     F3).
+ * 20: active structures (M21): `FOLEY_SHOT_SCULK_RING`, a triggered low-Q
+ *     tone for sculk sensors.
  */
-#define FOLEY_ABI_VERSION 17
+#define FOLEY_ABI_VERSION 20
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -113,6 +115,12 @@
  * An insect buzzing: `size` 0 a bee, 1 a fly.
  */
 #define FOLEY_SHOT_BUZZ 15
+
+/**
+ * A sculk sensor's triggered tone: `size` is the bowl's Q (0.5 to 20);
+ * higher Q rings longer.
+ */
+#define FOLEY_SHOT_SCULK_RING 16
 
 /**
  * Primitives for `foley_render_primitive`, and the floats each takes, in
