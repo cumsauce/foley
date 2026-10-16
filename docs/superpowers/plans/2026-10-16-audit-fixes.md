@@ -422,6 +422,129 @@ deliverable: docs/PLAN.md
 
 ---
 
+## Task 4: Thunder — the audio thread must not lock on the worker channels (Bug, found by Task 1c)
+
+File: `crates/foley-synth/src/thunder.rs` (the worker thread spawned in
+`Thunder::new`, lines ~248-290).
+
+**Root cause** (verified against this toolchain's std source, not guessed):
+`Thunder::render` runs on the audio thread and calls
+`self.jobs.try_send(Job::Free(sound))` when a strike finishes
+(`thunder.rs:366`). `jobs` is a `std::sync::mpsc::sync_channel`. In std's
+mpsc (`library/std/src/sync/mpmc/`), sending calls
+`self.receivers.notify()`, and `SyncWaker::notify` is:
+
+```rust
+pub(crate) fn notify(&self) {
+    if !self.is_empty.load(Ordering::SeqCst) {      // fast path
+        let mut inner = self.inner.lock().unwrap(); // ← pthread_mutex_lock
+        …
+    }
+}
+```
+
+`is_empty` is false exactly while a peer is *registered*, i.e. **blocked** in
+`recv`. The worker blocks in `for job in inbox` (a blocking `recv`), so the
+audio thread's `try_send` takes a real mutex — which Task 1c's newly armed
+RealtimeSanitizer reports as `try_send → SyncWaker::notify → pthread_mutex_lock`.
+The same hazard exists in the other direction: the audio thread's
+`ready.try_recv()` calls `self.senders.notify()`, which locks if the worker is
+blocked in `made.send(sound)` (channel full).
+
+**Change**: make the worker never block on either channel. Replace the
+blocking `for job in inbox { … }` loop in `Thunder::new` with a poll loop over
+`try_recv`/`try_send` plus a short sleep, holding a made-but-not-yet-accepted
+sound in an `Option<Vec<f32>>` so nothing is ever lost or dropped on a full
+`ready`:
+
+```rust
+// The audio thread only ever uses try_send/try_recv on these channels, and
+// std's mpsc locks a waker only while a peer is BLOCKED on the other end
+// (`SyncWaker::notify` fast-paths on an atomic when nothing is registered).
+// So this thread must never block on either channel: a blocking recv() or
+// send() here would register this thread and make the audio thread take a
+// mutex — a real lock on the audio thread, which RealtimeSanitizer catches.
+// Poll instead. (A recv_timeout/recv with a deadline still registers.)
+let mut pending: Option<Vec<f32>> = None;
+loop {
+    let mut progress = false;
+    if let Some(sound) = pending.take() {
+        match made.try_send(sound) {
+            Ok(()) => progress = true,
+            Err(TrySendError::Full(sound)) => pending = Some(sound),
+            Err(TrySendError::Disconnected(_)) => return,
+        }
+    }
+    if pending.is_none() {
+        match inbox.try_recv() {
+            Ok(Job::Free(sound)) => {
+                drop(sound);
+                progress = true;
+            }
+            Ok(Job::Strike { base, seed, celsius, humidity }) => {
+                // A strike that fails to make comes back silent, so it's
+                // still counted off and thunder carries on.
+                pending = Some(
+                    std::panic::catch_unwind(|| strike(base, seed, celsius, humidity))
+                        .unwrap_or_default(),
+                );
+                progress = true;
+            }
+            Err(TryRecvError::Empty) => {}
+            Err(TryRecvError::Disconnected) => return,
+        }
+    }
+    if !progress {
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+}
+```
+
+Imports: add `TryRecvError, TrySendError` to the `std::sync::mpsc` use at
+`thunder.rs:2`. Do **not** use `recv()`/`send()`/`recv_timeout()` anywhere in
+the worker — each registers the thread as blocked and reintroduces the lock.
+
+Keep everything else identical: `making` accounting, `MAX_STRIKES`
+back-pressure, and `render()`'s own `try_recv`/`try_send` calls (those are
+already non-blocking). The only behaviour change is that thunder may now start
+up to ~1 ms later, since the worker wakes on its poll tick rather than on a
+notification.
+
+**Do not** widen the RealtimeSanitizer region in
+`the_audio_thread_never_allocates` to cover `foley_bed_set_scene`/`strike` in
+this task — `BedSound.catchUp` calls strikes from the audio thread in at least
+one path, so widening may surface further findings; that is a separate change.
+
+**Dependencies**: requires Task 1c (the RTSan arming) to be in place, since
+that is what detects this. Nothing depends on it, but CI stays red until it
+lands.
+
+### Task 4 verification
+
+```
+export PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH"
+export CARGO_BUILD_JOBS=1
+cargo fmt --all
+cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo test -p foley-synth
+cargo test --workspace --locked
+RTSAN_ENABLE=1 cargo test --locked -p foley-ffi audio_thread
+```
+
+Expected: the RTSan run **passes** (this is the whole point — it fails on
+`7a34c00` with `pthread_mutex_lock` under `SyncWaker::notify`), all tests pass,
+clippy clean, and `the_audio_thread_never_allocates`'s allocation count stays 0
+(the worker's `drop(sound)` still happens on the worker thread, never the audio
+thread). The `RTSAN_ENABLE=1 … --ignored realtime_sanitizer_catches_an_allocation`
+canary must still fail by design.
+
+```
+[acceptance]
+criteria: RTSAN_ENABLE=1 cargo test --locked -p foley-ffi audio_thread passes (no lock reported), cargo test --workspace --locked passes, cargo clippy --workspace --all-targets --locked -- -D warnings is clean, cargo fmt --all --check is clean, and the implementer report quotes the raw output of each
+deliverable: crates/foley-synth/src/thunder.rs
+[/acceptance]
+```
+
 ## Non-goals (deliberately not in this plan)
 
 - The client gametest (`./gradlew runClientGameTest`) remains gated to
