@@ -110,7 +110,7 @@
  * A shore bed. The bed takes 4 floats: `height` (wave height in m, 0.2 to
  * 3.0; 0 renders silence), `shore` (0 to 1, how close the listener is to the
  * water's edge), `storm` (0 to 1, rain and thunder), and `exposure` (0 to 1,
- * the wind the wind bed reports).
+ * the wind speed the wind bed reports).
  */
 #define FOLEY_BED_SURF 9
 

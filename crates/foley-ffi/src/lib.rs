@@ -106,7 +106,7 @@ pub const FOLEY_BED_BIOME: i32 = 8;
 /// A shore bed. The bed takes 4 floats: `height` (wave height in m, 0.2 to
 /// 3.0; 0 renders silence), `shore` (0 to 1, how close the listener is to the
 /// water's edge), `storm` (0 to 1, rain and thunder), and `exposure` (0 to 1,
-/// the wind the wind bed reports).
+/// the wind speed the wind bed reports).
 pub const FOLEY_BED_SURF: i32 = 9;
 /// One-shot kinds. `size` is the drop's (or bubble's) radius in mm for the
 /// water drips (0.1 to 10), and unused for lava; the air's temperature in °C
