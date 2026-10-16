@@ -9,6 +9,7 @@ import io.github.cumsauce.foley.audio.AddonBeds;
 import io.github.cumsauce.foley.audio.AddonSounds;
 import io.github.cumsauce.foley.audio.CustomMaterials;
 import io.github.cumsauce.foley.audio.Surfaces;
+import io.github.cumsauce.foley.config.FoleyConfig;
 import io.github.cumsauce.foley.natives.NativeBridge;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -23,6 +24,7 @@ import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.level.levelgen.Heightmap;
 
 /**
  * Starts the real client and checks: the native synthesis loaded; when it rains, Foley's rain (a synthesized stream)
@@ -407,7 +409,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					false, false, false, false, false, false, false, false, false, false, false, 0L)));
 			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CHEST_OPEN,
 					SoundSource.BLOCKS, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX() + 4,
-					mc.player.getY(), mc.player.getZ())));			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
+					mc.player.getY(), mc.player.getZ())));
+			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
 			if (FoleyClient.replaced() != beforeMuted) {
 				throw new AssertionError("M21 played when its toggles were off (replaced delta="
 						+ (FoleyClient.replaced() - beforeMuted) + ")");
@@ -420,13 +423,13 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			// call in the window would have to be a wave (lake ice, the one unblocked cousin, needs
 			// freezing air and the superflat plains never have it).
 			context.runOnClient(mc -> FoleyClient.apply(
-					io.github.cumsauce.foley.config.FoleyConfig.NONE.withWater(true)));
+					FoleyConfig.NONE.withWater(true)));
 			// Three-wide water stripes with two of land between, 33 blocks round the player: every column
 			// the shore scan's 24 samples can pick is water with land two off, all inside its 32 radius.
 			int[] spot = context.computeOnClient(mc -> new int[] {
 					(int) Math.floor(mc.player.getX()), (int) Math.floor(mc.player.getZ())});
 			int ground = context.computeOnClient(mc -> mc.level.getHeight(
-					net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, spot[0], spot[1]));
+					Heightmap.Types.MOTION_BLOCKING, spot[0], spot[1]));
 			try {
 				context.waitFor(mc -> mc.player != null && Math.abs(mc.player.getY() - ground) < 1.0, 10 * 20);
 			} catch (RuntimeException | AssertionError e) {

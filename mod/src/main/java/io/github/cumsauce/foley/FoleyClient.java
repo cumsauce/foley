@@ -60,7 +60,8 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable MobBrushes mobBrushes;
 	private static @Nullable PeacefulBreathing peacefulBreathing;
 	private static @Nullable SurfController surf;
-	private static @Nullable AshDrift ashDrift;	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
+	private static @Nullable AshDrift ashDrift;
+	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
 	private static volatile boolean bypassed;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
 	private static final java.util.concurrent.atomic.AtomicInteger layered = new java.util.concurrent.atomic.AtomicInteger();
@@ -301,7 +302,8 @@ public final class FoleyClient implements ClientModInitializer {
 		surf = surfBed;
 		ClientTickEvents.END_CLIENT_TICK.register(surfBed::tick);
 		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
-		registerCommands(loaded);	}
+		registerCommands(loaded);
+	}
 
 	/** A generated drip at the player's feet, a different one each time. */
 	public static SimpleSoundInstance drip(double x, double y, double z) {
