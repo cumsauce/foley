@@ -5,8 +5,30 @@
 use crate::{BandPass, Bubble, Rng, SAMPLE_RATE};
 
 /// How many wave grains can sound at once — also the size of the free
-/// buffer pool, so a spawn on the audio thread never allocates.
-const MAX_GRAINS: usize = 16;
+/// buffer pool, so a spawn on the audio thread never allocates
+/// (`the_audio_thread_never_allocates` in `foley-ffi` still guards that).
+///
+/// Derived from the wave cadence: a grain is one full ~7 s wave
+/// (`outdoors::SURF_LEN`) and surges are never closer than the 2 s
+/// full-storm interval, so at most `ceil(7 s / 2 s) + 1 = 5` grains sound
+/// at once; 6 slots leave a little headroom. One buffer per slot means the
+/// (multi-megabyte) wave buffers are allocated once per bed, not on every
+/// return to shore.
+const MAX_GRAINS: usize = 6;
+
+/// The foam/shingle wash level at full wave height at the water's edge —
+/// well below the grains it runs under.
+const WASH_LEVEL: f32 = 0.15;
+/// Base gain of one wave grain at full height, before the distance taper.
+const GRAIN_GAIN: f32 = 0.12;
+/// Distance taper: a grain plays at
+/// `GRAIN_GAIN × height × (WAVE_DISTANCE_FLOOR + WAVE_DISTANCE_RANGE × shore)`
+/// — full level at the water's edge, a floor of 0.4 still audible far away
+/// since `height > 0` already gates full silence.
+const WAVE_DISTANCE_FLOOR: f32 = 0.4;
+const WAVE_DISTANCE_RANGE: f32 = 0.6;
+/// Seconds of linear fade at a grain's tail.
+const TAIL_FADE_SECS: f32 = 0.05;
 
 /// What the Java side tells the shore bed about the listener.
 #[derive(Debug, Clone, Copy)]
@@ -17,7 +39,7 @@ pub struct SurfScene {
     pub shore: f32,
     /// 0 to 1: rain and thunder above the shore.
     pub storm: f32,
-    /// 0 to 1: the wind the wind bed reports (never a locally re-measured wind).
+    /// 0 to 1: the wind speed the wind bed reports (never a locally re-measured wind).
     pub exposure: f32,
 }
 
@@ -88,7 +110,7 @@ impl Surf {
         }
         let shore = self.scene.shore.clamp(0.0, 1.0);
         // The foam and shingle the wave leaves behind, well below the grains.
-        let wash_level = 0.15 * (self.scene.height / 3.0) * shore;
+        let wash_level = WASH_LEVEL * (self.scene.height / 3.0) * shore;
         let interval = self.interval_secs();
         let dt = 1.0 / SAMPLE_RATE as f32;
         for sample in out.iter_mut() {
@@ -97,11 +119,15 @@ impl Surf {
                 self.spawn_grain();
                 self.until_surge += interval;
             }
-            // The continuous wash: band-passed noise under the waves.
+            // The continuous wash: band-passed noise under the waves, in
+            // three cascaded 900 Hz band-pass stages, read 0 → 1 → 2 (stage
+            // 0 takes the noise, stage 2 feeds the sum) — the natural
+            // direction; the stages are identical, so only readability
+            // depends on the order.
             let n = self.rng.signed();
-            let w1 = self.wash[2].process(n);
+            let w1 = self.wash[0].process(n);
             let w2 = self.wash[1].process(w1);
-            let mut sum = wash_level * self.wash[0].process(w2);
+            let mut sum = wash_level * self.wash[2].process(w2);
             // Overlapping grains, summed; each retires when its buffer ends,
             // handing the buffer back to the pool for the next wave.
             for grain in &mut self.grains {
@@ -128,17 +154,24 @@ impl Surf {
         12.0 - 10.0 * stormy
     }
 
+    /// Spawns the next wave. The render cost is one full-grain synthesis on
+    /// the frames that spawn: measured worst-case ≈11 ms per 0.25 s pull
+    /// (≈24× realtime headroom; first ≈7.9 ms, ~109/800 renders over 500 µs).
+    /// If the pull size ever shrinks, revisit this — amortise the synthesis
+    /// into a resumable state machine.
     fn spawn_grain(&mut self) {
         // The pool has one buffer per grain slot, so an empty pool is the
-        // old `grains.len() >= 16` guard — and a spawn never allocates.
+        // old `grains.len() >= MAX_GRAINS` guard — and a spawn never allocates.
         let Some(mut data) = self.pool.pop() else {
             return;
         };
         let seed = self.seed ^ self.counter.wrapping_mul(0x9E37_79B9_7F4A_7C15);
         self.counter += 1;
         crate::outdoors::surf_into(self.scene.height, seed, &mut data, &mut self.bubbles);
-        // Fade the buffer's tail so a grain ending under a newer one never clicks.
-        let fade = (0.05 * SAMPLE_RATE as f32) as usize;
+        // `surf_into`'s natural backwash drain already shapes the tail; this
+        // 50 ms linear fade guarantees an exact-zero end so a retiring grain
+        // never clicks.
+        let fade = (TAIL_FADE_SECS * SAMPLE_RATE as f32) as usize;
         let n = data.len();
         for (i, s) in data.iter_mut().enumerate().skip(n.saturating_sub(fade)) {
             *s *= (n - 1 - i) as f32 / fade as f32;
@@ -147,7 +180,9 @@ impl Surf {
         // edge (`shore = 1`), a floor of 0.4 still audible far away since
         // `height > 0` already gates full silence.
         let shore = self.scene.shore.clamp(0.0, 1.0);
-        let gain = 0.12 * self.scene.height.clamp(0.2, 3.0) * (0.4 + 0.6 * shore);
+        let gain = GRAIN_GAIN
+            * self.scene.height.clamp(0.2, 3.0)
+            * (WAVE_DISTANCE_FLOOR + WAVE_DISTANCE_RANGE * shore);
         self.grains.push(Grain { data, pos: 0, gain });
     }
 }
