@@ -66,6 +66,12 @@ public final class ActiveStructures {
 		return played;
 	}
 
+	/** Static accessor for the active-structures counter. For the gametest. */
+	public static int playedTotal(Minecraft minecraft) {
+		var active = FoleyClient.activeStructures();
+		return active == null ? 0 : active.played();
+	}
+
 	/** The boat lapping manager. */
 	public BoatBed boats() {
 		return boats;

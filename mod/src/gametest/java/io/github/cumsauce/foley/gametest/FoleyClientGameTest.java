@@ -352,6 +352,36 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			}
 			context.runOnClient(mc -> FoleyClient.apply(settings));
 
+			// Active structures (M21): a door, a chest, and a sculk sensor each fire Foley's event.
+			int beforeStructures = FoleyClient.replaced();
+			singleplayer.getServer().runCommand("setblock ~3 ~ ~ oak_door[facing=north,hinge=left,half=lower]");
+			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.WOODEN_DOOR_OPEN,
+					SoundSource.BLOCKS, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX() + 3,
+					mc.player.getY(), mc.player.getZ())));
+			singleplayer.getServer().runCommand("setblock ~4 ~ ~ chest");
+			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CHEST_OPEN,
+					SoundSource.BLOCKS, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX() + 4,
+					mc.player.getY(), mc.player.getZ())));
+			for (int i = 0; i < 5; i++) singleplayer.getServer().waitForTick();
+			if (FoleyClient.replaced() < beforeStructures + 2) {
+				throw new AssertionError("M21 door/chest did not fire (replaced delta="
+						+ (FoleyClient.replaced() - beforeStructures) + ")");
+			}
+			// All toggles off: M21 stays silent.
+			int beforeMuted = FoleyClient.replaced();
+			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
+					settings.volume(), false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, 0L)));
+			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CHEST_OPEN,
+					SoundSource.BLOCKS, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX() + 4,
+					mc.player.getY(), mc.player.getZ())));
+			for (int i = 0; i < 5; i++) singleplayer.getServer().waitForTick();
+			if (FoleyClient.replaced() != beforeMuted) {
+				throw new AssertionError("M21 played when its toggles were off (replaced delta="
+						+ (FoleyClient.replaced() - beforeMuted) + ")");
+			}
+			context.runOnClient(mc -> FoleyClient.apply(settings));
+
 			// The settings, where players look first: Options → Music & Sounds → Foley.
 			context.setScreen(() -> new SoundOptionsScreen(null, Minecraft.getInstance().options));
 			// The button is inside the screen's options list, where clickScreenButton doesn't look.
