@@ -383,6 +383,30 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			}
 			context.runOnClient(mc -> FoleyClient.apply(settings));
 
+			// Aeolian tones (M18): with wind blowing past iron bars and a bell, Foley's whistle fires.
+			singleplayer.getServer().runCommand("setblock ~5 ~ ~ iron_bars");
+			singleplayer.getServer().runCommand("setblock ~6 ~ ~ bell");
+			singleplayer.getServer().runCommand("foley wind 12"); // force the wind
+			try {
+				context.waitFor(mc -> {
+					var ae = FoleyClient.aeolian();
+					return ae != null && ae.played() > 0;
+				}, 15 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("M18 aeolian never fired (played=" + FoleyClient.aeolian().played() + ")", e);
+			}
+			// All toggles off: aeolian stays silent.
+			int beforeMutedAeolian = FoleyClient.aeolian().played();
+			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
+					settings.volume(), false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, 0L)));
+			singleplayer.getServer().waitFor(server -> server.getTickCount() > 100, 200);
+			if (FoleyClient.aeolian().played() != beforeMutedAeolian) {
+				throw new AssertionError("M18 aeolian played when its toggle was off (delta="
+						+ (FoleyClient.aeolian().played() - beforeMutedAeolian) + ")");
+			}
+			context.runOnClient(mc -> FoleyClient.apply(settings));
+
 			// The settings, where players look first: Options → Music & Sounds → Foley.
 			context.setScreen(() -> new SoundOptionsScreen(null, Minecraft.getInstance().options));
 			// The button is inside the screen's options list, where clickScreenButton doesn't look.
