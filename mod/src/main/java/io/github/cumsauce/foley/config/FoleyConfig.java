@@ -30,35 +30,42 @@ import java.nio.file.Path;
  * @param birds      birdsong (added)
  * @param crickets   crickets (added)
  * @param frogs      frogs (added)
+ * @param minecarts  active structures (M21): minecart wheels and rush
+ * @param doors      active structures (M21): door creaks
+ * @param chests     active structures (M21): chest and shulker open
+ * @param redstone   active structures (M21): redstone component state-change clicks
+ * @param boats      active structures (M21): boat lapping at the hull
+ * @param sculk      active structures (M21): sculk sensor ring
  * @param voices     which mobs Foley voices (M6, M7), a bit each in {@code Voices.GROUPS}' order; none by default
  */
 public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunder, boolean water, boolean fire,
 		boolean lava, boolean drips, boolean strikes, boolean footsteps, boolean birds, boolean crickets,
-		boolean frogs, long voices) {
+		boolean frogs, boolean minecarts, boolean doors, boolean chests, boolean redstone, boolean boats,
+		boolean sculk, long voices) {
 	public static final FoleyConfig DEFAULT = new FoleyConfig(100, true, true, true, true, true, true, true, true, true,
-			true, true, true, 0);
+			true, true, true, true, true, true, true, true, true, 0);
 	/** Everything on, every mob's voice too. */
 	public static final FoleyConfig ALL = DEFAULT.withVoices(~0L);
 	/** Everything off. */
 	public static final FoleyConfig NONE = new FoleyConfig(100, false, false, false, false, false, false, false, false,
-			false, false, false, false, 0);
+			false, false, false, false, false, false, false, false, false, false, 0);
 
 	/** These settings with the mob voices in {@code mask} ({@code Voices.GROUPS} bits). */
 	public FoleyConfig withVoices(long mask) {
 		return new FoleyConfig(volume, rain, wind, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
-				frogs, mask);
+				frogs, minecarts, doors, chests, redstone, boats, sculk, mask);
 	}
 
 	/** These settings with the wind on or off. */
 	public FoleyConfig withWind(boolean on) {
 		return new FoleyConfig(volume, rain, on, thunder, water, fire, lava, drips, strikes, footsteps, birds, crickets,
-				frogs, voices);
+				frogs, minecarts, doors, chests, redstone, boats, sculk, voices);
 	}
 
 	/** These settings with flowing water on or off. */
 	public FoleyConfig withWater(boolean on) {
 		return new FoleyConfig(volume, rain, wind, thunder, on, fire, lava, drips, strikes, footsteps, birds, crickets,
-				frogs, voices);
+				frogs, minecarts, doors, chests, redstone, boats, sculk, voices);
 	}
 
 	/** Whether Foley voices the group at {@code index} in {@code Voices.GROUPS}. */
@@ -101,7 +108,9 @@ public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunde
 				flag(json, "thunder", d.thunder), flag(json, "water", d.water), flag(json, "fire", d.fire),
 				flag(json, "lava", d.lava), flag(json, "drips", d.drips), flag(json, "strikes", d.strikes),
 				flag(json, "footsteps", d.footsteps), flag(json, "birds", d.birds), flag(json, "crickets", d.crickets),
-				flag(json, "frogs", d.frogs), voices(json));
+				flag(json, "frogs", d.frogs), flag(json, "minecarts", d.minecarts), flag(json, "doors", d.doors),
+				flag(json, "chests", d.chests), flag(json, "redstone", d.redstone), flag(json, "boats", d.boats),
+				flag(json, "sculk", d.sculk), voices(json));
 	}
 
 	JsonObject toJson() {
@@ -119,6 +128,12 @@ public record FoleyConfig(int volume, boolean rain, boolean wind, boolean thunde
 		json.addProperty("birds", birds);
 		json.addProperty("crickets", crickets);
 		json.addProperty("frogs", frogs);
+		json.addProperty("minecarts", minecarts);
+		json.addProperty("doors", doors);
+		json.addProperty("chests", chests);
+		json.addProperty("redstone", redstone);
+		json.addProperty("boats", boats);
+		json.addProperty("sculk", sculk);
 		JsonObject mobs = new JsonObject();
 		for (int i = 0; i < MOBS.size(); i++) mobs.addProperty(MOBS.get(i), voice(i));
 		json.add("voices", mobs);

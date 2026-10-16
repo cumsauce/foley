@@ -271,7 +271,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 				FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(settings.volume(), settings.rain(),
 						settings.wind(), settings.thunder(), settings.water(), settings.fire(), settings.lava(),
 						settings.drips(), settings.strikes(), settings.footsteps(), settings.birds(),
-						settings.crickets(), settings.frogs(), 1 << 2));
+						settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(), settings.chests(),
+						settings.redstone(), settings.boats(), settings.sculk(), 1 << 2));
 				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.SHEEP_AMBIENT, SoundSource.NEUTRAL, 1f,
 						1.5f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),
 						mc.player.getZ()));
@@ -291,7 +292,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 				FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(settings.volume(), settings.rain(),
 						settings.wind(), settings.thunder(), settings.water(), settings.fire(), settings.lava(),
 						settings.drips(), settings.strikes(), settings.footsteps(), settings.birds(),
-						settings.crickets(), settings.frogs(),
+						settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(), settings.chests(),
+						settings.redstone(), settings.boats(), settings.sculk(),
 						1L << io.github.cumsauce.foley.audio.Voices.ADDON_GROUP));
 				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.DOLPHIN_AMBIENT, SoundSource.NEUTRAL,
 						1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),
@@ -306,7 +308,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), settings.rain(), settings.wind(), settings.thunder(), settings.water(),
 					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
-					settings.birds(), settings.crickets(), settings.frogs(), (1 << 5) | (1 << 10))));
+					settings.birds(), settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
+					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(), (1 << 5) | (1 << 10))));
 			singleplayer.getServer().runCommand("summon zombie ~3 ~ ~ {NoAI:1b,PersistenceRequired:1b}");
 			try {
 				context.waitFor(mc -> FoleyClient.breathing().breaths() > 0, 10 * 20);
@@ -330,7 +333,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), settings.rain(), settings.wind(), settings.thunder(), settings.water(),
 					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
-					settings.birds(), settings.crickets(), settings.frogs(), chosen)));
+					settings.birds(), settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
+					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(), chosen)));
 			int beforeAnimals = FoleyClient.replaced();
 			int beforeRedirect = io.github.cumsauce.foley.audio.Voices.redirected();
 			context.runOnClient(mc -> {

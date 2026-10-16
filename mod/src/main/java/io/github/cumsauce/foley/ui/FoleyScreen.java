@@ -38,6 +38,12 @@ public final class FoleyScreen extends OptionsSubScreen {
 	private final OptionInstance<Boolean> birds;
 	private final OptionInstance<Boolean> crickets;
 	private final OptionInstance<Boolean> frogs;
+	private final OptionInstance<Boolean> minecarts;
+	private final OptionInstance<Boolean> doors;
+	private final OptionInstance<Boolean> chests;
+	private final OptionInstance<Boolean> redstone;
+	private final OptionInstance<Boolean> boats;
+	private final OptionInstance<Boolean> sculk;
 	private final List<OptionInstance<Boolean>> voices = new java.util.ArrayList<>();
 
 	/** The settings over {@code parent}, or an alert if Foley's synthesis isn't running. */
@@ -69,6 +75,12 @@ public final class FoleyScreen extends OptionsSubScreen {
 		birds = added("foley.settings.birds", config.birds());
 		crickets = added("foley.settings.crickets", config.crickets());
 		frogs = added("foley.settings.frogs", config.frogs());
+		minecarts = added("foley.settings.minecarts", config.minecarts());
+		doors = added("foley.settings.doors", config.doors());
+		chests = added("foley.settings.chests", config.chests());
+		redstone = added("foley.settings.redstone", config.redstone());
+		boats = added("foley.settings.boats", config.boats());
+		sculk = added("foley.settings.sculk", config.sculk());
 		for (int i = 0; i < io.github.cumsauce.foley.audio.Voices.GROUPS.size(); i++) {
 			String mob = io.github.cumsauce.foley.audio.Voices.GROUPS.get(i);
 			voices.add(new OptionInstance<>("foley.settings.voice." + mob,
@@ -114,6 +126,11 @@ public final class FoleyScreen extends OptionsSubScreen {
 		list.addHeader(Component.translatable("foley.settings.section.life"));
 		list.addSmall(birds, crickets);
 		list.addSmall(frogs, null);
+
+		list.addHeader(Component.translatable("foley.settings.section.structures"));
+		list.addSmall(minecarts, doors);
+		list.addSmall(chests, redstone);
+		list.addSmall(boats, sculk);
 
 		list.addHeader(Component.translatable("foley.settings.section.voices"));
 		list.addBig(note(Component.translatable("foley.settings.voices.note")));
@@ -177,7 +194,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 		}
 		FoleyConfig next = new FoleyConfig(volume.get(), rain.get(), wind.get(), thunder.get(), water.get(), fire.get(),
 				lava.get(), drips.get(), strikes.get(), footsteps.get(), birds.get(), crickets.get(), frogs.get(),
-				voiced);
+				minecarts.get(), doors.get(), chests.get(), redstone.get(), boats.get(), sculk.get(), voiced);
 		if (!next.equals(initial)) FoleyClient.apply(next);
 		super.removed();
 	}
