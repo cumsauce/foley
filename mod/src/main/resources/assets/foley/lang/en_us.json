@@ -129,5 +129,21 @@
 	"foley.settings.voice.guardian": "Guardians",
 	"foley.settings.voice.silverfish": "Silverfish, Endermites",
 	"foley.settings.voices.all_foley": "Voice All Mobs with Foley",
-	"foley.settings.voices.all_game": "Give All Mobs the Game's Voices"
+	"foley.settings.voices.all_game": "Give All Mobs the Game's Voices",
+	"subtitles.foley.biome": "Biome ambience",
+	"foley.settings.section.biome": "Biome beds",
+	"foley.settings.biomeBeds": "Biome beds",
+	"foley.settings.biomeBeds.tooltip": "Each biome's own ambient bed (desert hiss, mushroom hum, lush/dripstone cave colors, deep dark drone, snow hush, mangrove drone).",
+	"foley.settings.desertBeds": "Desert",
+	"foley.settings.desertBeds.tooltip": "Desert and badlands: a granular sand hiss underfoot, a hollow wind whistle on the open plain, and a slow vortex whoosh when the wind's up.",
+	"foley.settings.mushroomHum": "Mushroom fields",
+	"foley.settings.mushroomHum.tooltip": "A low ambient hum unique to the mushroom biome, fading outside it.",
+	"foley.settings.caveColors": "Lush and dripstone caves",
+	"foley.settings.caveColors.tooltip": "Each cave biome gets its own bed: a high-frequency moss hiss in lush caves, more drips and less rumble in dripstone caves.",
+	"foley.settings.deepDark": "Deep dark",
+	"foley.settings.deepDark.tooltip": "A subsonic ~30 Hz drone and scuttling sculk sensors as one-shots.",
+	"foley.settings.snowyHush": "Snow and ice",
+	"foley.settings.snowyHush.tooltip": "High-frequency absorption: a slow LPF in cold biomes, the wind and other Foley beds muffled.",
+	"foley.settings.mangroveDrone": "Mangrove swamp",
+	"foley.settings.mangroveDrone.tooltip": "A humid insect drone, louder the more mangrove leaves are around."
 }

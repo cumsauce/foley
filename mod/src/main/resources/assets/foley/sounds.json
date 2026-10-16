@@ -5362,5 +5362,14 @@
 			"foley:generated/sculk_ring_2",
 			"foley:generated/sculk_ring_3"
 		]
+	},
+	"biome": {
+		"subtitle": "subtitles.foley.biome",
+		"sounds": [
+			{
+				"name": "fabric-sound-api-v1:empty",
+				"stream": true
+			}
+		]
 	}
 }

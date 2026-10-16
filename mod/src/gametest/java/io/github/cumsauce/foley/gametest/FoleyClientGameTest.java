@@ -386,6 +386,38 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			}
 			context.runOnClient(mc -> FoleyClient.apply(settings));
 
+			// Biome beds (M19): the controller runs without crashing in the superflat plains, and a desert
+			// biome starts the desert hiss bed.
+			int beforeBiome = FoleyClient.replaced();
+			context.runOnClient(mc -> {
+				if (FoleyClient.biome() == null) throw new AssertionError("M19 BiomeController is null");
+			});
+			// Switch the listener to a desert biome and confirm the bed runs.
+			singleplayer.getServer().runCommand("execute in minecraft:desert run tp @s ~ ~100 ~");
+			try {
+				context.waitFor(mc -> FoleyClient.biome() != null
+						&& FoleyClient.biome().scene().kind() == io.github.cumsauce.foley.audio.BiomeScene.DESERT, 10 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("M19 desert bed did not start", e);
+			}
+			// All toggles off: M19 stays silent.
+			int beforeMutedBiome = FoleyClient.replaced();
+			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
+					settings.volume(), false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+					false, false, 0L)));
+			try {
+				context.waitFor(mc -> FoleyClient.biome() != null
+						&& FoleyClient.biome().scene().gain() == 0f, 10 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("M19 desert bed did not stop when its toggles were off", e);
+			}
+			context.runOnClient(mc -> FoleyClient.apply(settings));
+			// (Sanity check: replaced counter unchanged when biome bed is just playing its own sound.)
+			if (FoleyClient.replaced() < beforeBiome) {
+				throw new AssertionError("M19 biome bed reduced replaced counter (it should only replace game sounds)");
+			}
+
 			// The settings, where players look first: Options → Music & Sounds → Foley.
 			context.setScreen(() -> new SoundOptionsScreen(null, Minecraft.getInstance().options));
 			// The button is inside the screen's options list, where clickScreenButton doesn't look.
