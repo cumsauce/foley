@@ -143,18 +143,24 @@ public final class SurfController {
 	/**
 	 * Where open water meets land within {@code radius}: a column whose top is a water source with
 	 * land a couple of blocks off one side, or null. Ported from {@link Life}'s one-shot scan; Life's
-	 * copy goes with the one-shot it served.
+	 * copy goes with the one-shot it served. Columns whose chunk is not loaded — a teleport, respawn
+	 * or login leaves chunks streaming in for a tick or two, and reading an unloaded one on the client
+	 * throws — are skipped, never read.
 	 */
 	private @Nullable BlockPos findShore(ClientLevel level, Vec3 eye, int radius) {
 		for (int tries = 0; tries < 24; tries++) {
 			int x = (int) Math.floor(eye.x) + random.nextInt(2 * radius + 1) - radius;
 			int z = (int) Math.floor(eye.z) + random.nextInt(2 * radius + 1) - radius;
+			if (!level.hasChunkAt(new BlockPos(x, (int) eye.y, z))) continue;
 			int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1;
 			if (Math.abs(top - eye.y) > 16) continue;
 			if (!level.getFluidState(new BlockPos(x, top, z)).isSourceOfType(Fluids.WATER)) continue;
 			for (int[] d : new int[][] {{2, 0}, {-2, 0}, {0, 2}, {0, -2}}) {
-				BlockPos land = new BlockPos(x + d[0],
-						level.getHeight(Heightmap.Types.MOTION_BLOCKING, x + d[0], z + d[1]) - 1, z + d[1]);
+				int landX = x + d[0];
+				int landZ = z + d[1];
+				if (!level.hasChunkAt(new BlockPos(landX, (int) eye.y, landZ))) continue;
+				BlockPos land = new BlockPos(landX,
+						level.getHeight(Heightmap.Types.MOTION_BLOCKING, landX, landZ) - 1, landZ);
 				if (!level.getFluidState(land).getType().isSame(Fluids.WATER)
 						&& Math.abs(land.getY() - top) <= 2) {
 					return new BlockPos(x, top, z);
