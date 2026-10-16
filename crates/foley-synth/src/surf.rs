@@ -155,10 +155,11 @@ impl Surf {
     }
 
     /// Spawns the next wave. The render cost is one full-grain synthesis on
-    /// the frames that spawn: measured worst-case ≈11 ms per 0.25 s pull
-    /// (≈24× realtime headroom; first ≈7.9 ms, ~109/800 renders over 500 µs).
-    /// If the pull size ever shrinks, revisit this — amortise the synthesis
-    /// into a resumable state machine.
+    /// the frames that spawn: measured worst-case ≈11 ms per 0.25 s of audio
+    /// (≈24× realtime headroom; first ≈7.9 ms, ~109/800 renders over 500 µs),
+    /// so the client's 0.5 s pulls cost about twice that (≈22 ms, still ≈23×
+    /// headroom). If the pull size ever shrinks, revisit this — amortise the
+    /// synthesis into a resumable state machine.
     fn spawn_grain(&mut self) {
         // The pool has one buffer per grain slot, so an empty pool is the
         // old `grains.len() >= MAX_GRAINS` guard — and a spawn never allocates.

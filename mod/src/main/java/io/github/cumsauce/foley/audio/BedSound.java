@@ -228,6 +228,8 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 		private boolean closed;
 		/** Whether the render failure has been logged: once per stream, not per buffer. */
 		private boolean warned;
+		/** Whether a rejected scene has been logged: once per stream, not per read. */
+		private boolean sceneWarned;
 		private final AtomicReference<float @Nullable []> pending = new AtomicReference<>();
 		private final Queue<Strike> flashes = new ConcurrentLinkedQueue<>();
 
@@ -250,7 +252,10 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 				if (params != null) bridge.bedSetScene(bed, params);
 				for (Strike s; (s = flashes.poll()) != null; ) bridge.bedStrike(bed, s.x(), s.y(), s.z(), s.seed());
 			} catch (RuntimeException e) {
-				FoleyClient.LOGGER.warn("Foley bed rejected its scene", e);
+				if (!sceneWarned) {
+					sceneWarned = true;
+					FoleyClient.LOGGER.warn("Foley bed rejected its scene", e);
+				}
 			}
 		}
 

@@ -28,6 +28,11 @@ public final class SurfController {
 	private static final int SAMPLE_EVERY = 10;
 	/** How far round to look for a shore, blocks: the one-shot's scan radius. */
 	private static final int RADIUS = 32;
+	/**
+	 * Probes miss on a thin shoreline; keep the scene this many misses before falling silent —
+	 * the dry-linger the cave and wind beds use, so a gap is a miss, not an end.
+	 */
+	private static final int MISSES_TO_STOP = 3;
 	/** Wind speed, m/s, at which exposure saturates: a strong gale, {@link WindScene#STORM}. */
 	private static final float GALE = 16f;
 
@@ -35,6 +40,9 @@ public final class SurfController {
 	private final RandomSource random = RandomSource.create();
 	private @Nullable BedSound<SurfScene> sound;
 	private SurfScene scene = SurfScene.SILENT;
+	/** The shore last reported, re-tested rather than re-rolled, and how many probes have missed it. */
+	private @Nullable BlockPos lastShore;
+	private int misses;
 	private int ticks;
 
 	public SurfController(NativeBridge bridge) {
@@ -91,19 +99,26 @@ public final class SurfController {
 		if (level == null || player == null) return SurfScene.SILENT;
 		Vec3 eye = player.getEyePosition();
 		BlockPos shore = findShore(level, eye, RADIUS);
-		if (shore == null) return SurfScene.SILENT;
+		if (shore == null) {
+			// A probe can miss a thin shoreline: keep the last scene for a few samples rather than
+			// flapping the bed off and on again with a fresh seed.
+			if (lastShore != null && holdsOnMiss(++misses)) return scene;
+			lastShore = null;
+			misses = 0;
+			return SurfScene.SILENT;
+		}
 		// 1 at the water's edge, falling to 0 at the scan radius (horizontal, as findShore scans).
 		double dx = shore.getX() + 0.5 - eye.x;
 		double dz = shore.getZ() + 0.5 - eye.z;
 		float near = Math.clamp(1f - (float) Math.hypot(dx, dz) / RADIUS, 0f, 1f);
-		Holder<Biome> biome = level.getBiome(BlockPos.containing(eye));
+		// Salt or fresh at the shore itself, not at the listener: a plains bank beside an ocean
+		// is not a lake, and a pond beside a beach is not the sea.
+		Holder<Biome> biome = level.getBiome(shore);
 		boolean salt = biome.is(BiomeTags.IS_OCEAN) || biome.is(BiomeTags.IS_DEEP_OCEAN)
 				|| biome.is(BiomeTags.IS_BEACH);
-		// The storm the wind bed's sample mixes from: rain's weight to thunder's, clear to storm.
-		float rain = level.getRainLevel(1f);
-		float thunder = level.getThunderLevel(1f);
-		float storm = Math.clamp(((WindScene.RAIN - WindScene.CLEAR) * rain
-				+ (WindScene.STORM - WindScene.RAIN) * thunder) / (WindScene.STORM - WindScene.CLEAR), 0f, 1f);
+		// The storm the wind bed's sample mixes from: rain's weight to thunder's, clear to storm —
+		// its own expression, not a copy that could drift from it.
+		float storm = WindScene.storm(level);
 		boolean stormy = level.isThundering() || level.isRaining();
 		// The wind bed's reported wind, never a wind re-measured here; its m/s is scaled to
 		// the 0..1 the bed takes, so calm and storm spread instead of saturating.
@@ -131,13 +146,13 @@ public final class SurfController {
 	}
 
 	/**
-	 * How often a surge grain starts, grains per second: about 1/12 calm to 1/2 in a full storm
-	 * with wind — the Java mirror of the native bed's interval, {@code 12 − 10·storm·exposure}
-	 * seconds between surges.
+	 * Whether a probe that found no shore should hold the last scene rather than go silent.
+	 * {@value #MISSES_TO_STOP} consecutive misses silence the bed: one random probe can miss a
+	 * thin shoreline, and flapping the bed off and on restarts it with a fresh seed. Pure, so
+	 * the latch can be pinned without a client.
 	 */
-	public static float surgeRate(float storm, float exposure) {
-		float stormy = Math.clamp(storm * exposure, 0f, 1f);
-		return 1f / (12f - 10f * stormy);
+	static boolean holdsOnMiss(int consecutiveMisses) {
+		return consecutiveMisses < MISSES_TO_STOP;
 	}
 
 	/**
@@ -148,25 +163,49 @@ public final class SurfController {
 	 * throws — are skipped, never read.
 	 */
 	private @Nullable BlockPos findShore(ClientLevel level, Vec3 eye, int radius) {
+		// Re-test the last shore before rolling again: the same column keeps `near` steady between
+		// samples, instead of jumping to whichever column the next roll happens to hit.
+		if (lastShore != null) {
+			double lx = lastShore.getX() + 0.5 - eye.x;
+			double lz = lastShore.getZ() + 0.5 - eye.z;
+			if (Math.hypot(lx, lz) <= radius && isShore(level, lastShore.getX(), lastShore.getZ(), eye.y)) {
+				misses = 0;
+				return lastShore;
+			}
+		}
 		for (int tries = 0; tries < 24; tries++) {
 			int x = (int) Math.floor(eye.x) + random.nextInt(2 * radius + 1) - radius;
 			int z = (int) Math.floor(eye.z) + random.nextInt(2 * radius + 1) - radius;
-			if (!level.hasChunkAt(new BlockPos(x, (int) eye.y, z))) continue;
-			int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1;
-			if (Math.abs(top - eye.y) > 16) continue;
-			if (!level.getFluidState(new BlockPos(x, top, z)).isSourceOfType(Fluids.WATER)) continue;
-			for (int[] d : new int[][] {{2, 0}, {-2, 0}, {0, 2}, {0, -2}}) {
-				int landX = x + d[0];
-				int landZ = z + d[1];
-				if (!level.hasChunkAt(new BlockPos(landX, (int) eye.y, landZ))) continue;
-				BlockPos land = new BlockPos(landX,
-						level.getHeight(Heightmap.Types.MOTION_BLOCKING, landX, landZ) - 1, landZ);
-				if (!level.getFluidState(land).getType().isSame(Fluids.WATER)
-						&& Math.abs(land.getY() - top) <= 2) {
-					return new BlockPos(x, top, z);
-				}
-			}
+			if (!isShore(level, x, z, eye.y)) continue;
+			lastShore = new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1, z);
+			misses = 0;
+			return lastShore;
 		}
 		return null;
+	}
+
+	/**
+	 * Whether the column at {@code (x, z)} is open water with land a couple of blocks off one side:
+	 * the per-column test {@link #findShore} probes, and the re-test its remembered shore answers.
+	 * A column whose chunk is not loaded — a teleport, respawn or login leaves chunks streaming in
+	 * for a tick or two, and reading an unloaded one on the client throws — is never read.
+	 */
+	private boolean isShore(ClientLevel level, int x, int z, double eyeY) {
+		if (!level.hasChunkAt(new BlockPos(x, (int) eyeY, z))) return false;
+		int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1;
+		if (Math.abs(top - eyeY) > 16) return false;
+		if (!level.getFluidState(new BlockPos(x, top, z)).isSourceOfType(Fluids.WATER)) return false;
+		for (int[] d : new int[][] {{2, 0}, {-2, 0}, {0, 2}, {0, -2}}) {
+			int landX = x + d[0];
+			int landZ = z + d[1];
+			if (!level.hasChunkAt(new BlockPos(landX, (int) eyeY, landZ))) continue;
+			BlockPos land = new BlockPos(landX,
+					level.getHeight(Heightmap.Types.MOTION_BLOCKING, landX, landZ) - 1, landZ);
+			if (!level.getFluidState(land).getType().isSame(Fluids.WATER)
+					&& Math.abs(land.getY() - top) <= 2) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

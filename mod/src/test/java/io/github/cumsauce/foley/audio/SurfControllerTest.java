@@ -1,14 +1,15 @@
 package io.github.cumsauce.foley.audio;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
 /**
  * The surf bed's pure helpers (M17): the three wave-height tiers Life's one-shot picked from
- * {@link Life#SURF_M}, and the surge rate the native bed's grain schedule mirrors. The sampler
- * itself needs a live client, so it is covered by the client gametest, not here.
+ * {@link Life#SURF_M}, and the wind exposure the bed takes. The sampler itself needs a live
+ * client, so it is covered by the client gametest, not here.
  */
 class SurfControllerTest {
 	@Test
@@ -21,16 +22,6 @@ class SurfControllerTest {
 	@Test
 	void aStormRaisesTheHeightOnlyForSaltWater() {
 		assertEquals(SurfController.heightFor(false, false), SurfController.heightFor(false, true), 1e-6);
-	}
-
-	@Test
-	void surgeRateRisesWithStormAndWind() {
-		assertTrue(SurfController.surgeRate(1f, 1f) > SurfController.surgeRate(0f, 0f));
-		assertTrue(SurfController.surgeRate(1f, 0f) > 0f);
-		// The endpoints the surge mapping promises: one wave every 12 s calm,
-		// every 2 s in a full storm (the Rust interval's 12 - 10*storm*exposure).
-		assertEquals(1f / 12f, SurfController.surgeRate(0f, 0f), 1e-6, "calm cadence");
-		assertEquals(0.5f, SurfController.surgeRate(1f, 1f), 1e-6, "storm cadence");
 	}
 
 	@Test
@@ -50,5 +41,13 @@ class SurfControllerTest {
 	void exposureClampsBeyondFullStormAndBelowStillAir() {
 		assertEquals(1f, SurfController.exposureFor(60f), 1e-6);
 		assertEquals(0f, SurfController.exposureFor(-1f), 1e-6);
+	}
+
+	@Test
+	void a_probe_miss_holds_the_last_scene_for_a_few_samples_then_silences() {
+		assertTrue(SurfController.holdsOnMiss(0), "a first miss holds the scene");
+		assertTrue(SurfController.holdsOnMiss(1), "a second miss holds the scene");
+		assertTrue(SurfController.holdsOnMiss(2), "a third miss holds the scene");
+		assertFalse(SurfController.holdsOnMiss(3), "the third consecutive miss silences the bed");
 	}
 }

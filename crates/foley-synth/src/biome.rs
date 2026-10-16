@@ -1,8 +1,8 @@
 //! Biome-specific beds (M19): desert hiss, mushroom hum, lush/dripstone cave
 //! colors, deep dark, snow hush, mangrove drone. One streaming bed, with the
-//! per-biome work sharing the same envelope code. The Java side picks the
-//! kind and the per-biome parameters and starts a new bed when the listener
-//! moves between biomes; the synth just renders what it's told.
+//! per-biome work sharing the same envelope code. Java keeps one bed and
+//! changes its scene; `kind` is snapped by the FFI's glide, so the state is
+//! rebuilt once per biome change.
 
 use std::f32::consts::TAU;
 
@@ -50,15 +50,15 @@ pub struct BiomeScene {
     /// 0 to 1: how much of the biome the listener is in (1 = centered).
     pub intensity: f32,
     /// A kind-specific count (vortex rings per 30 s for desert; scuttle count
-    /// for deep_dark; mangrove leaf count / 16 for mangrove; leaf exposure for
-    /// snow; unused for the others).
+    /// for deep_dark; the raw mangrove leaf count, 0..=200, for mangrove;
+    /// leaf exposure for snow; unused for the others).
     pub sub: f32,
     /// 0 to 1: the bed's master gain.
     pub gain: f32,
 }
 
-/// One per-biome bed. Re-created by the Java side when the listener moves
-/// between biomes; the synth itself does not switch kinds mid-stream.
+/// One per-biome bed. Java keeps one bed and changes its scene; `kind` is
+/// snapped by the FFI's glide, so the state is rebuilt once per biome change.
 #[derive(Debug)]
 pub struct Biome {
     seed: u64,
