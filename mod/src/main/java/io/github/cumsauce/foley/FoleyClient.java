@@ -6,6 +6,7 @@ import io.github.cumsauce.foley.audio.AddonSounds;
 import io.github.cumsauce.foley.audio.Breathing;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
 import io.github.cumsauce.foley.audio.MobBrushes;
+import io.github.cumsauce.foley.audio.PeacefulBreathing;
 import io.github.cumsauce.foley.audio.Settling;
 import io.github.cumsauce.foley.config.FoleyConfig;
 import io.github.cumsauce.foley.ui.BypassKey;
@@ -46,6 +47,7 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable ActiveStructures activeStructures;
 	private static @Nullable Settling settling;
 	private static @Nullable MobBrushes mobBrushes;
+	private static @Nullable PeacefulBreathing peacefulBreathing;
 	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
 	private static volatile boolean bypassed;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
@@ -87,6 +89,11 @@ public final class FoleyClient implements ClientModInitializer {
 	/** M22: sheep, spiders and chickens brushing through plants. */
 	public static @Nullable MobBrushes mobBrushes() {
 		return mobBrushes;
+	}
+
+	/** M22: cows and sheep breathing quietly when Foley voices them. */
+	public static @Nullable PeacefulBreathing peacefulBreathing() {
+		return peacefulBreathing;
 	}
 
 	/** One-shots Foley may start in a tick; past it, the game's own sound plays alone. */
@@ -223,6 +230,9 @@ public final class FoleyClient implements ClientModInitializer {
 		MobBrushes brushes = new MobBrushes();
 		mobBrushes = brushes;
 		ClientTickEvents.END_CLIENT_TICK.register(brushes::tick);
+		PeacefulBreathing quiet = new PeacefulBreathing();
+		peacefulBreathing = quiet;
+		ClientTickEvents.END_CLIENT_TICK.register(quiet::tick);
 		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
 		registerCommands(loaded);
 	}
