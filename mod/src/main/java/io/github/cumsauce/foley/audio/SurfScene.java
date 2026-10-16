@@ -9,7 +9,7 @@ package io.github.cumsauce.foley.audio;
  *                  a rough one
  * @param shore     1 at the water's edge, falling to 0 at the scan radius
  * @param storm     0 clear to 1 full thunderstorm
- * @param exposure  the wind bed's reported wind speed, m/s (the native bed clamps it to 0..1)
+ * @param exposure  0 to 1: the wind bed's reported speed scaled by {@link SurfController#exposureFor}
  */
 public record SurfScene(float height, float shore, float storm, float exposure) implements Scene {
 	/** An off scene: the bed is silent. */

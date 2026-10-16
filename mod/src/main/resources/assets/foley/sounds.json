@@ -6399,6 +6399,15 @@
 			}
 		]
 	},
+	"surf": {
+		"subtitle": "subtitles.foley.surf",
+		"sounds": [
+			{
+				"name": "fabric-sound-api-v1:empty",
+				"stream": true
+			}
+		]
+	},
 	"biome": {
 		"subtitle": "subtitles.foley.biome",
 		"sounds": [

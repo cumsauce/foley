@@ -33,4 +33,18 @@ class SurfControllerTest {
 	void noWaterMeansNoHeight() {
 		assertEquals(0f, SurfScene.SILENT.height(), 1e-6);
 	}
+
+	@Test
+	void exposureScalesTheWindUpToFullStormSpeed() {
+		assertEquals(0f, SurfController.exposureFor(0f), 1e-6);
+		assertEquals(0.3125f, SurfController.exposureFor(WindScene.CLEAR), 1e-6);
+		assertEquals(0.5f, SurfController.exposureFor(8f), 1e-6);
+		assertEquals(1f, SurfController.exposureFor(WindScene.STORM), 1e-6);
+	}
+
+	@Test
+	void exposureClampsBeyondFullStormAndBelowStillAir() {
+		assertEquals(1f, SurfController.exposureFor(60f), 1e-6);
+		assertEquals(0f, SurfController.exposureFor(-1f), 1e-6);
+	}
 }

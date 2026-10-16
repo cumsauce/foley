@@ -28,6 +28,8 @@ public final class SurfController {
 	private static final int SAMPLE_EVERY = 10;
 	/** How far round to look for a shore, blocks: the one-shot's scan radius. */
 	private static final int RADIUS = 32;
+	/** Wind speed, m/s, at which exposure saturates: a strong gale, {@link WindScene#STORM}. */
+	private static final float GALE = 16f;
 
 	private final NativeBridge bridge;
 	private final RandomSource random = RandomSource.create();
@@ -103,9 +105,10 @@ public final class SurfController {
 		float storm = Math.clamp(((WindScene.RAIN - WindScene.CLEAR) * rain
 				+ (WindScene.STORM - WindScene.RAIN) * thunder) / (WindScene.STORM - WindScene.CLEAR), 0f, 1f);
 		boolean stormy = level.isThundering() || level.isRaining();
-		// The wind bed's reported wind, never a wind re-measured here.
+		// The wind bed's reported wind, never a wind re-measured here; its m/s is scaled to
+		// the 0..1 the bed takes, so calm and storm spread instead of saturating.
 		var wind = FoleyClient.wind();
-		float exposure = wind == null ? 0f : wind.scene().speed();
+		float exposure = wind == null ? 0f : exposureFor(wind.scene().speed());
 		return new SurfScene(heightFor(salt, stormy), near, storm, exposure);
 	}
 
@@ -115,6 +118,16 @@ public final class SurfController {
 	 */
 	public static float heightFor(boolean salt, boolean stormy) {
 		return !salt ? 0.3f : (stormy ? 2.2f : 1.0f);
+	}
+
+	/**
+	 * The wind bed's reported speed, m/s, as the 0..1 exposure the bed takes: 0 in still air,
+	 * 1 at {@value #GALE} m/s (a strong gale, {@link WindScene#STORM}'s reference) and clamped
+	 * above it — gameplay wind rarely exceeds ~15 m/s, so the storm response spans the range
+	 * instead of saturating at 1 m/s.
+	 */
+	public static float exposureFor(float windSpeed) {
+		return Math.clamp(windSpeed / GALE, 0f, 1f);
 	}
 
 	/**
