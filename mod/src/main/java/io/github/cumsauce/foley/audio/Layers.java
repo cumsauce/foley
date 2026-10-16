@@ -87,6 +87,11 @@ public final class Layers {
 			minecraft.getSoundManager().play(new SimpleSoundInstance(event, SoundSource.BLOCKS,
 					VOLUME[contact] * FoleyClient.gain(), 1f, SoundInstance.createUnseededRandom(), sound.getX(),
 					sound.getY(), sound.getZ()));
+			// M22: a delayed settle tick behind footsteps and block placement on
+			// gravel, sand or snow — granular shifts and a snow brush.
+			if (contact != NativeBridge.CONTACT_BREAK && FoleyClient.settling() != null) {
+				FoleyClient.settling().settle(minecraft, sound.getX(), sound.getY(), sound.getZ(), material);
+			}
 		}
 		FoleyClient.countLayered();
 	}

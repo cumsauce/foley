@@ -5,6 +5,7 @@ import io.github.cumsauce.foley.audio.ActiveStructures;
 import io.github.cumsauce.foley.audio.AddonSounds;
 import io.github.cumsauce.foley.audio.Breathing;
 import io.github.cumsauce.foley.audio.GeneratedSounds;
+import io.github.cumsauce.foley.audio.Settling;
 import io.github.cumsauce.foley.config.FoleyConfig;
 import io.github.cumsauce.foley.ui.BypassKey;
 import io.github.cumsauce.foley.ui.SoundOptionsButton;
@@ -42,6 +43,7 @@ public final class FoleyClient implements ClientModInitializer {
 	private static @Nullable Life life;
 	private static @Nullable Breathing breathing;
 	private static @Nullable ActiveStructures activeStructures;
+	private static @Nullable Settling settling;
 	private static volatile FoleyConfig config = FoleyConfig.DEFAULT;
 	private static volatile boolean bypassed;
 	private static final java.util.concurrent.atomic.AtomicInteger replaced = new java.util.concurrent.atomic.AtomicInteger();
@@ -73,6 +75,11 @@ public final class FoleyClient implements ClientModInitializer {
 	/** M21: minecarts, doors, chests, redstone, boats, sculk. */
 	public static @Nullable ActiveStructures activeStructures() {
 		return activeStructures;
+	}
+
+	/** M22: the settle tick under footsteps and block placement. */
+	public static @Nullable Settling settling() {
+		return settling;
 	}
 
 	/** One-shots Foley may start in a tick; past it, the game's own sound plays alone. */
@@ -204,6 +211,8 @@ public final class FoleyClient implements ClientModInitializer {
 		ActiveStructures structures = new ActiveStructures(loaded);
 		activeStructures = structures;
 		ClientTickEvents.END_CLIENT_TICK.register(structures::tick);
+		Settling set = new Settling(loaded);
+		settling = set;
 		ClientTickEvents.START_CLIENT_TICK.register(minecraft -> oneShots = 0);
 		registerCommands(loaded);
 	}
