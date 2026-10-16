@@ -16,10 +16,10 @@ mod no_alloc;
 use foley_synth::{
     Call, Contact, CreatureCall, CreatureSpec, Fire, FireScene, Lava, LavaScene, Material,
     MaterialProps, Mob, Plant, Rain, RainScene, SAMPLE_RATE, Surface, Thunder, ThunderScene, Water,
-    WaterScene, Wind, WindScene, birdsong, brush, bubble, buzz, cicadas, contact, contact_with,
-    creature_voice, crickets, drip_into_water, drip_on_stone, flush, fracture, fracture_with, frog,
-    gust, howl, ice_singing, lava_drip, noise_burst, owl, sculk_ring, settling_stone, surf, to_pcm,
-    tone, voice, woodpecker,
+    WaterScene, Wind, WindScene, aeolian, birdsong, brush, bubble, buzz, cicadas, contact,
+    contact_with, creature_voice, crickets, drip_into_water, drip_on_stone, flush, fracture,
+    fracture_with, frog, gust, howl, ice_singing, lava_drip, noise_burst, owl, sculk_ring,
+    settling_stone, surf, to_pcm, tone, voice, woodpecker,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -49,7 +49,8 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 /// 17: other mods' creatures, `foley_render_creature` (the integration API,
 ///     F3).
 /// 20: active structures (M21): `FOLEY_SHOT_SCULK_RING`, a triggered low-Q
-///     tone for sculk sensors.
+///     tone for sculk sensors; M18's aeolian primitive is additive within the
+///     F2 integration API (`FOLEY_PRIMITIVE_AEOLIAN`), so the ABI stays at 20.
 pub const FOLEY_ABI_VERSION: u32 = 20;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
@@ -113,11 +114,15 @@ pub const FOLEY_SHOT_SCULK_RING: i32 = 16;
 /// - tone: the pitch (Hz, 20 to 10000), where it glides to (Hz, 20 to
 ///   20000), the seconds (0.01 to 5) and the gain (0 to 1);
 /// - gust: the wind's speed (m/s, 0 to 60), the seconds (0.2 to 10) and the
-///   gain (0 to 1).
+///   gain (0 to 1);
+/// - aeolian: the obstacle's characteristic diameter (m, 0.005 to 0.5), the
+///   wind's speed (m/s, 0.5 to 30; silent below 2), the seconds (0.05 to 2)
+///   and the gain (0 to 1) — a Strouhal whistle at f ≈ 0.2·U/d (M18).
 pub const FOLEY_PRIMITIVE_BUBBLE: i32 = 0;
 pub const FOLEY_PRIMITIVE_NOISE: i32 = 1;
 pub const FOLEY_PRIMITIVE_TONE: i32 = 2;
 pub const FOLEY_PRIMITIVE_GUST: i32 = 3;
+pub const FOLEY_PRIMITIVE_AEOLIAN: i32 = 4;
 
 /// The most floats any primitive takes.
 pub const FOLEY_PRIMITIVE_MAX_FLOATS: usize = 4;
@@ -720,6 +725,13 @@ pub unsafe extern "C" fn foley_render_primitive(
                 gain(2)?,
                 seed,
             ),
+            FOLEY_PRIMITIVE_AEOLIAN => aeolian(
+                range("diameter_m", given(0)?, 0.005, 0.5)?,
+                range("wind_speed_m_s", given(1)?, 0.5, 30.0)?,
+                range("seconds", given(2)?, 0.05, 2.0)?,
+                gain(3)?,
+                seed,
+            ),
             _ => return Err(FfiError::invalid("unknown primitive")),
         };
         if let Some(dest) = out.get_mut(..sound.len()) {
@@ -1200,11 +1212,12 @@ mod tests {
 
     #[test]
     fn primitives_render_and_are_checked() {
-        let cases: [(i32, Vec<f32>); 4] = [
+        let cases: [(i32, Vec<f32>); 5] = [
             (FOLEY_PRIMITIVE_BUBBLE, vec![1.0]),
             (FOLEY_PRIMITIVE_NOISE, vec![2000.0, 1.2, 0.3, 0.8]),
             (FOLEY_PRIMITIVE_TONE, vec![440.0, 880.0, 0.5, 0.6]),
             (FOLEY_PRIMITIVE_GUST, vec![15.0, 3.0, 1.0]),
+            (FOLEY_PRIMITIVE_AEOLIAN, vec![0.025, 10.0, 0.5, 0.8]),
         ];
         for (kind, params) in &cases {
             let mut needed = 0;
