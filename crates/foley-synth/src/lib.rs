@@ -1,6 +1,7 @@
 //! Physically based sound synthesis: each sound is made from the physics
 //! that dominates what is heard (docs/PLAN.md), at [`SAMPLE_RATE`], mono.
 
+mod aeolian;
 mod birds;
 mod dsp;
 mod life;
@@ -19,6 +20,7 @@ pub use foley_dsp::{
     minnaert_hz, plunge_radius, to_pcm,
 };
 
+pub use crate::aeolian::aeolian;
 pub use crate::birds::{Bird, bird_call};
 pub use crate::life::{birdsong, crickets, dolbear_chirps_per_minute, frog};
 pub use crate::modal::{
