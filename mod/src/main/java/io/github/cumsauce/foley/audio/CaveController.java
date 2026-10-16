@@ -5,6 +5,7 @@ import io.github.cumsauce.foley.config.FoleyConfig;
 import io.github.cumsauce.foley.natives.NativeBridge;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -112,7 +113,7 @@ public final class CaveController {
 		if (state.is(Blocks.POINTED_DRIPSTONE)) {
 			// Dripstone dripping is only the stalactites (pointing down).
 			if (state.hasProperty(BlockStateProperties.VERTICAL_DIRECTION)
-					&& state.getValue(BlockStateProperties.VERTICAL_DIRECTION) == net.minecraft.core.Direction.DOWN) {
+					&& state.getValue(BlockStateProperties.VERTICAL_DIRECTION) == Direction.DOWN) {
 				return true;
 			}
 		}

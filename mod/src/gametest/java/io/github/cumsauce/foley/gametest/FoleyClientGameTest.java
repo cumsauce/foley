@@ -384,6 +384,56 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			}
 			context.runOnClient(mc -> FoleyClient.apply(settings));
 
+			// Cave atmosphere (M12): underground, the cave bed plays; on the surface, it stops. Switches off the toggle
+			// mid-cave and the bed stops.
+			singleplayer.getServer().runCommand("tp @p ~ -50 ~");
+			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
+			try {
+				context.waitFor(mc -> mc.player != null && mc.player.getY() < -40, 20 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("the player never teleported underground", e);
+			}
+			context.runOnClient(mc -> FoleyClient.apply(settings.withCaveAtmosphere(true)));
+			try {
+				context.waitFor(mc -> {
+					var cave = FoleyClient.cave();
+					return cave != null && cave.sound() != null && mc.getSoundManager().isActive(cave.sound())
+							&& cave.sound().rendered() > NativeBridge.SAMPLE_RATE && cave.scene().depth() > 0.5f;
+				}, 20 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				var cave = FoleyClient.cave();
+				throw new AssertionError("the cave bed never played underground: "
+						+ (cave == null ? "off" : cave.scene() + ", sound " + cave.sound()), e);
+			}
+			// Toggle off mid-cave: the bed should stop within ~1 s.
+			context.runOnClient(mc -> FoleyClient.apply(settings));
+			try {
+				context.waitFor(mc -> {
+					var cave = FoleyClient.cave();
+					return cave == null || cave.sound() == null || !mc.getSoundManager().isActive(cave.sound());
+				}, 5 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("the cave bed kept playing after the toggle was switched off", e);
+			}
+			// On the surface (high exposure), the bed is silent — even with the toggle on.
+			singleplayer.getServer().runCommand("tp @p ~ 80 ~");
+			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
+			try {
+				context.waitFor(mc -> mc.player != null && mc.player.getY() > 60, 10 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("the player never teleported to the surface", e);
+			}
+			context.runOnClient(mc -> FoleyClient.apply(settings.withCaveAtmosphere(true)));
+			try {
+				context.waitFor(mc -> {
+					var cave = FoleyClient.cave();
+					return cave == null || cave.sound() == null || !mc.getSoundManager().isActive(cave.sound());
+				}, 5 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("the cave bed played on the surface", e);
+			}
+			context.runOnClient(mc -> FoleyClient.apply(settings));
+
 			// The settings, where players look first: Options → Music & Sounds → Foley.
 			context.setScreen(() -> new SoundOptionsScreen(null, Minecraft.getInstance().options));
 			// The button is inside the screen's options list, where clickScreenButton doesn't look.
