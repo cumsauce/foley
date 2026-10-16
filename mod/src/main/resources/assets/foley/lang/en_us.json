@@ -63,6 +63,8 @@
 	"foley.settings.footsteps.tooltip": "Under the game's step sounds: each heel strike on the block, with gravel crunching and snow squeaking.",
 	"foley.settings.birds": "Birds",
 	"foley.settings.birds.tooltip": "Birdsong from the trees by day, most at dawn. Each biome has its own species.",
+	"foley.settings.rarerSpecies": "Rarer species",
+	"foley.settings.rarerSpecies.tooltip": "Adds rarely-heard birds: Kori bustard on savannas, golden eagle above jagged peaks, alpine chough in the high mountains.",
 	"foley.settings.crickets": "Crickets",
 	"foley.settings.crickets.tooltip": "Crickets in the grass on warm nights, chirping faster the warmer it is.",
 	"foley.settings.frogs": "Frogs",
