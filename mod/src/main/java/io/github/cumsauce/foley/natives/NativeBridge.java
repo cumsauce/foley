@@ -258,8 +258,22 @@ public final class NativeBridge {
 				check((int) render.call(out, needed));
 				length = needed.get(SIZE_T, 0);
 			}
-			return out.asSlice(0, length * 2).toArray(JAVA_SHORT);
+			// Both reads funnel through here: the buffer holds out.byteSize() / 2 samples and no more, so a native
+			// report past it throws rather than slicing into uninitialized memory and playing it as PCM.
+			return out.asSlice(0, sliceLength(length, out.byteSize() / 2) * 2).toArray(JAVA_SHORT);
 		}
+	}
+
+	/**
+	 * How many samples of a {@code capacitySamples}-sized buffer to take: {@code needed}, unless the native side
+	 * reported more than the buffer holds — slicing past it would read uninitialized memory and play it as PCM.
+	 */
+	static long sliceLength(long needed, long capacitySamples) {
+		if (needed > capacitySamples) {
+			throw new FoleyException(-1, "native render reported " + needed + " samples into a buffer of "
+					+ capacitySamples + "; refusing to read past it");
+		}
+		return needed;
 	}
 
 	private void check(int code) {
