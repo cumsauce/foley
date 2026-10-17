@@ -48,8 +48,9 @@
  * 22: `foley_set_submerged` for the global 1 kHz low-pass on every Foley
  *     stream (not voices) while the head is under.
  * 23: surf as a placed bed (M17): `FOLEY_BED_SURF`, one continuous shore bed.
+ * 24: note block instruments (M23): `FOLEY_PRIMITIVE_NOTE`.
  */
-#define FOLEY_ABI_VERSION 23
+#define FOLEY_ABI_VERSION 24
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -197,6 +198,12 @@
 #define FOLEY_PRIMITIVE_GUST 3
 
 #define FOLEY_PRIMITIVE_AEOLIAN 4
+
+/**
+ * Note block instruments (M23): `instrument` (0 to 15), `note` (0 to 24,
+ * vanilla's note block note), `character` (0 to 1, a per-hit timbre).
+ */
+#define FOLEY_PRIMITIVE_NOTE 5
 
 /**
  * The most floats any primitive takes.
