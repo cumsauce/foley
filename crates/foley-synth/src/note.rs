@@ -168,10 +168,12 @@ pub fn note(instrument: u32, note: f32, character: f32, seed: u64) -> Option<Vec
             // modes ≈ 1, 2.76, 5.40, 8.93), the iron bar metallic and long,
             // the cowbell clanky and short. `character` swings each hit
             // around the voicing: a low character strikes dull and dies
-            // sooner, a high one rings on and sits further off the series.
+            // sooner — `damping` is the ring's length here, so it is
+            // scaled *down* — while a high one rings on and sits further
+            // off the series, the Pluck family's convention.
             let v = INSTRUMENTS[instrument as usize].3;
             let inharmonicity = (v.inharmonicity + 0.1 * (character - 0.5)).clamp(0.0, 1.0);
-            let damping = (v.damping * (1.2 - 0.4 * character)).clamp(0.0, 1.0);
+            let damping = (v.damping * (0.8 + 0.4 * character)).clamp(0.0, 1.0);
             modal(hz, inharmonicity, damping, seed)
         }
         Family::Membrane => return None,   // Task 3
@@ -453,5 +455,47 @@ mod tests {
         let short = modal(440.0, 0.3, 0.1, 3);
         let long = modal(440.0, 0.3, 0.9, 3);
         assert!(tail_rms(&long) > 2.0 * tail_rms(&short));
+    }
+
+    #[test]
+    fn a_struck_bar_renders_audible_finite_audio() {
+        let out = note(6, 12.0, 0.5, 7);
+        assert!(out.is_some(), "struck note rendered nothing");
+        let out = out.unwrap();
+        assert!(!out.is_empty(), "struck note is empty");
+        assert!(
+            out.iter().all(|x| x.is_finite()),
+            "struck note has non-finite samples"
+        );
+        let peak = out.iter().fold(0.0f32, |m, x| m.max(x.abs()));
+        assert!(
+            peak > 0.05 && peak <= 1.0,
+            "peak {peak} not in (0.05, 1.0]: not audible, or clipping"
+        );
+        assert!(
+            out.len() <= (3.0 * SAMPLE_RATE as f32) as usize,
+            "struck note runs past 3 s"
+        );
+        // The tail must be below -60 dB: a note that stops mid-cycle clicks.
+        let tail = &out[out.len().saturating_sub(100)..];
+        assert!(
+            tail.iter().all(|x| x.abs() < 1e-3),
+            "tail does not fade out — the note clicks off"
+        );
+    }
+
+    #[test]
+    fn a_low_character_bell_dies_sooner_than_a_high_one() {
+        // The Modal arm's character swing follows the Pluck family's
+        // convention: a low character strikes dull and dies sooner, a
+        // high one rings on.
+        let dull = note(6, 12.0, 0.1, 9).unwrap();
+        let bright = note(6, 12.0, 0.9, 9).unwrap();
+        assert!(
+            tail_rms(&dull) < 0.5 * tail_rms(&bright),
+            "low character tail {} not clearly under high character tail {}",
+            tail_rms(&dull),
+            tail_rms(&bright)
+        );
     }
 }
