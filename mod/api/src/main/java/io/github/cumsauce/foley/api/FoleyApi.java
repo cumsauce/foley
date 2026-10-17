@@ -16,6 +16,18 @@ public interface FoleyApi {
 	/** Foley's creature voices: describe a modded creature's voice and Foley speaks for it. */
 	FoleyVoices voices();
 
+	/**
+	 * Sets or clears the handler that takes over vanilla door and trapdoor sounds. While one is registered Foley does
+	 * not play its built-in contact tap: each event is handed to the handler instead, and an unhandled one falls back to
+	 * the game's sound. {@code null} restores the built-in tap. Client thread, at any time — not only during
+	 * {@link FoleyEntrypoint}.
+	 */
+	void doorHandler(@Nullable DoorSoundHandler handler);
+
+	/** The door sound handler in force, or null while Foley's built-in contact tap is. */
+	@Nullable
+	DoorSoundHandler doorHandler();
+
 	/** Foley's own implementation of the API, found by ServiceLoader. Nothing else implements it. */
 	interface Provider {
 		/** Foley's API once its synthesis is ready, or null until then. */

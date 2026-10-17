@@ -1,6 +1,7 @@
 package io.github.cumsauce.foley.audio;
 
 import io.github.cumsauce.foley.FoleyClient;
+import io.github.cumsauce.foley.api.DoorSoundHandler;
 import io.github.cumsauce.foley.config.FoleyConfig;
 import java.util.ArrayList;
 import java.util.List;
@@ -121,14 +122,25 @@ public final class Replacements {
 		// M21: doors, chests, shulkers, minecarts. Foley layers its own under the game's
 		// event (which the dispatcher is about to skip) — the per-tick scan in
 		// {@link ActiveStructures} plays the actual creak, the chest puff, the wheel impact.
-		if (FoleyClient.activeStructures() != null) {
-			if (DOOR_WOOD.contains(id) || DOOR_IRON.contains(id)) {
-				if (FoleyClient.wants(FoleyConfig::doors)) {
-					FoleyClient.activeStructures().onDoorSkipped(minecraft, sound, DOOR_IRON.contains(id));
-					return counted();
+		if (DOOR_WOOD.contains(id) || DOOR_IRON.contains(id)) {
+			boolean iron = DOOR_IRON.contains(id);
+			boolean bypassed = FoleyClient.bypassed();
+			// An addon's handler, if registered, owns the event entirely: no built-in tap. It is
+			// consulted only when Foley is not bypassed; bypass always lets the game's sound through.
+			DoorSoundHandler handler = DoorHandling.handler();
+			boolean handled = handler != null && !bypassed
+					&& handler.onVanillaDoorEvent(id, sound.getX(), sound.getY(), sound.getZ(), iron);
+			boolean contactWanted = FoleyClient.activeStructures() != null && FoleyClient.wants(FoleyConfig::doors);
+			return switch (DoorHandling.action(bypassed, contactWanted, handler != null, handled)) {
+				case ADDON -> counted();
+				case CONTACT_TAP -> {
+					FoleyClient.activeStructures().onDoorSkipped(minecraft, sound, iron);
+					yield counted();
 				}
-				return false;
-			}
+				case PLAY_VANILLA -> false;
+			};
+		}
+		if (FoleyClient.activeStructures() != null) {
 			if (CHEST.contains(id)) {
 				if (FoleyClient.wants(FoleyConfig::chests)) {
 					FoleyClient.activeStructures().onChestSkipped(minecraft, sound, false);

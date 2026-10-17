@@ -1,5 +1,6 @@
 package io.github.cumsauce.foley.audio;
 
+import io.github.cumsauce.foley.api.DoorSoundHandler;
 import io.github.cumsauce.foley.api.FoleyApi;
 import io.github.cumsauce.foley.api.FoleyBeds;
 import io.github.cumsauce.foley.api.FoleyMaterials;
@@ -8,6 +9,7 @@ import io.github.cumsauce.foley.api.FoleySounds;
 import io.github.cumsauce.foley.api.SoundModel;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Foley's API for one addon: every registration it makes names it in any error, so a clash or a bad value reads as
@@ -39,6 +41,16 @@ final class FoleyApiImpl implements FoleyApi {
 	@Override
 	public FoleyVoices voices() {
 		return CustomVoices.api(origin);
+	}
+
+	@Override
+	public void doorHandler(@Nullable DoorSoundHandler handler) {
+		DoorHandling.handler(handler);
+	}
+
+	@Override
+	public @Nullable DoorSoundHandler doorHandler() {
+		return DoorHandling.handler();
 	}
 
 	private record Addon(String origin) implements FoleySounds {

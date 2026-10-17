@@ -148,6 +148,20 @@ In a pack, `assets/mymod/foley/voices.json`:
 }
 ```
 
+## Door sounds (S1)
+
+A mod can take over the game's door and trapdoor sounds. Register a handler — in your `onFoleyReady`, or any time on the client thread — and Foley stops playing its own contact tap: each vanilla open or close event is handed to you with its id, its world position and whether it was iron. Return true when you played something, keeping the vanilla sound skipped; return false and the game's sound plays as the fallback.
+
+```java
+api.doorHandler((event, x, y, z, iron) -> {
+    api.sounds().play(Identifier.fromNamespaceAndPath("mymod", iron ? "door_iron" : "door_wood"),
+            x, y, z, SoundSource.BLOCKS, 0.6f, 1f);
+    return true;
+});
+```
+
+Open and close are told apart by the event id (`minecraft:block.wooden_door.open`, `minecraft:block.iron_trapdoor.close`, …). Foley's bypass wins: while bypassed the game's sound plays and the handler is not called. Whatever you play through `sounds().play` follows Foley's volume, bypass and per-tick one-shot budget; the callback itself does not spend that budget. `api.doorHandler(null)` restores Foley's built-in tap.
+
 ## What is deliberate
 
 - The `foley/` path within a namespace is Foley's, by convention: variant buffers live at `<ns>:foley/<name>_<n>`.
