@@ -427,14 +427,16 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
             synth,
             scratch: [0.0; GLIDE_BLOCK],
             envelope: 0.0,
-            // At the floor, not unity: a fresh bed's envelope is empty, so
+            // At the ceiling, not unity: a fresh bed's envelope is empty, so
             // `wanted` clamps to 1.0 and a guard left at 1.0 would pass a
             // full-scale onset straight past BED_CEILING for as long as it
-            // takes the guard's slow fall to catch it. From the floor it
-            // can only climb towards `wanted` (0.0001 a sample), so
-            // `sample * guard` stays under the ceiling from the first
-            // sample, filter or no filter.
-            guard: 0.0,
+            // takes the guard's slow fall to catch it. At BED_CEILING a
+            // full-scale onset on sample 0 obeys `|sample * guard| <=
+            // BED_CEILING` at once, so the ceiling holds from the very first
+            // sample — and, unlike the floor (0.0, which climbs at only
+            // 0.0001 a sample and so fades a new bed in over ~0.2 s, making
+            // arriving beds sound late), it needs no fade-in at all.
+            guard: BED_CEILING,
             target: [0.0; MAX_PARAMS],
             heard: [0.0; MAX_PARAMS],
             params: 0,
