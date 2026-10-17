@@ -9,6 +9,7 @@ use crate::LowPass;
 use crate::Rng;
 use crate::SAMPLE_RATE;
 use std::f32::consts::LN_10;
+use std::f32::consts::PI;
 use std::f32::consts::TAU;
 
 /// Which family models an instrument.
@@ -243,7 +244,23 @@ pub fn note(instrument: u32, note: f32, character: f32, seed: u64) -> Option<Vec
             let drop = (v.drop * (0.7 + 0.6 * character)).clamp(0.0, 0.95);
             membrane(hz, drop, noise_mix, character, seed)
         }
-        Family::Breath => return None,     // Task 4
+        Family::Breath => {
+            // The two blown instruments, in the mapped index order: flute,
+            // didgeridoo — the flute a near-pure tone under a light breath,
+            // the didgeridoo a low buzz driven hard. `airflow` sets how
+            // much of the drive is breath noise and buzz against the tone
+            // (and how narrow the glottal pulse is with it). `character`
+            // swings `bright` in the family's convention: a low character
+            // sounds duller and holds a shorter time before the release, a
+            // high one brighter and longer.
+            let (airflow, bright) = match instrument {
+                5 => (0.30, 0.55),  // flute: a light breath over the tone
+                12 => (1.00, 0.30), // didgeridoo: driven hard, dull and reedy
+                _ => (0.50, 0.50),
+            };
+            let bright = (bright + 0.25 * (character - 0.5)).clamp(0.0, 1.0);
+            breath(hz, airflow, bright, seed)
+        }
         Family::Electronic => return None, // Task 5
     };
     crate::dsp::normalize_in_place(&mut out, 0.9);
@@ -417,6 +434,80 @@ fn membrane(hz: f32, drop: f32, noise_mix: f32, bright: f32, seed: u64) -> Vec<f
         }
         out.push(s);
         env *= g;
+    }
+    out
+}
+
+/// A blown tube — a resonant pipe driven by a mixture of a glottal-ish
+/// pulse and breath noise, the mix set by `airflow` (0 a nearly pure tone,
+/// 1 driven hard with air), with the tube's resonances tracking `hz`: two
+/// bandpass formants, one at the note and one at its third harmonic.
+/// `airflow` also narrows the glottal pulse as it rises — a hard-driven
+/// buzz is a narrow pulse, rich in harmonics — and voices the third
+/// formant. `bright` (0 to 1) lifts the breath's cutoff and the hiss of
+/// air over the tone, and stretches the hold before the release: the
+/// character axis, low is dull and short, high bright and long. `seed`
+/// mixes the breath so two blows of the same note differ.
+fn breath(hz: f32, airflow: f32, bright: f32, seed: u64) -> Vec<f32> {
+    let hz = hz.clamp(20.0, 0.4 * SAMPLE_RATE as f32);
+    let airflow = airflow.clamp(0.0, 1.0);
+    let bright = bright.clamp(0.0, 1.0);
+    // How long the note is held before the release, and how long the
+    // release takes: a low character holds a short time and lets go
+    // quickly, a high one sustains and fades long. Together they stay
+    // under the 3 s every note obeys.
+    let hold = 0.30 + 1.40 * bright;
+    let release = 0.15 + 0.35 * bright;
+    let length = ((hold + release) * SAMPLE_RATE as f32) as usize;
+    // The glottal duty: a hard-driven buzz is a narrow pulse, rich in
+    // harmonics; a lightly blown flute sits near a sine.
+    let duty = 0.45 - 0.38 * airflow;
+    // The tube: a formant at the note and another at its third harmonic,
+    // wide enough for the buzz's upper partials to sound through.
+    let mut f1 = BandPass::new(hz, 1.2);
+    let mut f2 = BandPass::new((3.0 * hz).min(0.45 * SAMPLE_RATE as f32), 1.0);
+    // The breath in the tube: noise lowpassed at a cutoff set by
+    // brightness — and the hiss of air over the tone, higher in band and
+    // louder the brighter the blow.
+    let mut lp = LowPass::new(500.0 + 4500.0 * bright);
+    let mut hiss_bp = BandPass::new((1000.0 + 5000.0 * bright).clamp(800.0, 12_000.0), 0.7);
+    let hiss_amp = 0.5 * bright * bright;
+    let mut rng = Rng::new(seed);
+    // A swell on so the note does not click on, a cosine release so it
+    // does not click off.
+    let attack = ((0.010 * SAMPLE_RATE as f32) as usize).max(1);
+    let rel = ((release * SAMPLE_RATE as f32) as usize).max(2);
+    let step = hz / SAMPLE_RATE as f32;
+    let mut phase = 0.0f32;
+    let mut out = Vec::with_capacity(length);
+    for i in 0..length {
+        // The glottal flow: a raised-cosine hump of width `duty` per
+        // period, with its mean taken out so the drive is bipolar and the
+        // tube rings at `hz` and its harmonics rather than at the pulse's
+        // DC. The level holds as the pulse narrows, so `airflow` buys
+        // harmonic richness, not loudness — the breath noise rides over
+        // the tone at the same weight whatever the buzz.
+        let hump = if phase < duty {
+            0.5 * (1.0 - (PI * phase / duty).cos())
+        } else {
+            0.0
+        };
+        let drive = (hump - 0.5 * duty) * (0.45 / duty) + airflow * lp.process(rng.signed());
+        let mut s = f1.process(drive) + 0.5 * airflow * f2.process(drive);
+        s += hiss_amp * hiss_bp.process(rng.signed());
+        let env = if i < attack {
+            i as f32 / attack as f32
+        } else if i + rel >= length {
+            let u = (i + rel - length) as f32 / rel as f32;
+            0.5 * (1.0 + (PI * u).cos())
+        } else {
+            1.0
+        };
+        out.push(env * s);
+        phase += step;
+        if phase >= 1.0 {
+            phase -= 1.0;
+        }
     }
     out
 }
@@ -761,6 +852,139 @@ mod tests {
         assert!(
             tail.iter().all(|x| x.abs() < 1e-3),
             "tail does not fade out — the note clicks off"
+        );
+    }
+
+    /// How many partials of the fundamental carry real weight: a Goertzel
+    /// scan of the first half second at 2·f0, 3·f0, … counting each whose
+    /// magnitude reaches a tenth of the fundamental's.
+    fn harmonic_count(s: &[f32]) -> u32 {
+        let f0 = fundamental(s);
+        let w = &s[..s.len().min(SAMPLE_RATE as usize / 2)];
+        let magnitude = |hz: f32| {
+            let coeff = 2.0 * (TAU * hz / SAMPLE_RATE as f32).cos();
+            let (mut s1, mut s2) = (0.0f32, 0.0f32);
+            for &x in w {
+                let s0 = x + coeff * s1 - s2;
+                s2 = s1;
+                s1 = s0;
+            }
+            (s1 * s1 + s2 * s2 - coeff * s1 * s2).max(0.0).sqrt()
+        };
+        let base = magnitude(f0).max(1e-9);
+        let mut count = 0;
+        for k in 2.. {
+            let hz = f0 * k as f32;
+            if hz > 8000.0 {
+                break;
+            }
+            if magnitude(hz) > 0.1 * base {
+                count += 1;
+            }
+        }
+        count
+    }
+
+    /// Energy above a kilohertz: RMS of the signal after a one-pole
+    /// highpass strips its low end, so a windy blow carries more than a
+    /// still one.
+    fn high_band_energy(s: &[f32]) -> f32 {
+        let mut lp = LowPass::new(1000.0);
+        let high: Vec<f32> = s.iter().map(|x| x - lp.process(*x)).collect();
+        rms(&high)
+    }
+
+    #[test]
+    fn a_flute_sounds_the_note_it_is_asked_for() {
+        let out = breath(587.0, 0.3, 0.5, 1);
+        assert!(
+            (fundamental(&out) - 587.0).abs() < 40.0,
+            "flute at {}",
+            fundamental(&out)
+        );
+    }
+
+    #[test]
+    fn a_didgeridoo_is_richer_than_a_flute() {
+        assert!(
+            harmonic_count(&breath(150.0, 1.0, 0.5, 2))
+                > harmonic_count(&breath(587.0, 0.2, 0.5, 2)),
+            "didgeridoo {} not richer than flute {}",
+            harmonic_count(&breath(150.0, 1.0, 0.5, 2)),
+            harmonic_count(&breath(587.0, 0.2, 0.5, 2))
+        );
+    }
+
+    #[test]
+    fn the_breath_noise_rides_under_the_tone() {
+        let quiet = breath(440.0, 0.0, 0.5, 3);
+        let windy = breath(440.0, 1.0, 0.5, 3);
+        assert!(
+            high_band_energy(&windy) > high_band_energy(&quiet),
+            "windy high band {} not above quiet {}",
+            high_band_energy(&windy),
+            high_band_energy(&quiet)
+        );
+    }
+
+    #[test]
+    fn a_breath_note_renders_audible_finite_audio() {
+        let out = note(5, 12.0, 0.5, 7);
+        assert!(out.is_some(), "breath note rendered nothing");
+        let out = out.unwrap();
+        assert!(!out.is_empty(), "breath note is empty");
+        assert!(
+            out.iter().all(|x| x.is_finite()),
+            "breath note has non-finite samples"
+        );
+        let peak = out.iter().fold(0.0f32, |m, x| m.max(x.abs()));
+        assert!(
+            peak > 0.05 && peak <= 1.0,
+            "peak {peak} not in (0.05, 1.0]: not audible, or clipping"
+        );
+        assert!(
+            out.len() <= (3.0 * SAMPLE_RATE as f32) as usize,
+            "breath note runs past 3 s"
+        );
+        // The tail must be below -60 dB: a note that stops mid-cycle clicks.
+        let tail = &out[out.len().saturating_sub(100)..];
+        assert!(
+            tail.iter().all(|x| x.abs() < 1e-3),
+            "tail does not fade out — the note clicks off"
+        );
+    }
+
+    #[test]
+    fn a_low_character_breath_note_is_duller_and_shorter_than_a_high_one() {
+        // The Breath arm's character swing follows the family convention:
+        // a low character holds a shorter, duller note, a high one holds
+        // longer and brighter.
+        let dull = note(5, 12.0, 0.1, 4).unwrap();
+        let bright = note(5, 12.0, 0.9, 4).unwrap();
+        assert!(
+            bright.len() > dull.len() + SAMPLE_RATE as usize / 10,
+            "high character flute ({}) not clearly longer than low character ({})",
+            bright.len(),
+            dull.len()
+        );
+        // Skip the swell so the spectra compare tone against tone.
+        let skip = SAMPLE_RATE as usize / 100;
+        let dull_centroid = centroid(&dull[skip..]);
+        let bright_centroid = centroid(&bright[skip..]);
+        assert!(
+            bright_centroid > 1.15 * dull_centroid,
+            "high character flute centroid {} not clearly above low character {}",
+            bright_centroid,
+            dull_centroid
+        );
+        // The didgeridoo follows the same axis on length: low short, high long.
+        let dull = note(12, 12.0, 0.1, 6).unwrap();
+        let bright = note(12, 12.0, 0.9, 6).unwrap();
+        assert!(
+            bright.len() > dull.len(),
+            "high character didgeridoo ({}) not longer than low character ({})",
+            bright.len(),
+            dull.len()
         );
     }
 }
