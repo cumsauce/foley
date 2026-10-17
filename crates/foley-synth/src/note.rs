@@ -4,6 +4,7 @@
 //! family. The index order is Foley's own; the Java twin is
 //! `NoteBlocks.INSTRUMENTS`.
 
+use crate::BandPass;
 use crate::LowPass;
 use crate::Rng;
 use crate::SAMPLE_RATE;
@@ -20,20 +21,28 @@ pub enum Family {
     Electronic,
 }
 
-/// A struck instrument's modal voicing: how far its modes sit off the
-/// harmonic series (0 near-harmonic bar, 1 clanking metal) and how long the
-/// strike rings (0 dies almost at once, 1 rings on for seconds).
+/// An instrument's voicing. For `Family::Modal`: how far its modes sit off
+/// the harmonic series (0 near-harmonic bar, 1 clanking metal) and how long
+/// the strike rings (0 dies almost at once, 1 rings on for seconds). For
+/// `Family::Membrane`: how far the drum head's pitch falls as its tension
+/// releases (0 barely bends, 1 nearly bottoms out) and how much of the hit
+/// is the rattle of noise rather than the tone beneath it.
 #[derive(Debug, Clone, Copy)]
 struct Voicing {
     inharmonicity: f32,
     damping: f32,
+    drop: f32,
+    noise_mix: f32,
 }
 
-/// The voicing of an instrument that is not modelled modally; only
-/// `Family::Modal` looks at it.
+/// The voicing of an instrument that is modelled by neither the modal bank
+/// nor the membrane head; only `Family::Modal` and `Family::Membrane` read
+/// any of it.
 const NO_VOICING: Voicing = Voicing {
     inharmonicity: 0.0,
     damping: 0.0,
+    drop: 0.0,
+    noise_mix: 0.0,
 };
 
 /// The vanilla note block instruments, in Foley's index order (0..=15),
@@ -52,9 +61,39 @@ const NO_VOICING: Voicing = Voicing {
 /// cowbell clanky and short.
 const INSTRUMENTS: [(&str, Family, f32, Voicing); 16] = [
     ("harp", Family::Pluck, 369.99, NO_VOICING),
-    ("basedrum", Family::Membrane, 80.0, NO_VOICING),
-    ("snare", Family::Membrane, 200.0, NO_VOICING),
-    ("hat", Family::Membrane, 400.0, NO_VOICING),
+    (
+        "basedrum",
+        Family::Membrane,
+        80.0,
+        Voicing {
+            inharmonicity: 0.0,
+            damping: 0.0,
+            drop: 0.55,
+            noise_mix: 0.10,
+        },
+    ),
+    (
+        "snare",
+        Family::Membrane,
+        200.0,
+        Voicing {
+            inharmonicity: 0.0,
+            damping: 0.0,
+            drop: 0.35,
+            noise_mix: 0.60,
+        },
+    ),
+    (
+        "hat",
+        Family::Membrane,
+        8000.0,
+        Voicing {
+            inharmonicity: 0.0,
+            damping: 0.0,
+            drop: 0.02,
+            noise_mix: 1.0,
+        },
+    ),
     ("bass", Family::Pluck, 65.41, NO_VOICING),
     ("flute", Family::Breath, 440.0, NO_VOICING),
     (
@@ -64,6 +103,8 @@ const INSTRUMENTS: [(&str, Family, f32, Voicing); 16] = [
         Voicing {
             inharmonicity: 0.85,
             damping: 0.90,
+            drop: 0.0,
+            noise_mix: 0.0,
         },
     ),
     ("guitar", Family::Pluck, 196.0, NO_VOICING),
@@ -74,6 +115,8 @@ const INSTRUMENTS: [(&str, Family, f32, Voicing); 16] = [
         Voicing {
             inharmonicity: 0.70,
             damping: 0.85,
+            drop: 0.0,
+            noise_mix: 0.0,
         },
     ),
     (
@@ -83,6 +126,8 @@ const INSTRUMENTS: [(&str, Family, f32, Voicing); 16] = [
         Voicing {
             inharmonicity: 0.10,
             damping: 0.25,
+            drop: 0.0,
+            noise_mix: 0.0,
         },
     ),
     (
@@ -92,6 +137,8 @@ const INSTRUMENTS: [(&str, Family, f32, Voicing); 16] = [
         Voicing {
             inharmonicity: 0.50,
             damping: 0.70,
+            drop: 0.0,
+            noise_mix: 0.0,
         },
     ),
     (
@@ -101,6 +148,8 @@ const INSTRUMENTS: [(&str, Family, f32, Voicing); 16] = [
         Voicing {
             inharmonicity: 0.60,
             damping: 0.20,
+            drop: 0.0,
+            noise_mix: 0.0,
         },
     ),
     ("didgeridoo", Family::Breath, 73.42, NO_VOICING),
@@ -176,7 +225,21 @@ pub fn note(instrument: u32, note: f32, character: f32, seed: u64) -> Option<Vec
             let damping = (v.damping * (0.8 + 0.4 * character)).clamp(0.0, 1.0);
             modal(hz, inharmonicity, damping, seed)
         }
-        Family::Membrane => return None,   // Task 3
+        Family::Membrane => {
+            // The three drums, in the mapped index order: basedrum, snare,
+            // hat — the kick a low falling tone, the snare a mid tone under
+            // its rattle, the hat pure air. `character` swings each hit
+            // around the voicing: a low character dulls the rattle and the
+            // head's tension drops less, so the drum dies sooner; a high
+            // one rattles brighter, drops further and rings longer — the
+            // family convention, low = duller and shorter, high = brighter
+            // and longer (`drop` sets both how far the pitch falls and how
+            // long the head rings, so the two move together).
+            let v = INSTRUMENTS[instrument as usize].3;
+            let noise_mix = (v.noise_mix + 0.25 * (character - 0.5)).clamp(0.0, 1.0);
+            let drop = (v.drop * (0.7 + 0.6 * character)).clamp(0.0, 0.95);
+            membrane(hz, drop, noise_mix, seed)
+        }
         Family::Breath => return None,     // Task 4
         Family::Electronic => return None, // Task 5
     };
@@ -298,6 +361,54 @@ fn modal(hz: f32, inharmonicity: f32, damping: f32, seed: u64) -> Vec<f32> {
         for m in 0..modes {
             level[m] *= decay[m];
         }
+    }
+    out
+}
+
+/// A struck membrane — a drum head. A decaying sine whose frequency starts
+/// at `hz` and glides down toward `hz * (1 - drop)` as the head's tension
+/// releases — the skin's pitch drop — with a short stick click at onset,
+/// mixed with bandpassed noise (`noise_mix`) for the snare's rattle and the
+/// hat's air: a basedrum is almost wholly tone, a hat entirely noise.
+/// `drop` (0 to 1) also sets how long the head rings — a further release
+/// takes longer to settle — and `seed` mixes the rattle and the click so
+/// two hits of the same note differ.
+fn membrane(hz: f32, drop: f32, noise_mix: f32, seed: u64) -> Vec<f32> {
+    let hz = hz.clamp(20.0, 0.45 * SAMPLE_RATE as f32);
+    let drop = drop.clamp(0.0, 0.95);
+    let noise_mix = noise_mix.clamp(0.0, 1.0);
+    // The ring: -60 dB after `t60`, longer the further the skin's tension
+    // drops; the run stops exactly where the envelope reaches about
+    // -66 dB, so the tail fades instead of clicking off.
+    let t60 = 0.12 + 0.55 * drop;
+    let length =
+        ((t60 * 1.1 * SAMPLE_RATE as f32) as usize + 2).min((3.0 * SAMPLE_RATE as f32) as usize);
+    let g = 10.0f32.powf(-3.0 / (t60 * SAMPLE_RATE as f32));
+    // The rattle's band rides the note: a low kick barely rattles, a hat
+    // hisses up high.
+    let band = (4.0 * hz).clamp(1200.0, 11_000.0);
+    let mut bp = BandPass::new(band, 1.0);
+    let mut rng = Rng::new(seed);
+    // The stick click: about 3 ms of raw noise at the onset.
+    let click_len = ((0.003 * SAMPLE_RATE as f32) as usize).max(1);
+    let tone_amp = 1.0 - noise_mix;
+    let mut env = 1.0f32;
+    let mut phase = 0.0f32;
+    let mut out = Vec::with_capacity(length);
+    for i in 0..length {
+        // The pitch falls with the skin's tension: `drop` is how far down
+        // from `hz` the head settles by the time it dies away.
+        let freq = hz * (1.0 - drop * (1.0 - env));
+        phase += TAU * freq / SAMPLE_RATE as f32;
+        let mut s = tone_amp * env * phase.sin();
+        // Bandpassed noise under the tone, dying faster than it.
+        let nenv = env * env.sqrt();
+        s += noise_mix * nenv * bp.process(rng.signed());
+        if i < click_len {
+            s += 0.5 * (1.0 - i as f32 / click_len as f32) * rng.signed();
+        }
+        out.push(s);
+        env *= g;
     }
     out
 }
@@ -496,6 +607,127 @@ mod tests {
             "low character tail {} not clearly under high character tail {}",
             tail_rms(&dull),
             tail_rms(&bright)
+        );
+    }
+
+    /// The fundamental at `t` seconds into the hit: the same zero-crossing
+    /// estimator as `fundamental`, but the lowpassed window starts at `t`,
+    /// so one call can catch a pitch that is still falling.
+    fn fundamental_at(s: &[f32], t: f32) -> f32 {
+        let start = ((t * SAMPLE_RATE as f32) as usize).min(s.len().saturating_sub(1));
+        let end = (start + 2048).min(s.len());
+        let mut lp = LowPass::new(600.0);
+        let mut lp2 = LowPass::new(600.0);
+        let w: Vec<f32> = s[start..end]
+            .iter()
+            .map(|x| lp2.process(lp.process(*x)))
+            .collect();
+        let crossings = w.windows(2).filter(|x| x[0] <= 0.0 && x[1] > 0.0).count() as f32;
+        crossings * SAMPLE_RATE as f32 / w.len().max(1) as f32
+    }
+
+    /// How noisy a hit is: RMS of its first difference over its own RMS.
+    /// A smooth low sine scores near its own frequency over the sample
+    /// rate; bandpassed noise, whose energy sits high, scores far more.
+    fn roughness(s: &[f32]) -> f32 {
+        let diff: Vec<f32> = s.windows(2).map(|w| w[1] - w[0]).collect();
+        rms(&diff) / rms(s).max(1e-12)
+    }
+
+    /// The spectral centroid (Hz): the magnitude-weighted mean frequency
+    /// of a coarse Goertzel scan over the strike's opening quarter second.
+    fn centroid(s: &[f32]) -> f32 {
+        let w = &s[..s.len().min(SAMPLE_RATE as usize / 4)];
+        let mut num = 0.0f32;
+        let mut den = 0.0f32;
+        let mut hz = 50.0f32;
+        while hz < 16_000.0 {
+            let coeff = 2.0 * (TAU * hz / SAMPLE_RATE as f32).cos();
+            let (mut s1, mut s2) = (0.0f32, 0.0f32);
+            for &x in w {
+                let s0 = x + coeff * s1 - s2;
+                s2 = s1;
+                s1 = s0;
+            }
+            let mag = (s1 * s1 + s2 * s2 - coeff * s1 * s2).max(0.0).sqrt();
+            num += hz * mag;
+            den += mag;
+            hz *= 1.15;
+        }
+        num / den.max(1e-9)
+    }
+
+    #[test]
+    fn a_drum_starts_at_its_note_and_falls() {
+        let out = membrane(200.0, 0.6, 0.2, 1);
+        assert!(
+            fundamental_at(&out, 0.0) > fundamental_at(&out, 0.3),
+            "the pitch must drop"
+        );
+    }
+
+    #[test]
+    fn a_snare_is_noisier_than_a_basedrum() {
+        let drum = membrane(150.0, 0.6, 0.0, 2);
+        let snare = membrane(150.0, 0.4, 1.0, 2);
+        assert!(roughness(&snare) > roughness(&drum));
+    }
+
+    #[test]
+    fn a_hat_is_short_and_bright() {
+        let hat = membrane(9000.0, 0.0, 1.0, 3);
+        assert!(hat.len() < crate::SAMPLE_RATE as usize / 2);
+        assert!(centroid(&hat) > centroid(&membrane(150.0, 0.6, 0.0, 3)));
+    }
+
+    #[test]
+    fn a_low_character_drum_is_duller_and_shorter_than_a_high_one() {
+        // The Membrane arm's character swing follows the family convention:
+        // a low character rattles less and its head dies sooner, a high one
+        // rattles brighter and rings longer (`drop` drives both the pitch
+        // fall and the ring length).
+        let dull = note(1, 12.0, 0.1, 5).unwrap();
+        let bright = note(1, 12.0, 0.9, 5).unwrap();
+        assert!(
+            bright.len() > dull.len(),
+            "high character note ({}) not longer than low character note ({})",
+            bright.len(),
+            dull.len()
+        );
+        // Skip the stick click so the comparison is rattle against pure tone.
+        let skip = SAMPLE_RATE as usize / 100;
+        assert!(
+            roughness(&bright[skip..]) > roughness(&dull[skip..]),
+            "high character roughness {} not above low character roughness {}",
+            roughness(&bright[skip..]),
+            roughness(&dull[skip..])
+        );
+    }
+
+    #[test]
+    fn a_membrane_note_renders_audible_finite_audio() {
+        let out = note(1, 12.0, 0.5, 7);
+        assert!(out.is_some(), "membrane note rendered nothing");
+        let out = out.unwrap();
+        assert!(!out.is_empty(), "membrane note is empty");
+        assert!(
+            out.iter().all(|x| x.is_finite()),
+            "membrane note has non-finite samples"
+        );
+        let peak = out.iter().fold(0.0f32, |m, x| m.max(x.abs()));
+        assert!(
+            peak > 0.05 && peak <= 1.0,
+            "peak {peak} not in (0.05, 1.0]: not audible, or clipping"
+        );
+        assert!(
+            out.len() <= (3.0 * SAMPLE_RATE as f32) as usize,
+            "membrane note runs past 3 s"
+        );
+        // The tail must be below -60 dB: a note that stops mid-cycle clicks.
+        let tail = &out[out.len().saturating_sub(100)..];
+        assert!(
+            tail.iter().all(|x| x.abs() < 1e-3),
+            "tail does not fade out — the note clicks off"
         );
     }
 }
