@@ -16,5 +16,12 @@ foley-synth.workspace = true
 [dev-dependencies]
 rtsan-standalone.workspace = true
 
+[features]
+# Measurement only, and off by default: with `audio-debug` the bed render
+# path prints one stderr line per bed every ~0.25 s (see docs/audio-debug.md).
+# The default build compiles none of it — the audio thread never allocates.
+default = []
+audio-debug = []
+
 [lints]
 workspace = true

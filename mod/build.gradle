@@ -60,6 +60,14 @@ def cargoNatives = tasks.register('cargoNatives', Exec) {
 	workingDir = rootDir.parentFile
 	def out = hostNativesDir.get().asFile
 	commandLine 'cargo', 'xtask', 'natives', '--target', 'host', '--out', out.absolutePath
+	// `-Pfoley.audioDebug=true` builds the native with cargo's non-default
+	// `audio-debug` feature: the bed render path prints one level line per bed
+	// to stderr (~0.25 s each; docs/audio-debug.md). xtask forwards the
+	// variable to cargo as `--features audio-debug`.
+	def audioDebug = providers.gradleProperty('foley.audioDebug').getOrElse('false')
+	if (audioDebug == 'true') {
+		environment 'FOLEY_AUDIO_DEBUG', '1'
+	}
 	outputs.dir(out)
 	// Cargo does its own up-to-date checking.
 	outputs.upToDateWhen { false }

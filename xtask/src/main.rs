@@ -121,6 +121,13 @@ fn natives(target: &str, out: &Path) -> Result<()> {
 /// cargo-zigbuild, so the library runs on any glibc since 2.17.
 fn build_ffi(target: Option<&str>) -> Result<PathBuf> {
     let mut cmd = cargo(&["build", "--profile", "dist", "--package", "foley-ffi"]);
+    // `FOLEY_AUDIO_DEBUG=1` — set by Gradle's `-Pfoley.audioDebug=true`
+    // (mod/build.gradle) — turns on the non-default `audio-debug` feature:
+    // the bed render path logs its levels (docs/audio-debug.md). Unset (the
+    // default), cargo gets exactly the arguments it always did.
+    if env::var_os("FOLEY_AUDIO_DEBUG").is_some() {
+        cmd.args(["--features", "audio-debug"]);
+    }
     let mut built = target_dir();
     let os = match target {
         None => env::consts::OS,

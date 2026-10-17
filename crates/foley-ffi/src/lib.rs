@@ -246,6 +246,11 @@ pub struct FoleyBed {
     underwater: UnderwaterLpf,
     /// How much of the underwater LPF is mixed in (0..=1, eased).
     underwater_mix: f32,
+    /// Peaks for the `audio-debug` playtest log. Compiled out unless that
+    /// feature is on: a default build carries no instrumentation at all, so
+    /// the audio thread's never-allocate guarantee is untouched.
+    #[cfg(feature = "audio-debug")]
+    meter: audio_debug::Meter,
 }
 
 /// Scenes glide this often, samples, and over about this long, seconds.
@@ -442,6 +447,8 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
             params: 0,
             underwater: UnderwaterLpf::new(),
             underwater_mix: 0.0,
+            #[cfg(feature = "audio-debug")]
+            meter: audio_debug::Meter::default(),
         }));
         Ok(())
     })
@@ -731,10 +738,139 @@ fn render_bed(bed: &mut FoleyBed, out: &mut [i16]) -> Result<(), FfiError> {
             bed.underwater_mix +=
                 (target_mix - bed.underwater_mix) * (1.0 / (0.25 * SAMPLE_RATE as f32));
             let filtered = bed.underwater.process(sample, bed.underwater_mix);
-            *out = to_pcm(filtered * bed.guard);
+            let value = to_pcm(filtered * bed.guard);
+            // Peaks only — and only under `audio-debug`, which the default
+            // build erases along with this call: no work, no branches, no
+            // allocation on the audio thread.
+            #[cfg(feature = "audio-debug")]
+            audio_debug::observe(
+                &mut bed.meter,
+                sample.abs(),
+                (filtered * bed.guard).abs(),
+                value,
+            );
+            *out = value;
         }
+        // Per bed, one line every ~0.25 s; feature-gated like the rest.
+        #[cfg(feature = "audio-debug")]
+        audio_debug::end_block(bed, out.len());
     }
     Ok(())
+}
+
+/// Measurement only, and only for the non-default `audio-debug` feature: a
+/// playtest built with `--features audio-debug` prints one stderr line per
+/// bed every [`audio_debug::LINE_FRAMES`] frames, showing that bed's raw
+/// synth peak before the level guard, its envelope and guard at the end of
+/// the block, the peak after guard + underwater filter, and the final i16
+/// peak. Nothing here changes what is rendered — without the feature this
+/// whole module is not compiled, and the default path does exactly the work
+/// it did before.
+#[cfg(feature = "audio-debug")]
+mod audio_debug {
+    use super::{SAMPLE_RATE, Synth};
+
+    /// One line per bed every this many frames: a quarter second at
+    /// 48 kHz (about ninety-four of the 128-frame glide blocks), fine
+    /// enough to catch a single-block transient in a playtest log.
+    pub(super) const LINE_FRAMES: usize = SAMPLE_RATE as usize / 4;
+
+    /// Peaks since the last line. Carried by [`super::FoleyBed`] only when
+    /// the feature is on.
+    #[derive(Debug, Default)]
+    pub(super) struct Meter {
+        /// Frames counted towards the next line.
+        frames: usize,
+        /// Peak `abs()` of the raw synth sample, before the guard.
+        pre: f32,
+        /// Peak after the guard and the underwater low-pass.
+        post: f32,
+        /// Peak `abs()` of the final `i16` samples from `to_pcm`; `u16` so
+        /// full scale (`-32768`) is 32768, not a wrapped negative.
+        pcm: u16,
+    }
+
+    /// One rendered sample: keep the peaks. Printing happens once per line,
+    /// in [`end_block`] — never per sample.
+    pub(super) fn observe(meter: &mut Meter, pre: f32, post: f32, pcm: i16) {
+        meter.pre = meter.pre.max(pre);
+        meter.post = meter.post.max(post);
+        meter.pcm = meter.pcm.max(pcm.unsigned_abs());
+    }
+
+    /// The glide block just rendered: count its frames and, once a line is
+    /// due, print the peaks accumulated since the last one — the envelope
+    /// and guard are the values at the end of this block — and start again.
+    pub(super) fn end_block(bed: &mut super::FoleyBed, block: usize) {
+        bed.meter.frames += block;
+        if bed.meter.frames < LINE_FRAMES {
+            return;
+        }
+        let meter = std::mem::take(&mut bed.meter);
+        eprintln!("{}", report(&bed.synth, bed.envelope, bed.guard, &meter));
+    }
+
+    /// The line, spelled out so it can be asserted on:
+    /// `[foley] bed=surf env=0.83 guard=1.000 pre=0.912 post=0.364 pcm=11945`.
+    fn report(synth: &Synth, envelope: f32, guard: f32, meter: &Meter) -> String {
+        format!(
+            "[foley] bed={} env={envelope:.2} guard={guard:.3} pre={:.3} post={:.3} pcm={}",
+            name(synth),
+            meter.pre,
+            meter.post,
+            meter.pcm,
+        )
+    }
+
+    /// The bed's kind, as the log spells it.
+    fn name(synth: &Synth) -> &'static str {
+        match synth {
+            Synth::Rain(_) => "rain",
+            Synth::Wind(_) => "wind",
+            Synth::Water(_) => "water",
+            Synth::Fire(_) => "fire",
+            Synth::Lava(_) => "lava",
+            Synth::Thunder(_) => "thunder",
+            Synth::Cave(_) => "cave",
+            Synth::Underwater(_) => "underwater",
+            Synth::Biome(_) => "biome",
+            Synth::Surf(_) => "surf",
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        /// A full-scale-ish block of a surf bed, after a quiet one.
+        #[test]
+        fn the_line_names_the_bed_and_reports_peaks() {
+            let synth = Synth::Surf(crate::Surf::new(7));
+            let meter = Meter {
+                frames: LINE_FRAMES,
+                pre: 0.912,
+                post: 0.364,
+                pcm: 11_945,
+            };
+            let line = report(&synth, 0.83, 1.0, &meter);
+            assert_eq!(
+                line,
+                "[foley] bed=surf env=0.83 guard=1.000 pre=0.912 post=0.364 pcm=11945"
+            );
+        }
+
+        /// Peaks are maxima, and full scale is 32768 — not a wrapped
+        /// negative that would hide saturation. `pre`/`post` arrive as peaks
+        /// (the render passes `abs()`), so they are never negative here.
+        #[test]
+        fn observe_keeps_the_highest_of_each() {
+            let mut meter = Meter::default();
+            observe(&mut meter, 0.5, 0.25, -100);
+            observe(&mut meter, 0.9, 0.1, 30_000);
+            observe(&mut meter, 0.4, 0.3, -32_768);
+            assert_eq!((meter.pre, meter.post, meter.pcm), (0.9, 0.3, 32_768));
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1377,7 +1513,24 @@ mod tests {
                         }
                         rtsan_standalone::realtime_exit();
                     });
+                    // Without the feature: nothing, ever — the audio thread
+                    // never allocates, which is the whole guarantee.
+                    #[cfg(not(feature = "audio-debug"))]
                     assert_eq!(made, 0, "bed {kind}, scene {n}: allocated {made} times");
+                    // With it, the per-line log allocates by design (why the
+                    // feature is never on by default; docs/audio-debug.md) —
+                    // but only once per line, never per sample, so a few
+                    // allocations per 12 000-frame line is all it may reach.
+                    #[cfg(feature = "audio-debug")]
+                    {
+                        let lines = 40 * pcm.len() / crate::audio_debug::LINE_FRAMES;
+                        let budget = lines * 8;
+                        assert!(
+                            made <= budget,
+                            "bed {kind}, scene {n}: allocated {made} times, over the \
+                             {budget} allowed for {lines} log lines"
+                        );
+                    }
                     // Gives the thunder thread time to make and free.
                     if kind == FOLEY_BED_THUNDER {
                         std::thread::sleep(std::time::Duration::from_millis(500));
