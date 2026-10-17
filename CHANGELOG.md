@@ -3,6 +3,20 @@
 The mod and the Rust workspace share one version; entries are grouped by that
 version. Playtest builds are `0.1.0-beta.N`.
 
+## 0.1.0-beta.59 — pluggable door sounds
+
+### Added
+
+- `foley-api` gains `DoorSoundHandler`: an addon can register a handler on
+  `FoleyApi` to take over the vanilla door/trapdoor open/close sounds from
+  Foley's built-in contact tap. Returning true keeps the vanilla event skipped,
+  false lets it play; no handler means today's behaviour exactly. Registrable
+  any time on the client thread; `null` restores the built-in tap. Documented
+  with an example in `docs/INTEGRATING.md`.
+- `foley-api` is now publishable to Maven repositories (`publishToMavenLocal`
+  installs the api jar, sources jar and pom under `io.github.cumsauce:foley-api`),
+  so sibling mods can compile against it.
+
 ## 0.1.0-beta.58 — coastline fixes
 
 ### Fixed
