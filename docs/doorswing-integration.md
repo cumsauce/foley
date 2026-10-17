@@ -14,7 +14,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly "io.github.cumsauce:foley-api:0.1.0-beta.59"
+    compileOnly "io.github.cumsauce:foley-api:0.1.0-beta.60+"
 }
 ```
 

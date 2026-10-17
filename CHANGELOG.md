@@ -3,7 +3,7 @@
 The mod and the Rust workspace share one version; entries are grouped by that
 version. Playtest builds are `0.1.0-beta.N`.
 
-## Unreleased — generic sound overrides
+## 0.1.0-beta.60 — generic sound overrides
 
 ### Added
 
@@ -20,6 +20,12 @@ version. Playtest builds are `0.1.0-beta.N`.
   door code keeps working unchanged.
 - Mob voice sounds are outside this registry: they run through Foley's separate
   voice system.
+
+### Fixed
+
+- Foley's global bypass now lets the game's own sounds through for every event
+  Foley takes over (rain, thunder, ambience, drips, chests, shulkers,
+  minecarts), not just doors.
 
 ## 0.1.0-beta.59 — pluggable door sounds
 
