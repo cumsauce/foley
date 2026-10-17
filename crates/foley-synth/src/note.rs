@@ -261,7 +261,21 @@ pub fn note(instrument: u32, note: f32, character: f32, seed: u64) -> Option<Vec
             let bright = (bright + 0.25 * (character - 0.5)).clamp(0.0, 1.0);
             breath(hz, airflow, bright, seed)
         }
-        Family::Electronic => return None, // Task 5
+        Family::Electronic => {
+            // The two electronic instruments, in the mapped index order:
+            // bit, pling — the bit a chiptune square blip, the pling an FM
+            // electric-piano strike. `kind` picks the synth (0 bit, 1 pling)
+            // and `bright` is the family's character axis swung around the
+            // voicing: a low character sounds duller and dies sooner, a high
+            // one brighter and rings longer.
+            let (kind, bright) = match instrument {
+                13 => (0.0, 0.40), // bit: a short square blip
+                15 => (1.0, 0.60), // pling: a longer FM strike
+                _ => (0.5, 0.50),
+            };
+            let bright = (bright + 0.4 * (character - 0.5)).clamp(0.0, 1.0);
+            electronic(hz, kind, bright, seed)
+        }
     };
     crate::dsp::normalize_in_place(&mut out, 0.9);
     Some(out)
@@ -507,6 +521,98 @@ fn breath(hz: f32, airflow: f32, bright: f32, seed: u64) -> Vec<f32> {
         phase += step;
         if phase >= 1.0 {
             phase -= 1.0;
+        }
+    }
+    out
+}
+
+/// An electronic instrument. `kind` (below 0.5, the bit; at or above it,
+/// the pling) picks which of the two synths sounds, `bright` (0 to 1) is
+/// the family's character axis — a low character is duller and dies sooner,
+/// a high one brighter and rings longer — and `seed` offsets the phases so
+/// two hits of the same note differ.
+fn electronic(hz: f32, kind: f32, bright: f32, seed: u64) -> Vec<f32> {
+    let bright = bright.clamp(0.0, 1.0);
+    // The strike: -60 dB after `t60`, and the run ends where the envelope
+    // reaches about -66 dB so the tail fades instead of clicking off —
+    // short and dull at a low character, long and bright at a high one.
+    let t60 = if kind < 0.5 {
+        0.15 + 0.60 * bright
+    } else {
+        0.25 + 1.20 * bright
+    };
+    let length =
+        ((t60 * 1.1 * SAMPLE_RATE as f32) as usize + 2).min((3.0 * SAMPLE_RATE as f32) as usize);
+    let g = 10.0f32.powf(-3.0 / (t60 * SAMPLE_RATE as f32));
+    // An attack so the hit swells on rather than clicking.
+    let attack = ((0.003 * SAMPLE_RATE as f32) as usize).max(1);
+    let mut rng = Rng::new(seed);
+    let mut out = Vec::with_capacity(length);
+    if kind < 0.5 {
+        // The bit: a square wave at the note — half-wave symmetric, so its
+        // weight sits on the odd harmonics — pitched with a touch of
+        // downward drop as the blip starts, and lowpassed at a cutoff the
+        // character lifts: a duller bit sheds its upper partials, a
+        // brighter one keeps them.
+        let hz = hz.clamp(20.0, 0.45 * SAMPLE_RATE as f32);
+        let fc = (500.0 + 7500.0 * bright).min(0.45 * SAMPLE_RATE as f32);
+        let mut lp1 = LowPass::new(fc);
+        let mut lp2 = LowPass::new(fc);
+        let mut phase = rng.unit() * TAU;
+        let mut env = 1.0f32;
+        for i in 0..length {
+            // The pitch drop: the blip starts at the note and settles a
+            // touch below as its envelope falls away.
+            let freq = hz * (1.0 - 0.05 * (1.0 - env));
+            let square = phase.sin().signum();
+            let swell = if i < attack {
+                i as f32 / attack as f32
+            } else {
+                1.0
+            };
+            out.push(swell * env * lp2.process(lp1.process(square)));
+            phase += TAU * freq / SAMPLE_RATE as f32;
+            if phase >= TAU {
+                phase -= TAU;
+            }
+            env *= g;
+        }
+    } else {
+        // The pling: a two-operator FM strike — sine carrier at the note,
+        // sine modulator at 3.5 times it, a non-integer ratio whose
+        // sidebands fall between the harmonics — with the modulating index
+        // falling to zero as the strike decays. `bright` sets how far the
+        // index is driven: a duller pling stays near a sine, a brighter one
+        // rings with inharmonic sidebands.
+        let hz = hz.clamp(20.0, 0.4 * SAMPLE_RATE as f32 / 3.5);
+        let index0 = 1.2 + 1.6 * bright;
+        // The index falls to nothing over a few hundred milliseconds —
+        // faster the duller the strike — so the sidebands die away before
+        // the carrier does.
+        let ig = 10.0f32.powf(-3.0 / ((0.15 + 0.30 * bright) * SAMPLE_RATE as f32));
+        let mut cphase = rng.unit() * TAU;
+        let mut mphase = rng.unit() * TAU;
+        let step_c = TAU * hz / SAMPLE_RATE as f32;
+        let step_m = TAU * (3.5 * hz) / SAMPLE_RATE as f32;
+        let mut env = 1.0f32;
+        let mut index = index0;
+        for i in 0..length {
+            let swell = if i < attack {
+                i as f32 / attack as f32
+            } else {
+                1.0
+            };
+            out.push(swell * env * (cphase + index * mphase.sin()).sin());
+            cphase += step_c;
+            if cphase >= TAU {
+                cphase -= TAU;
+            }
+            mphase += step_m;
+            if mphase >= TAU {
+                mphase -= TAU;
+            }
+            env *= g;
+            index *= ig;
         }
     }
     out
@@ -985,6 +1091,134 @@ mod tests {
             "high character didgeridoo ({}) not longer than low character ({})",
             bright.len(),
             dull.len()
+        );
+    }
+
+    /// RMS of the front half: how loud the hit still is at its onset, the
+    /// mirror of `tail_rms`.
+    fn head_rms(s: &[f32]) -> f32 {
+        let half = (s.len() / 2).max(1);
+        rms(&s[..half])
+    }
+
+    /// The Goertzel magnitude at one exact frequency over the strike's
+    /// opening quarter second — a single bin of the scan `centroid` and
+    /// `harmonic_count` sweep.
+    fn mag_at(s: &[f32], hz: f32) -> f32 {
+        let w = &s[..s.len().min(SAMPLE_RATE as usize / 4)];
+        let coeff = 2.0 * (TAU * hz / SAMPLE_RATE as f32).cos();
+        let (mut s1, mut s2) = (0.0f32, 0.0f32);
+        for &x in w {
+            let s0 = x + coeff * s1 - s2;
+            s2 = s1;
+            s1 = s0;
+        }
+        (s1 * s1 + s2 * s2 - coeff * s1 * s2).max(0.0).sqrt()
+    }
+
+    #[test]
+    fn a_bit_is_a_square_wave_at_the_note() {
+        let out = electronic(440.0, 0.0, 0.5, 1); // bit
+        assert!(
+            (fundamental(&out) - 440.0).abs() < 30.0,
+            "bit at {}",
+            fundamental(&out)
+        );
+    }
+
+    #[test]
+    fn a_pling_is_an_fm_pair_that_decays() {
+        let out = electronic(440.0, 1.0, 0.5, 2); // pling
+        assert!(out.len() < 3 * crate::SAMPLE_RATE as usize);
+        assert!(
+            tail_rms(&out) < 0.2 * head_rms(&out),
+            "the pling must decay"
+        );
+    }
+
+    #[test]
+    fn the_two_electronics_differ() {
+        let bit = electronic(440.0, 0.0, 0.5, 3);
+        let pling = electronic(440.0, 1.0, 0.5, 3);
+        assert_ne!(
+            bit.len(),
+            pling.len(),
+            "the two electronics share a buffer length"
+        );
+        // The bit is a square: half-wave symmetric, so its weight sits on
+        // the *odd* harmonics — 3·hz loud, the even 2·hz absent.
+        let bit_odd = mag_at(&bit, 3.0 * 440.0);
+        let bit_even = mag_at(&bit, 2.0 * 440.0);
+        assert!(
+            bit_odd > 4.0 * bit_even,
+            "bit's 3rd harmonic magnitude {bit_odd} not clearly above its 2nd {bit_even}"
+        );
+        // The pling's sidebands sit off the series: its 3.5·hz modulator
+        // folds one onto 2.5·hz, between the integer multiples where the
+        // square keeps its weight.
+        let pling_off = mag_at(&pling, 2.5 * 440.0);
+        let pling_odd = mag_at(&pling, 3.0 * 440.0);
+        assert!(
+            pling_off > 4.0 * pling_odd,
+            "pling's 2.5× sideband magnitude {pling_off} not clearly above the 3rd harmonic {pling_odd}"
+        );
+    }
+
+    #[test]
+    fn an_electronic_note_renders_audible_finite_audio() {
+        let out = note(13, 12.0, 0.5, 7);
+        assert!(out.is_some(), "electronic note rendered nothing");
+        let out = out.unwrap();
+        assert!(!out.is_empty(), "electronic note is empty");
+        assert!(
+            out.iter().all(|x| x.is_finite()),
+            "electronic note has non-finite samples"
+        );
+        let peak = out.iter().fold(0.0f32, |m, x| m.max(x.abs()));
+        assert!(
+            peak > 0.05 && peak <= 1.0,
+            "peak {peak} not in (0.05, 1.0]: not audible, or clipping"
+        );
+        assert!(
+            out.len() <= (3.0 * SAMPLE_RATE as f32) as usize,
+            "electronic note runs past 3 s"
+        );
+        // The tail must be below -60 dB: a note that stops mid-cycle clicks.
+        let tail = &out[out.len().saturating_sub(100)..];
+        assert!(
+            tail.iter().all(|x| x.abs() < 1e-3),
+            "tail does not fade out — the note clicks off"
+        );
+        // The pling half of the family renders too: no arm of `note`
+        // returns None for a valid instrument any more.
+        assert!(
+            note(15, 12.0, 0.5, 7).is_some(),
+            "pling note rendered nothing"
+        );
+    }
+
+    #[test]
+    fn a_low_character_bit_is_duller_and_shorter_than_a_high_one() {
+        // The Electronic arm's character swing follows the family
+        // convention: a low character is duller and dies sooner, a high
+        // one brighter and rings longer.
+        let dull = note(13, 12.0, 0.1, 4).unwrap();
+        let bright = note(13, 12.0, 0.9, 4).unwrap();
+        assert!(
+            bright.len() > dull.len() + SAMPLE_RATE as usize / 100,
+            "high character bit ({}) not clearly longer than low character ({})",
+            bright.len(),
+            dull.len()
+        );
+        // Skip the attack so the spectra compare blip against blip.
+        let skip = SAMPLE_RATE as usize / 100;
+        let dull_centroid = centroid(&dull[skip..]);
+        let bright_centroid = centroid(&bright[skip..]);
+        assert!(
+            bright_centroid > 1.1 * dull_centroid,
+            "high character bit centroid {} not clearly above low character {}",
+            bright_centroid,
+            dull_centroid
         );
     }
 }
