@@ -526,11 +526,41 @@ fn breath(hz: f32, airflow: f32, bright: f32, seed: u64) -> Vec<f32> {
     out
 }
 
+/// A two-pole resonant lowpass (topology-preserving transform), the
+/// analog voice's filter. `fc` and `q` may change every sample, so the
+/// cutoff can sweep down with the strike's envelope the way an analog
+/// envelope-following filter does.
+#[derive(Debug, Clone, Copy, Default)]
+struct ResonantLp {
+    ic1: f32,
+    ic2: f32,
+}
+
+impl ResonantLp {
+    fn process(&mut self, x: f32, fc: f32, q: f32) -> f32 {
+        let g = (PI * fc / SAMPLE_RATE as f32).tan();
+        let k = 1.0 / q.max(0.5);
+        let a1 = 1.0 / (1.0 + g * (g + k));
+        let a2 = g * a1;
+        let a3 = g * a2;
+        let v3 = x - self.ic2;
+        let v1 = a1 * self.ic1 + a2 * v3;
+        let v2 = self.ic2 + a2 * self.ic1 + a3 * v3;
+        self.ic1 = 2.0 * v1 - self.ic1;
+        self.ic2 = 2.0 * v2 - self.ic2;
+        v2
+    }
+}
+
 /// An electronic instrument. `kind` (below 0.5, the bit; at or above it,
 /// the pling) picks which of the two synths sounds, `bright` (0 to 1) is
 /// the family's character axis — a low character is duller and dies sooner,
 /// a high one brighter and rings longer — and `seed` offsets the phases so
-/// two hits of the same note differ.
+/// two hits of the same note differ. The voice is analog by treatment: the
+/// oscillator drifts (pulse-width modulation and a pitch random walk for
+/// the bit, operators a few cents apart for the pling), a resonant
+/// lowpass closes down with the envelope, the output saturates softly and
+/// asymmetrically, and a quiet hiss sits under everything.
 fn electronic(hz: f32, kind: f32, bright: f32, seed: u64) -> Vec<f32> {
     let bright = bright.clamp(0.0, 1.0);
     // The strike: -60 dB after `t60`, and the run ends where the envelope
@@ -546,31 +576,73 @@ fn electronic(hz: f32, kind: f32, bright: f32, seed: u64) -> Vec<f32> {
     let g = 10.0f32.powf(-3.0 / (t60 * SAMPLE_RATE as f32));
     // An attack so the hit swells on rather than clicking.
     let attack = ((0.003 * SAMPLE_RATE as f32) as usize).max(1);
+    // The analog filter: a resonant lowpass whose cutoff starts high at
+    // the strike and closes with the envelope — the analog "pluck". The
+    // character lifts the whole sweep: a duller hit stays dark, a brighter
+    // one opens further before it darkens.
+    let fc_max = 900.0 + 7500.0 * bright;
+    let fc_min = 120.0 + 350.0 * bright;
+    let resonance = 1.3;
+    let mut filter = ResonantLp::default();
+    // The output stage: soft saturation with a quadratic bow — one side
+    // of the wave lifted more than the other, the asymmetry that leaves
+    // the even harmonic a symmetric clipper cannot — and a DC blocker for
+    // the offset the bow leaves behind.
+    let drive = 1.2;
+    let skew = 1.0;
+    let dc_r = 1.0 - TAU * 20.0 / SAMPLE_RATE as f32;
+    // A very quiet hiss under the voice — analog gear is never pristine.
+    // It decays with the note, so the tail still fades out.
+    let mut hiss_lp = LowPass::new(5500.0);
+    let hiss_amp = 0.008;
     let mut rng = Rng::new(seed);
     let mut out = Vec::with_capacity(length);
+    let mut dc_x = 0.0f32;
+    let mut dc_y = 0.0f32;
     if kind < 0.5 {
-        // The bit: a square wave at the note — half-wave symmetric, so its
-        // weight sits on the odd harmonics — pitched with a touch of
-        // downward drop as the blip starts, and lowpassed at a cutoff the
-        // character lifts: a duller bit sheds its upper partials, a
-        // brighter one keeps them.
+        // The bit: a pulse at the note with a touch of downward pitch
+        // drop — but analog, not chip: its duty swings slowly around
+        // 50 % (pulse-width modulation) and its pitch drifts a few cents
+        // on a seeded random walk, targets redrawn every 100 ms and
+        // glided between.
         let hz = hz.clamp(20.0, 0.45 * SAMPLE_RATE as f32);
-        let fc = (500.0 + 7500.0 * bright).min(0.45 * SAMPLE_RATE as f32);
-        let mut lp1 = LowPass::new(fc);
-        let mut lp2 = LowPass::new(fc);
+        let lfo = 1.5 + 2.5 * rng.unit();
+        let pwm_phase = rng.unit() * TAU;
+        let walk = ((0.1 * SAMPLE_RATE as f32) as usize).max(2);
+        let mut drift_from = rng.signed() * 8.0;
+        let mut drift_to = rng.signed() * 8.0;
         let mut phase = rng.unit() * TAU;
         let mut env = 1.0f32;
         for i in 0..length {
-            // The pitch drop: the blip starts at the note and settles a
-            // touch below as its envelope falls away.
-            let freq = hz * (1.0 - 0.05 * (1.0 - env));
-            let square = phase.sin().signum();
+            // The pitch drop plus the drift: the blip starts at the note
+            // and settles a touch below as its envelope falls away, its
+            // pitch wandering a few cents around that.
+            let cents = if i % walk == 0 {
+                drift_from = drift_to;
+                drift_to = rng.signed() * 8.0;
+                drift_from
+            } else {
+                let u = (i % walk) as f32 / walk as f32;
+                drift_from + (drift_to - drift_from) * u
+            };
+            let freq = hz * (1.0 - 0.05 * (1.0 - env)) * 2.0f32.powf(cents / 1200.0);
+            // The pulse: high for a duty the LFO swings slowly around
+            // half — pulse-width modulation, the oscillator's shimmer.
+            let duty = 0.5 + 0.09 * (TAU * lfo * i as f32 / SAMPLE_RATE as f32 + pwm_phase).sin();
+            let pulse = if phase / TAU < duty { 1.0 } else { -1.0 };
             let swell = if i < attack {
                 i as f32 / attack as f32
             } else {
                 1.0
             };
-            out.push(swell * env * lp2.process(lp1.process(square)));
+            let fc = fc_min + (fc_max - fc_min) * env;
+            let mut s = filter.process(swell * env * pulse, fc, resonance);
+            s = (drive * s + skew * s * s).tanh();
+            s += hiss_amp * env * hiss_lp.process(rng.signed());
+            let y = s - dc_x + dc_r * dc_y;
+            dc_x = s;
+            dc_y = y;
+            out.push(y);
             phase += TAU * freq / SAMPLE_RATE as f32;
             if phase >= TAU {
                 phase -= TAU;
@@ -583,17 +655,23 @@ fn electronic(hz: f32, kind: f32, bright: f32, seed: u64) -> Vec<f32> {
         // sidebands fall between the harmonics — with the modulating index
         // falling to zero as the strike decays. `bright` sets how far the
         // index is driven: a duller pling stays near a sine, a brighter one
-        // rings with inharmonic sidebands.
+        // rings with inharmonic sidebands. The operators drift a few cents
+        // against each other — carrier up half, modulator down half — so
+        // the FM beat is never mathematically locked, as an analog pair's
+        // would not be.
         let hz = hz.clamp(20.0, 0.4 * SAMPLE_RATE as f32 / 3.5);
         let index0 = 1.2 + 1.6 * bright;
         // The index falls to nothing over a few hundred milliseconds —
         // faster the duller the strike — so the sidebands die away before
         // the carrier does.
         let ig = 10.0f32.powf(-3.0 / ((0.15 + 0.30 * bright) * SAMPLE_RATE as f32));
+        let cents = 2.0 + 4.0 * rng.unit();
+        let carrier = hz * 2.0f32.powf(cents / 2400.0);
+        let mod_hz = 3.5 * hz * 2.0f32.powf(-cents / 2400.0);
         let mut cphase = rng.unit() * TAU;
         let mut mphase = rng.unit() * TAU;
-        let step_c = TAU * hz / SAMPLE_RATE as f32;
-        let step_m = TAU * (3.5 * hz) / SAMPLE_RATE as f32;
+        let step_c = TAU * carrier / SAMPLE_RATE as f32;
+        let step_m = TAU * mod_hz / SAMPLE_RATE as f32;
         let mut env = 1.0f32;
         let mut index = index0;
         for i in 0..length {
@@ -602,7 +680,18 @@ fn electronic(hz: f32, kind: f32, bright: f32, seed: u64) -> Vec<f32> {
             } else {
                 1.0
             };
-            out.push(swell * env * (cphase + index * mphase.sin()).sin());
+            let fc = fc_min + (fc_max - fc_min) * env;
+            let mut s = filter.process(
+                swell * env * (cphase + index * mphase.sin()).sin(),
+                fc,
+                resonance,
+            );
+            s = (drive * s + skew * s * s).tanh();
+            s += hiss_amp * env * hiss_lp.process(rng.signed());
+            let y = s - dc_x + dc_r * dc_y;
+            dc_x = s;
+            dc_y = y;
+            out.push(y);
             cphase += step_c;
             if cphase >= TAU {
                 cphase -= TAU;
@@ -1145,12 +1234,15 @@ mod tests {
             pling.len(),
             "the two electronics share a buffer length"
         );
-        // The bit is a square: half-wave symmetric, so its weight sits on
-        // the *odd* harmonics — 3·hz loud, the even 2·hz absent.
+        // The bit is analog now, so its "odd harmonics only" claim no
+        // longer holds: PWM and the asymmetric bow leave a real 2·hz
+        // (pinned by `an_analog_bit_carries_a_second_harmonic`). What
+        // still marks it as a pulse — against the pling, whose weight
+        // sits off the series entirely — is that 3·hz outweighs 2·hz.
         let bit_odd = mag_at(&bit, 3.0 * 440.0);
         let bit_even = mag_at(&bit, 2.0 * 440.0);
         assert!(
-            bit_odd > 4.0 * bit_even,
+            bit_odd > 1.8 * bit_even,
             "bit's 3rd harmonic magnitude {bit_odd} not clearly above its 2nd {bit_even}"
         );
         // The pling's sidebands sit off the series: its 3.5·hz modulator
@@ -1161,6 +1253,25 @@ mod tests {
         assert!(
             pling_off > 4.0 * pling_odd,
             "pling's 2.5× sideband magnitude {pling_off} not clearly above the 3rd harmonic {pling_odd}"
+        );
+    }
+
+    #[test]
+    fn an_analog_bit_carries_a_second_harmonic() {
+        // The bit is no longer a perfect 50 % square: the analog voice
+        // breaks its half-wave symmetry — the PWM's duty wanders off half
+        // and the output stage's quadratic bow lifts one side of the wave
+        // more than the other — so 2·hz carries real weight. The bar sits
+        // at 5 % of the fundamental because the bow's even harmonic
+        // integrates with the square of the decaying envelope: measured
+        // across bow strengths and seeds it lands at 5.6–6.2 %, an order
+        // above the sub-1 % leakage a static square leaves.
+        let bit = electronic(440.0, 0.0, 0.5, 11);
+        let f0 = mag_at(&bit, 440.0);
+        let h2 = mag_at(&bit, 880.0);
+        assert!(
+            h2 > 0.05 * f0,
+            "bit's 2nd harmonic {h2} under 5% of its fundamental {f0} — it reads as a digital square"
         );
     }
 
