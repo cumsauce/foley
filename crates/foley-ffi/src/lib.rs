@@ -432,16 +432,12 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
             synth,
             scratch: [0.0; GLIDE_BLOCK],
             envelope: 0.0,
-            // At the ceiling, not unity: a fresh bed's envelope is empty, so
-            // `wanted` clamps to 1.0 and a guard left at 1.0 would pass a
-            // full-scale onset straight past BED_CEILING for as long as it
-            // takes the guard's slow fall to catch it. At BED_CEILING a
-            // full-scale onset on sample 0 obeys `|sample * guard| <=
-            // BED_CEILING` at once, so the ceiling holds from the very first
-            // sample — and, unlike the floor (0.0, which climbs at only
-            // 0.0001 a sample and so fades a new bed in over ~0.2 s, making
-            // arriving beds sound late), it needs no fade-in at all.
-            guard: BED_CEILING,
+            // At unity: the ceiling is enforced by the applied gain
+            // (`guard.min(wanted)` in `render_bed`), so a full-scale onset
+            // on sample 0 obeys `|sample * gain| <= BED_CEILING` at once,
+            // while the smoothed guard itself starts where a steady bed
+            // needs it — no fade-in and no restart step.
+            guard: 1.0,
             target: [0.0; MAX_PARAMS],
             heard: [0.0; MAX_PARAMS],
             params: 0,
@@ -734,21 +730,22 @@ fn render_bed(bed: &mut FoleyBed, out: &mut [i16]) -> Result<(), FfiError> {
             let wanted = (BED_CEILING / bed.envelope.max(1e-6)).min(1.0);
             let rate = if wanted < bed.guard { 0.01 } else { 0.0001 };
             bed.guard += (wanted - bed.guard) * rate;
+            // Instant attack, unchanged release: what is applied is the
+            // lesser of the smoothed guard and what the envelope needs
+            // right now, so the ceiling holds from sample 0 (and a restarted
+            // bed fades in at once) even where the guard's slow fall has
+            // not yet caught up.
+            let gain = bed.guard.min(wanted);
             // Ease in/out at ~250 ms.
             bed.underwater_mix +=
                 (target_mix - bed.underwater_mix) * (1.0 / (0.25 * SAMPLE_RATE as f32));
             let filtered = bed.underwater.process(sample, bed.underwater_mix);
-            let value = to_pcm(filtered * bed.guard);
+            let value = to_pcm(filtered * gain);
             // Peaks only — and only under `audio-debug`, which the default
             // build erases along with this call: no work, no branches, no
             // allocation on the audio thread.
             #[cfg(feature = "audio-debug")]
-            audio_debug::observe(
-                &mut bed.meter,
-                sample.abs(),
-                (filtered * bed.guard).abs(),
-                value,
-            );
+            audio_debug::observe(&mut bed.meter, sample.abs(), (filtered * gain).abs(), value);
             *out = value;
         }
         // Per bed, one line every ~0.25 s; feature-gated like the rest.
@@ -925,8 +922,8 @@ mod render_contract_tests {
     /// A full-scale onset on a brand-new bed: its guard's envelope is empty,
     /// so `wanted` clamps to unity and nothing but the guard itself can catch
     /// the peak. A fire at full size is far louder than a speaker takes, but
-    /// `foley_bed_create` starts the guard at `BED_CEILING`, so
-    /// `|sample * guard| <= BED_CEILING` holds from sample 0.
+    /// `foley_bed_create` applies `guard.min(wanted)` as the gain, so
+    /// `|sample * gain| <= BED_CEILING` holds from sample 0.
     #[test]
     fn a_full_scale_onset_never_leaves_above_the_ceiling() {
         let _bed = bed(FOLEY_BED_FIRE);
