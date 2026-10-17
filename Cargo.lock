@@ -602,6 +602,7 @@ dependencies = [
  "anyhow",
  "cbindgen",
  "clap",
+ "foley-ffi",
  "sha2",
 ]
 

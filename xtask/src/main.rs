@@ -9,6 +9,8 @@ use anyhow::{Context, Result, bail, ensure};
 use clap::{Parser, Subcommand};
 use sha2::{Digest, Sha256};
 
+mod levels;
+
 #[derive(Debug, Parser)]
 struct Args {
     #[command(subcommand)]
@@ -42,6 +44,9 @@ enum Cmd {
         #[arg(long)]
         from: Option<PathBuf>,
     },
+    /// Render every bed through the C ABI and report its level against the
+    /// 0.4 full-scale ceiling; exits non-zero if any bed breaks it.
+    Levels,
 }
 
 fn main() -> Result<()> {
@@ -52,6 +57,7 @@ fn main() -> Result<()> {
         ),
         Cmd::Header { check } => header(check),
         Cmd::Dist { from } => dist(from.as_deref()),
+        Cmd::Levels => levels::run(),
     }
 }
 
