@@ -924,9 +924,9 @@ mod render_contract_tests {
 
     /// A full-scale onset on a brand-new bed: its guard's envelope is empty,
     /// so `wanted` clamps to unity and nothing but the guard itself can catch
-    /// the peak. A fire at full size is far louder than a speaker takes —
-    /// once the guard has had a block to act, no later sample may leave the
-    /// ceiling.
+    /// the peak. A fire at full size is far louder than a speaker takes, but
+    /// `foley_bed_create` starts the guard at `BED_CEILING`, so
+    /// `|sample * guard| <= BED_CEILING` holds from sample 0.
     #[test]
     fn a_full_scale_onset_never_leaves_above_the_ceiling() {
         let _bed = bed(FOLEY_BED_FIRE);
