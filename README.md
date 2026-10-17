@@ -53,6 +53,7 @@ You need JDK 25 and rustup (which reads `rust-toolchain.toml`). The layout follo
 ```sh
 cargo test --workspace                                  # Rust crates
 cargo xtask header                                      # regenerate crates/foley-ffi/include/foley.h after changing the C ABI
+cargo xtask levels                                      # measure every bed against the 0.4 full-scale ceiling (prints a sorted table; exits 1 if any scene exceeds it — that is by design, not a build failure)
 cargo run --release -p foley-synth --example bed_bench  # what synthesis costs
 cd mod && ./gradlew runClientGameTest                   # the real game: rain, wind and drips
 ```
@@ -60,6 +61,8 @@ cd mod && ./gradlew runClientGameTest                   # the real game: rain, w
 CI runs everything but that last line: launching the game there is slow and can hang on a loaded runner, so it is run locally, or from the Actions tab (Run workflow), which builds and runs it too.
 
 In a VM building from a VirtioFS shared folder, set `CARGO_TARGET_DIR` to a local disk and pass `-Pfoley.runDir=<local dir>` to game runs. Foley needs `--enable-native-access=ALL-UNNAMED` in the launcher's JVM arguments, like Earshot and Yak VC.
+
+A non-fatal `rust-objcopy`/`libLLVM.dylib` warning may appear while the native library is being stripped; the dylib still stages and the build succeeds, so it can be ignored.
 
 ## License
 

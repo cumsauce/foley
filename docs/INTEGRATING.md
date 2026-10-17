@@ -174,6 +174,24 @@ api.doorHandler((event, x, y, z, iron) -> {
 
 Open and close are told apart by the event id (`minecraft:block.wooden_door.open`, `minecraft:block.iron_trapdoor.close`, …). Foley's bypass wins: while bypassed the game's sound plays and no override is consulted. Otherwise the last-registered override whose predicate matches decides; `register` returns a handle whose `unregister()` removes that one override, and `api.soundOverrides().clear()` removes them all — the door handler's sugar registration among them. Whatever you play through `sounds().play` follows Foley's volume, bypass and per-tick one-shot budget; the callback itself does not spend that budget. `api.doorHandler(null)` restores Foley's built-in tap. Mob voice sounds are not part of this registry: they run through Foley's separate voice system.
 
+## What Foley takes over
+
+Every event below is skipped in the game's sound engine and replaced by Foley's own synthesis, so an override registered against its id (or a predicate matching it) takes precedence over the built-in sound.
+
+| Event family | Controller | Config toggle | Override id prefix |
+|---|---|---|---|
+| Doors / trapdoors (wood & iron) | `ActiveStructures` | `doors` | `block.wooden_door.*`, `block.iron_door.*`, `block.wooden_trapdoor.*`, `block.iron_trapdoor.*` |
+| Rain | `RainController` | `rain` | `weather.rain`, `weather.rain.above` |
+| Thunder | `ThunderController` | `thunder` | `entity.lightning_bolt.thunder*` |
+| Ambience (water / lava / fire) | `Surroundings` | `water`, `lava`, `fire` | `ambient.water`, `block.lava.ambient`, `block.fire.ambient`, `block.campfire.crackle` |
+| Drips | `GeneratedSounds` | `drips` | `block.pointed_dripstone.drip_*` |
+| Chests / ender chests | `ActiveStructures` | `chests` | `block.chest.*`, `block.ender_chest.*` |
+| Shulker boxes | `ActiveStructures` | `chests` | `block.shulker_box.*` |
+| Minecarts (inside / riding) | `ActiveStructures` | `minecarts` | `entity.minecart.*` |
+
+
+**Policy.** An override always wins over Foley's built-in toggle for that event: if a registered override matches, its return value (handled → skip, declined → vanilla) is final and the `wants(...)` toggle is not consulted. With no matching override, Foley's built-in logic runs unchanged and honours its toggle. The global bypass short-circuits everything — while bypassed no override is consulted and the game's sound plays. Chests and shulker boxes share the `chests` toggle; minecarts use `minecarts`.
+
 ## What is deliberate
 
 - The `foley/` path within a namespace is Foley's, by convention: variant buffers live at `<ns>:foley/<name>_<n>`.
