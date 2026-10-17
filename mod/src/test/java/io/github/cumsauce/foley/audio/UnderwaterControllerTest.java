@@ -42,14 +42,34 @@ class UnderwaterControllerTest {
 
 	@Test
 	void stayingDryPastTheLingerClearsTheFlag() {
-		// Latched on, then fully dry: the flag holds through the linger, then lets go.
+		// Latched on, then fully dry: the flag holds through the linger, then lets go on the 20th tick.
 		boolean flag = true;
-		for (int dryFor = 1; dryFor <= UnderwaterController.DRY_LINGER; dryFor++) {
+		for (int dryFor = 1; dryFor < UnderwaterController.DRY_LINGER; dryFor++) {
 			flag = UnderwaterController.latchedSubmerged(flag, false, dryFor);
 			assertTrue(flag, "cleared after only " + dryFor + " dry ticks, before the linger");
 		}
-		flag = UnderwaterController.latchedSubmerged(flag, false, UnderwaterController.DRY_LINGER + 1);
-		assertFalse(flag, "still set after the full linger dry");
+		flag = UnderwaterController.latchedSubmerged(flag, false, UnderwaterController.DRY_LINGER);
+		assertFalse(flag, "still set on the 20th dry tick — the linger is up");
+	}
+
+	@Test
+	void dry_latch_drops_on_tick_20() {
+		// The dry counter as tick() advances it, with the latch: a wet ear latches at once; then a
+		// fully dry run must hold the flag through the linger and let go on the 20th dry tick —
+		// DRY_LINGER's documented meaning — not the 21st.
+		boolean flag = UnderwaterController.latchedSubmerged(false, true, 0);
+		assertTrue(flag, "wet must latch");
+		int dryFor = 0;
+		for (int tick = 1; tick < UnderwaterController.DRY_LINGER; tick++) {
+			dryFor = UnderwaterController.dryTicks(false, dryFor);
+			flag = UnderwaterController.latchedSubmerged(flag, false, dryFor);
+			assertTrue(flag, "latch dropped at dry tick " + tick + ", before the linger");
+		}
+		dryFor = UnderwaterController.dryTicks(false, dryFor); // the 20th dry tick
+		flag = UnderwaterController.latchedSubmerged(flag, false, dryFor);
+		assertFalse(flag, "latch still set on dry tick " + UnderwaterController.DRY_LINGER);
+		// A wet tick relatches at once.
+		assertTrue(UnderwaterController.latchedSubmerged(flag, true, 0), "re-wetting must re-latch");
 	}
 
 	@Test

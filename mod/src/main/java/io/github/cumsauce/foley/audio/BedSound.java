@@ -37,7 +37,7 @@ import org.jspecify.annotations.Nullable;
 public final class BedSound<S extends Scene> extends AbstractSoundInstance implements TickableSoundInstance {
 	static final AudioFormat FORMAT = new AudioFormat(NativeBridge.SAMPLE_RATE, 16, 1, true, false);
 
-	private final NativeBridge bridge;
+	private final BedApi bridge;
 	private final int kind;
 	private volatile S scene;
 	private volatile long rendered;
@@ -56,6 +56,11 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 	 * @param kind its native kind, {@code NativeBridge.BED_*}
 	 */
 	public BedSound(String name, SoundSource source, NativeBridge bridge, int kind, S scene) {
+		this(name, source, nativeCalls(bridge), kind, scene);
+	}
+
+	/** The same, over the {@linkplain BedApi native calls} directly. For tests. */
+	BedSound(String name, SoundSource source, BedApi bridge, int kind, S scene) {
 		super(Sounds.event(name), source,
 				SoundInstance.createUnseededRandom());
 		this.bridge = bridge;
@@ -64,6 +69,49 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 		this.relative = true;
 		this.attenuation = SoundInstance.Attenuation.NONE;
 		this.volume = FoleyClient.gain();
+	}
+
+	/** The native calls a bed makes, so tests can count them without loading the library. */
+	interface BedApi {
+		MemorySegment bedCreate(int kind, long seed);
+
+		void bedSetScene(MemorySegment bed, float[] params);
+
+		void bedRender(MemorySegment bed, MemorySegment out);
+
+		void bedStrike(MemorySegment bed, float x, float y, float z, long seed);
+
+		void bedDestroy(MemorySegment bed);
+	}
+
+	/** Forwards to the real native bridge. */
+	private static BedApi nativeCalls(NativeBridge bridge) {
+		return new BedApi() {
+			@Override
+			public MemorySegment bedCreate(int kind, long seed) {
+				return bridge.bedCreate(kind, seed);
+			}
+
+			@Override
+			public void bedSetScene(MemorySegment bed, float[] params) {
+				bridge.bedSetScene(bed, params);
+			}
+
+			@Override
+			public void bedRender(MemorySegment bed, MemorySegment out) {
+				bridge.bedRender(bed, out);
+			}
+
+			@Override
+			public void bedStrike(MemorySegment bed, float x, float y, float z, long seed) {
+				bridge.bedStrike(bed, x, y, z, seed);
+			}
+
+			@Override
+			public void bedDestroy(MemorySegment bed) {
+				bridge.bedDestroy(bed);
+			}
+		};
 	}
 
 	/** An addon's bed: it has no sounds.json entry, so it resolves itself to a streaming sound (F2). */
@@ -210,6 +258,11 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 	@Override
 	public synchronized CompletableFuture<AudioStream> getAudioStream(SoundBufferLibrary loader, Identifier id,
 			boolean repeat) {
+		// A reopen retires the previous native bed: its close() is what calls bedDestroy, and close
+		// and read are synchronized on the same stream, so this waits out any in-flight read before
+		// the destroy. Close is idempotent (the closed flag), so the game closing the retired stream
+		// later cannot destroy it twice.
+		if (stream != null) stream.close();
 		stream = new Stream(bridge.bedCreate(kind, random.nextLong()));
 		stream.apply(scene);
 		for (Strike strike : strikes) {

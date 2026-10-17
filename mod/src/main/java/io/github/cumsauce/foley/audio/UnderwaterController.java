@@ -27,7 +27,7 @@ import org.jspecify.annotations.Nullable;
 public final class UnderwaterController {
 	/** The depth (in blocks below sea level) at which the bed's level reaches 1. */
 	private static final float MAX_DEPTH = 30f;
-	/** Ticks the submerged flag holds after the ear leaves water, so wave troughs don't flap the low-pass. */
+	/** Ticks the submerged flag holds after the ear leaves water, so wave troughs don't flap the low-pass: the flag lets go on the {@link #DRY_LINGER}th dry tick. */
 	static final int DRY_LINGER = 20;
 	/** Ticks per sample. Two ticks a second matches {@link PlacedBeds} and {@link WindController}. */
 	private static final int SAMPLE_EVERY = 10;
@@ -69,7 +69,7 @@ public final class UnderwaterController {
 			return;
 		}
 		scene = sample(minecraft);
-		dryFor = wet ? 0 : Math.min(dryFor + 1, DRY_LINGER + 1);
+		dryFor = dryTicks(wet, dryFor);
 		submerged = latchedSubmerged(submerged, wet, dryFor);
 		boolean wanted = FoleyClient.wants(FoleyConfig::underwater);
 		bridge.setSubmerged(submergedFlag(wanted, submerged));
@@ -90,13 +90,22 @@ public final class UnderwaterController {
 	}
 
 	/**
-	 * Hysteresis for the submerged flag: it latches the moment the ear is in water and only lets go after
-	 * {@link #DRY_LINGER} ticks fully dry. Bobbing at the surface — wet one tick, dry the next — must not
+	 * Ticks since the ear last touched water: zero while wet, counting up while dry and saturating
+	 * at {@link #DRY_LINGER} — the tick at which {@link #latchedSubmerged} lets go.
+	 */
+	static int dryTicks(boolean wet, int dryFor) {
+		return wet ? 0 : Math.min(dryFor + 1, DRY_LINGER);
+	}
+
+	/**
+	 * Hysteresis for the submerged flag: it latches the moment the ear is in water and only lets go
+	 * once it has been dry for {@link #DRY_LINGER} ticks — on the 20th dry tick, matching the
+	 * constant's documented meaning. Bobbing at the surface — wet one tick, dry the next — must not
 	 * flap the flag (and with it every other bed's low-pass) sample by sample.
 	 */
 	static boolean latchedSubmerged(boolean wasSubmerged, boolean wet, int dryFor) {
 		if (wet) return true;
-		return wasSubmerged && dryFor <= DRY_LINGER;
+		return wasSubmerged && dryFor < DRY_LINGER;
 	}
 
 	private void keep(Minecraft minecraft) {
