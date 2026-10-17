@@ -30,6 +30,11 @@ const TURBULENCE: f32 = 0.18;
 const GUST_TIME: f32 = 6.0;
 /// How loud the leaves' patter is.
 const LEAVES: f32 = 0.18;
+/// The wind's `level` saturates where its cubic hits the cap, 2.5 =
+/// (u/10)³: past this speed the roar no longer gets louder, and the leaves
+/// must not either — they sat outside the budget and swamped the bed at a
+/// gale (0.43 FS peak against the level guard's 0.4 ceiling).
+const LEVEL_CAP_SPEED: f32 = 13.57;
 /// What each sample keeps of a leaf's swish: about 25 ms.
 const LEAF_DECAY: f32 = 0.999_17;
 /// A leaf's share of the hush: the old 1.4 ms tick's over the 25 ms swish.
@@ -274,7 +279,11 @@ impl Wind {
             let whoosh = self.whoosh.process(self.rng.signed());
             let mut out = level * (roar * 1.5 + whoosh * 0.6 * exposure);
             if self.scene.leaves > 0.0 {
-                out += self.leaves(u, exposure, dt);
+                // Gain-staged against the same ceiling as `level`: full
+                // presence in an ordinary wind, falling away faster than the
+                // cap ratio beyond it so wind + leaves share one budget.
+                let roll = (LEVEL_CAP_SPEED / u).min(1.0);
+                out += roll * roll * self.leaves(u, exposure, dt);
             }
             *sample = out;
         }
@@ -338,6 +347,42 @@ mod tests {
         let mut out = vec![0.0; 10 * SAMPLE_RATE as usize];
         wind.render(&mut out);
         assert!(out.iter().all(|x| x.is_finite() && x.abs() < 1.0));
+    }
+
+    /// At the FFI's legal maximum the leaves must not swamp the bed: the
+    /// combined wind + leaves stays well under the level guard's ceiling,
+    /// while at an ordinary speed the leaves are still clearly heard.
+    #[test]
+    fn leaves_stay_level_matched_at_full_gale() {
+        fn render(speed: f32, leaves: f32) -> Vec<f32> {
+            let mut wind = Wind::new(5);
+            wind.set_scene(WindScene {
+                speed,
+                exposure: 1.0,
+                leaves,
+            });
+            let mut out = vec![0.0; 10 * SAMPLE_RATE as usize];
+            wind.render(&mut out);
+            out
+        }
+        let peak = |s: &[f32]| s.iter().fold(0.0f32, |m, x| m.max(x.abs()));
+        let rms = |s: &[f32]| (s.iter().map(|x| x * x).sum::<f32>() / s.len() as f32).sqrt();
+
+        let (gale, gale_bare) = (render(60.0, 1.0), render(60.0, 0.0));
+        let (calm, calm_bare) = (render(12.0, 1.0), render(12.0, 0.0));
+        // Diagnostics first, so a failure says by how much.
+        let (pg, pgb) = (peak(&gale), peak(&gale_bare));
+        let (rg, rgb) = (rms(&gale), rms(&gale_bare));
+        let (pc, pcb) = (peak(&calm), peak(&calm_bare));
+        let (rc, rcb) = (rms(&calm), rms(&calm_bare));
+        // Full gale: combined peak stays well under the guard's 0.4 ceiling,
+        // and the leaves do not double the bed's loudness there; at an
+        // ordinary wind the leaves still raise the RMS noticeably.
+        assert!(
+            pg <= 0.25 && rg <= 2.0 * rgb && rc > 1.15 * rcb,
+            "gale peak {pg} (bare {pgb}), gale rms {rg} vs bare {rgb}; \
+             12 m/s rms {rc} vs bare {rcb} (peaks {pc} vs {pcb})"
+        );
     }
 
     #[test]
