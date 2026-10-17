@@ -202,14 +202,14 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "foley-dsp"
-version = "0.1.0-beta.57"
+version = "0.1.0-beta.58"
 dependencies = [
  "foley-math",
 ]
 
 [[package]]
 name = "foley-ffi"
-version = "0.1.0-beta.57"
+version = "0.1.0-beta.58"
 dependencies = [
  "foley-synth",
  "rtsan-standalone",
@@ -217,18 +217,18 @@ dependencies = [
 
 [[package]]
 name = "foley-math"
-version = "0.1.0-beta.57"
+version = "0.1.0-beta.58"
 
 [[package]]
 name = "foley-sim"
-version = "0.1.0-beta.57"
+version = "0.1.0-beta.58"
 dependencies = [
  "foley-ffi",
 ]
 
 [[package]]
 name = "foley-synth"
-version = "0.1.0-beta.57"
+version = "0.1.0-beta.58"
 dependencies = [
  "foley-dsp",
  "foley-math",
@@ -597,7 +597,7 @@ checksum = "23b97319f7b8343df12cc98938e5c3eb436064524c8d2b4e30a1d3a36eecdf81"
 
 [[package]]
 name = "xtask"
-version = "0.1.0-beta.57"
+version = "0.1.0-beta.58"
 dependencies = [
  "anyhow",
  "cbindgen",
