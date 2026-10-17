@@ -52,4 +52,18 @@ publishing {
 			version = project.version
 		}
 	}
+	// Publishes to GitHub Packages when GITHUB_TOKEN is present; otherwise only mavenLocal is used, so local
+	// development never needs credentials and `publishToMavenLocal` keeps working offline.
+	if (System.getenv('GITHUB_TOKEN')) {
+		repositories {
+			maven {
+				name = 'GitHubPackages'
+				url = uri('https://maven.pkg.github.com/cumsauce/foley')
+				credentials {
+					username = System.getenv('GITHUB_ACTOR') ?: 'cumsauce'
+					password = System.getenv('GITHUB_TOKEN')
+				}
+			}
+		}
+	}
 }
