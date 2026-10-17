@@ -269,6 +269,11 @@ public final class NativeBridge {
 	 * reported more than the buffer holds — slicing past it would read uninitialized memory and play it as PCM.
 	 */
 	static long sliceLength(long needed, long capacitySamples) {
+		if (needed < 0) {
+			// A size_t past Long.MAX_VALUE reads back negative: not a valid length, so never sliced.
+			throw new FoleyException(-1, "native render reported a negative length of " + needed
+					+ " samples; it is not a valid size");
+		}
 		if (needed > capacitySamples) {
 			throw new FoleyException(-1, "native render reported " + needed + " samples into a buffer of "
 					+ capacitySamples + "; refusing to read past it");
