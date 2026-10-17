@@ -101,16 +101,39 @@ impl Surf {
 
     pub fn set_scene(&mut self, scene: SurfScene) {
         self.scene = scene;
+        // A shorter cadence than the remaining countdown re-arms it: a storm
+        // that arrives mid-calm must not wait out the old calm gap.
+        let interval = self.interval_secs();
+        if self.until_surge > interval {
+            self.until_surge = interval;
+        }
+    }
+
+    /// The silence path: no shore (`height <= 0`) or a non-finite height.
+    /// Returns every live grain's buffer to the pool and re-arms the surge
+    /// countdown, so returning to shore starts clean — no stale grain resumes
+    /// at its old gain, and no wave fires from a leftover countdown.
+    fn go_silent(&mut self, out: &mut [f32]) {
+        while let Some(grain) = self.grains.pop() {
+            self.pool.push(grain.data);
+        }
+        self.until_surge = self.interval_secs();
+        out.fill(0.0);
     }
 
     pub fn render(&mut self, out: &mut [f32]) {
-        if self.scene.height <= 0.0 {
-            out.fill(0.0);
+        // The client's height is not trusted: non-finite means silence, and a
+        // finite value clamps to the documented 0.2–3.0 m range so a huge
+        // height cannot saturate the wash.
+        let raw_height = self.scene.height;
+        if !raw_height.is_finite() || raw_height <= 0.0 {
+            self.go_silent(out);
             return;
         }
+        let height = raw_height.clamp(0.2, 3.0);
         let shore = self.scene.shore.clamp(0.0, 1.0);
         // The foam and shingle the wave leaves behind, well below the grains.
-        let wash_level = WASH_LEVEL * (self.scene.height / 3.0) * shore;
+        let wash_level = WASH_LEVEL * (height / 3.0) * shore;
         let interval = self.interval_secs();
         let dt = 1.0 / SAMPLE_RATE as f32;
         for sample in out.iter_mut() {
@@ -154,12 +177,9 @@ impl Surf {
         12.0 - 10.0 * stormy
     }
 
-    /// Spawns the next wave. The render cost is one full-grain synthesis on
-    /// the frames that spawn: measured worst-case ≈11 ms per 0.25 s of audio
-    /// (≈24× realtime headroom; first ≈7.9 ms, ~109/800 renders over 500 µs),
-    /// so the client's 0.5 s pulls cost about twice that (≈22 ms, still ≈23×
-    /// headroom). If the pull size ever shrinks, revisit this — amortise the
-    /// synthesis into a resumable state machine.
+    /// Spawns the next wave; one full-grain synthesis costs ≈11 ms per 0.25 s
+    /// of rendered audio (~24× realtime), so the client's 0.5 s pulls cost
+    /// ≈22 ms — revisit if the pull size ever shrinks.
     fn spawn_grain(&mut self) {
         // The pool has one buffer per grain slot, so an empty pool is the
         // old `grains.len() >= MAX_GRAINS` guard — and a spawn never allocates.
@@ -363,6 +383,115 @@ mod tests {
         assert!(
             rf < 0.6 * rn,
             "waves 20-odd blocks out must be clearly quieter, rms {rf} vs {rn}"
+        );
+    }
+
+    #[test]
+    fn nan_height_is_silent() {
+        // Non-finite heights — NaN and ±∞ — are treated as no shore.
+        for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+            let mut s = Surf::new(9);
+            s.set_scene(scene(bad, 1.0, 1.0));
+            let out = render_secs(&mut s, 3.0);
+            assert!(
+                out.iter().all(|x| *x == 0.0),
+                "height {bad} must render silence"
+            );
+        }
+        // A height that turns non-finite while waves are sounding must also
+        // go silent, not spray NaN through the wash.
+        let mut s = Surf::new(9);
+        s.set_scene(scene(2.2, 1.0, 1.0));
+        let out = render_secs(&mut s, 3.0);
+        assert!(
+            out.iter().any(|x| *x != 0.0),
+            "precondition: the shore sounds"
+        );
+        s.set_scene(scene(f32::NAN, 1.0, 1.0));
+        let out = render_secs(&mut s, 3.0);
+        assert!(
+            out.iter().all(|x| *x == 0.0),
+            "a height that turns NaN mid-life must fall silent"
+        );
+        // A huge finite height clamps to the documented 3.0 m ceiling: the
+        // bed behaves exactly as at 3.0 m instead of saturating the wash.
+        let mut huge = Surf::new(9);
+        huge.set_scene(scene(1e20, 1.0, 1.0));
+        let mut three = Surf::new(9);
+        three.set_scene(scene(3.0, 1.0, 1.0));
+        let a = render_secs(&mut huge, 3.0);
+        let b = render_secs(&mut three, 3.0);
+        assert!(
+            a.iter().eq(b.iter()),
+            "a huge height must clamp to the 3.0 m ceiling, not saturate the wash"
+        );
+    }
+
+    #[test]
+    fn returning_to_shore_starts_without_stale_grains() {
+        let mut s = Surf::new(10);
+        s.set_scene(scene(2.2, 1.0, 1.0));
+        let out = render_secs(&mut s, 3.0);
+        assert!(
+            out.iter().any(|x| *x != 0.0),
+            "precondition: the storm must sound"
+        );
+        assert!(!s.grains.is_empty(), "precondition: waves are sounding");
+        // Out of range: every live grain must return to the pool.
+        s.set_scene(scene(0.0, 1.0, 1.0));
+        let out = render_secs(&mut s, 1.0);
+        assert!(out.iter().all(|x| *x == 0.0), "no shore must be silence");
+        assert!(
+            s.grains.is_empty(),
+            "going silent must clear the live grains, got {}",
+            s.grains.len()
+        );
+        assert_eq!(
+            s.pool.len() + s.grains.len(),
+            MAX_GRAINS,
+            "every wave buffer must return to the pool"
+        );
+        // Back to shore: the countdown is re-armed, so no stale grain
+        // resumes and no wave fires from the leftover countdown.
+        s.set_scene(scene(2.2, 1.0, 1.0));
+        assert!(
+            s.until_surge > 0.0,
+            "returning to shore must re-arm the surge countdown, got {}",
+            s.until_surge
+        );
+        let out = render_secs(&mut s, 0.5);
+        assert!(
+            out.iter().any(|x| *x != 0.0),
+            "the returning shore must already lap"
+        );
+        assert!(
+            s.grains.is_empty(),
+            "no wave may spawn from stale state within the re-armed interval"
+        );
+    }
+
+    #[test]
+    fn calm_to_storm_spawns_within_the_storm_interval() {
+        let mut s = Surf::new(11);
+        s.set_scene(scene(2.2, 0.0, 0.0)); // calm: 12 s between surges
+        let _ = render_secs(&mut s, 5.0); // partway through the calm countdown
+        let before = s.counter;
+        s.set_scene(scene(2.2, 1.0, 1.0)); // storm: 2 s between surges
+        // The first storm wave must break within the storm interval of the
+        // post-transition audio, not wait out the leftover calm countdown.
+        let mut spawn = None;
+        for i in 0..=2 * crate::SAMPLE_RATE as usize {
+            let mut buf = [0.0f32; 1];
+            s.render(&mut buf);
+            if s.counter > before {
+                spawn = Some((i + 1) as f32 / crate::SAMPLE_RATE as f32);
+                break;
+            }
+        }
+        let spawn = spawn.expect("a storm wave must break within the storm interval");
+        assert!(
+            spawn <= 2.0,
+            "first storm wave at {spawn} s must be within the 2 s interval"
         );
     }
 
