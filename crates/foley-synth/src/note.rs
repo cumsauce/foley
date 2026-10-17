@@ -228,17 +228,20 @@ pub fn note(instrument: u32, note: f32, character: f32, seed: u64) -> Option<Vec
         Family::Membrane => {
             // The three drums, in the mapped index order: basedrum, snare,
             // hat — the kick a low falling tone, the snare a mid tone under
-            // its rattle, the hat pure air. `character` swings each hit
-            // around the voicing: a low character dulls the rattle and the
-            // head's tension drops less, so the drum dies sooner; a high
-            // one rattles brighter, drops further and rings longer — the
-            // family convention, low = duller and shorter, high = brighter
-            // and longer (`drop` sets both how far the pitch falls and how
-            // long the head rings, so the two move together).
+            // its rattle, the hat pure air. `character` swings every axis
+            // the family has in the family's direction: a low character
+            // dulls the rattle (less of it, in a lower band) and shortens
+            // the ring; a high one rattles more, higher up, and rings
+            // longer. The knobs: how much rattle (`noise_mix`), how far the
+            // pitch falls and part of how long the head rings (`drop`) —
+            // and, the axis the hat actually hears, since its rattle is
+            // already saturated and its tone inaudible, the rattle's band
+            // and the rest of the ring length (`bright`, the character
+            // itself).
             let v = INSTRUMENTS[instrument as usize].3;
             let noise_mix = (v.noise_mix + 0.25 * (character - 0.5)).clamp(0.0, 1.0);
             let drop = (v.drop * (0.7 + 0.6 * character)).clamp(0.0, 0.95);
-            membrane(hz, drop, noise_mix, seed)
+            membrane(hz, drop, noise_mix, character, seed)
         }
         Family::Breath => return None,     // Task 4
         Family::Electronic => return None, // Task 5
@@ -371,22 +374,27 @@ fn modal(hz: f32, inharmonicity: f32, damping: f32, seed: u64) -> Vec<f32> {
 /// mixed with bandpassed noise (`noise_mix`) for the snare's rattle and the
 /// hat's air: a basedrum is almost wholly tone, a hat entirely noise.
 /// `drop` (0 to 1) also sets how long the head rings — a further release
-/// takes longer to settle — and `seed` mixes the rattle and the click so
-/// two hits of the same note differ.
-fn membrane(hz: f32, drop: f32, noise_mix: f32, seed: u64) -> Vec<f32> {
+/// takes longer to settle. `bright` (0 to 1) lifts the rattle's band and
+/// stretches the ring — the character axis: low is dull and short, high
+/// bright and long — and `seed` mixes the rattle and the click so two hits
+/// of the same note differ.
+fn membrane(hz: f32, drop: f32, noise_mix: f32, bright: f32, seed: u64) -> Vec<f32> {
     let hz = hz.clamp(20.0, 0.45 * SAMPLE_RATE as f32);
     let drop = drop.clamp(0.0, 0.95);
     let noise_mix = noise_mix.clamp(0.0, 1.0);
+    let bright = bright.clamp(0.0, 1.0);
     // The ring: -60 dB after `t60`, longer the further the skin's tension
-    // drops; the run stops exactly where the envelope reaches about
-    // -66 dB, so the tail fades instead of clicking off.
-    let t60 = 0.12 + 0.55 * drop;
+    // drops and the brighter the hit; the run stops exactly where the
+    // envelope reaches about -66 dB, so the tail fades instead of clicking
+    // off.
+    let t60 = (0.12 + 0.55 * drop) * (0.7 + 0.6 * bright);
     let length =
         ((t60 * 1.1 * SAMPLE_RATE as f32) as usize + 2).min((3.0 * SAMPLE_RATE as f32) as usize);
     let g = 10.0f32.powf(-3.0 / (t60 * SAMPLE_RATE as f32));
-    // The rattle's band rides the note: a low kick barely rattles, a hat
-    // hisses up high.
-    let band = (4.0 * hz).clamp(1200.0, 11_000.0);
+    // The rattle's band rides the note and the character: a low character
+    // hisses low over a dull kick, a high one rattles up near the top — for
+    // the hat, whose noise is all there is, this is the whole timbre.
+    let band = ((4.0 * hz).clamp(1200.0, 11_000.0) * (0.4 + 1.2 * bright)).clamp(400.0, 14_000.0);
     let mut bp = BandPass::new(band, 1.0);
     let mut rng = Rng::new(seed);
     // The stick click: about 3 ms of raw noise at the onset.
@@ -659,7 +667,7 @@ mod tests {
 
     #[test]
     fn a_drum_starts_at_its_note_and_falls() {
-        let out = membrane(200.0, 0.6, 0.2, 1);
+        let out = membrane(200.0, 0.6, 0.2, 0.5, 1);
         assert!(
             fundamental_at(&out, 0.0) > fundamental_at(&out, 0.3),
             "the pitch must drop"
@@ -668,16 +676,16 @@ mod tests {
 
     #[test]
     fn a_snare_is_noisier_than_a_basedrum() {
-        let drum = membrane(150.0, 0.6, 0.0, 2);
-        let snare = membrane(150.0, 0.4, 1.0, 2);
+        let drum = membrane(150.0, 0.6, 0.0, 0.5, 2);
+        let snare = membrane(150.0, 0.4, 1.0, 0.5, 2);
         assert!(roughness(&snare) > roughness(&drum));
     }
 
     #[test]
     fn a_hat_is_short_and_bright() {
-        let hat = membrane(9000.0, 0.0, 1.0, 3);
+        let hat = membrane(9000.0, 0.0, 1.0, 0.5, 3);
         assert!(hat.len() < crate::SAMPLE_RATE as usize / 2);
-        assert!(centroid(&hat) > centroid(&membrane(150.0, 0.6, 0.0, 3)));
+        assert!(centroid(&hat) > centroid(&membrane(150.0, 0.6, 0.0, 0.5, 3)));
     }
 
     #[test]
@@ -701,6 +709,31 @@ mod tests {
             "high character roughness {} not above low character roughness {}",
             roughness(&bright[skip..]),
             roughness(&dull[skip..])
+        );
+    }
+
+    #[test]
+    fn a_low_character_hat_is_duller_and_shorter_than_a_high_one() {
+        // The hat's `noise_mix` saturates at 1.0, so its character rides
+        // the rattle's band and the ring length instead — same convention:
+        // low is dull and short, high bright and long.
+        let dull = note(3, 12.0, 0.1, 5).unwrap();
+        let bright = note(3, 12.0, 0.9, 5).unwrap();
+        assert!(
+            bright.len() > dull.len() + SAMPLE_RATE as usize / 100,
+            "high character hat ({}) not clearly longer than low character hat ({})",
+            bright.len(),
+            dull.len()
+        );
+        // Skip the stick click so the spectra compare rattle against rattle.
+        let skip = SAMPLE_RATE as usize / 100;
+        let dull_centroid = centroid(&dull[skip..]);
+        let bright_centroid = centroid(&bright[skip..]);
+        assert!(
+            bright_centroid > 1.3 * dull_centroid,
+            "high character hat centroid {} not clearly above low character hat centroid {}",
+            bright_centroid,
+            dull_centroid
         );
     }
 
