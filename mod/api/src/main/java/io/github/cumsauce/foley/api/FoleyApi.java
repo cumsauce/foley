@@ -17,6 +17,12 @@ public interface FoleyApi {
 	FoleyVoices voices();
 
 	/**
+	 * Foley's vanilla sound overrides: take over any vanilla event Foley would have played, by event id. This is the
+	 * general form of {@link #doorHandler(DoorSoundHandler)}; doors are simply one predicate away.
+	 */
+	SoundOverrideRegistry soundOverrides();
+
+	/**
 	 * Sets or clears the handler that takes over vanilla door and trapdoor sounds. While one is registered Foley does
 	 * not play its built-in contact tap: each event is handed to the handler instead, and an unhandled one falls back to
 	 * the game's sound. {@code null} restores the built-in tap. Client thread, at any time — not only during

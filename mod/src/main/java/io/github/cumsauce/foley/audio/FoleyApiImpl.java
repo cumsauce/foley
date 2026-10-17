@@ -7,6 +7,7 @@ import io.github.cumsauce.foley.api.FoleyMaterials;
 import io.github.cumsauce.foley.api.FoleyVoices;
 import io.github.cumsauce.foley.api.FoleySounds;
 import io.github.cumsauce.foley.api.SoundModel;
+import io.github.cumsauce.foley.api.SoundOverrideRegistry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
 import org.jspecify.annotations.Nullable;
@@ -41,6 +42,11 @@ final class FoleyApiImpl implements FoleyApi {
 	@Override
 	public FoleyVoices voices() {
 		return CustomVoices.api(origin);
+	}
+
+	@Override
+	public SoundOverrideRegistry soundOverrides() {
+		return DoorHandling.soundOverrides();
 	}
 
 	@Override

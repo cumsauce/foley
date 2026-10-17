@@ -1,7 +1,6 @@
 package io.github.cumsauce.foley.audio;
 
 import io.github.cumsauce.foley.FoleyClient;
-import io.github.cumsauce.foley.api.DoorSoundHandler;
 import io.github.cumsauce.foley.config.FoleyConfig;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,13 +46,7 @@ public final class Replacements {
 			SoundEvents.POINTED_DRIPSTONE_DRIP_WATER_INTO_CAULDRON.location();
 	private static final Set<Identifier> DRIP_LAVA = Set.of(SoundEvents.POINTED_DRIPSTONE_DRIP_LAVA.location(),
 			SoundEvents.POINTED_DRIPSTONE_DRIP_LAVA_INTO_CAULDRON.location());
-	/** M21: door, chest, shulker and minecart vanilla events, to skip so Foley can layer. */
-	private static final Set<Identifier> DOOR_WOOD = Set.of(SoundEvents.WOODEN_DOOR_OPEN.location(),
-			SoundEvents.WOODEN_DOOR_CLOSE.location(), SoundEvents.WOODEN_TRAPDOOR_OPEN.location(),
-			SoundEvents.WOODEN_TRAPDOOR_CLOSE.location());
-	private static final Set<Identifier> DOOR_IRON = Set.of(SoundEvents.IRON_DOOR_OPEN.location(),
-			SoundEvents.IRON_DOOR_CLOSE.location(), SoundEvents.IRON_TRAPDOOR_OPEN.location(),
-			SoundEvents.IRON_TRAPDOOR_CLOSE.location());
+	/** M21: chest, shulker and minecart vanilla events, to skip so Foley can layer. */
 	private static final Set<Identifier> CHEST = Set.of(SoundEvents.CHEST_OPEN.location(),
 			SoundEvents.CHEST_CLOSE.location(), SoundEvents.ENDER_CHEST_OPEN.location(),
 			SoundEvents.ENDER_CHEST_CLOSE.location());
@@ -77,10 +70,17 @@ public final class Replacements {
 		Identifier id = sound.getIdentifier();
 		if (Voices.replace(sound)) return true;
 		if (RAIN.contains(id)) {
+			// Bypass always lets the game's sound through, without consulting an override.
+			if (FoleyClient.bypassed()) return false;
+			Boolean owned = override(sound, id);
+			if (owned != null) return owned;
 			var rain = FoleyClient.rain();
 			return rain != null && rain.replacing() && counted();
 		}
 		if (THUNDER.contains(id)) {
+			if (FoleyClient.bypassed()) return false;
+			Boolean owned = override(sound, id);
+			if (owned != null) return owned;
 			var thunder = FoleyClient.thunder();
 			return thunder != null && thunder.replacing() && counted();
 		}
@@ -88,6 +88,10 @@ public final class Replacements {
 		if (FoleyClient.placed() == null || minecraft.level == null || minecraft.player == null) return false;
 		boolean ambience = WATER.contains(id) || LAVA.contains(id) || FIRE.contains(id);
 		if (ambience) {
+			// Bypass always lets the game's sound through, without consulting an override.
+			if (FoleyClient.bypassed()) return false;
+			Boolean owned = override(sound, id);
+			if (owned != null) return owned;
 			boolean wanted = WATER.contains(id) ? FoleyClient.wants(FoleyConfig::water)
 					: LAVA.contains(id) ? FoleyClient.wants(FoleyConfig::lava) : FoleyClient.wants(FoleyConfig::fire);
 			if (!wanted) return false;
@@ -102,6 +106,12 @@ public final class Replacements {
 			return false;
 		}
 		SoundEvent drip = null;
+		if (DRIP_LAVA.contains(id) || id.equals(DRIP_WATER_INTO_CAULDRON) || id.equals(DRIP_WATER)) {
+			// A drip-family event: bypass always lets the game's sound through.
+			if (FoleyClient.bypassed()) return false;
+			Boolean owned = override(sound, id);
+			if (owned != null) return owned;
+		}
 		if (!FoleyClient.wants(FoleyConfig::drips)) {
 			// Still check M21 events before falling through: a toggled-off drips user may want doors on.
 		} else if (DRIP_LAVA.contains(id)) {
@@ -122,26 +132,26 @@ public final class Replacements {
 		// M21: doors, chests, shulkers, minecarts. Foley layers its own under the game's
 		// event (which the dispatcher is about to skip) — the per-tick scan in
 		// {@link ActiveStructures} plays the actual creak, the chest puff, the wheel impact.
-		if (DOOR_WOOD.contains(id) || DOOR_IRON.contains(id)) {
-			boolean iron = DOOR_IRON.contains(id);
-			boolean bypassed = FoleyClient.bypassed();
-			// An addon's handler, if registered, owns the event entirely: no built-in tap. It is
-			// consulted only when Foley is not bypassed; bypass always lets the game's sound through.
-			DoorSoundHandler handler = DoorHandling.handler();
-			boolean handled = handler != null && !bypassed
-					&& handler.onVanillaDoorEvent(id, sound.getX(), sound.getY(), sound.getZ(), iron);
-			boolean contactWanted = FoleyClient.activeStructures() != null && FoleyClient.wants(FoleyConfig::doors);
-			return switch (DoorHandling.action(bypassed, contactWanted, handler != null, handled)) {
-				case ADDON -> counted();
-				case CONTACT_TAP -> {
-					FoleyClient.activeStructures().onDoorSkipped(minecraft, sound, iron);
-					yield counted();
-				}
-				case PLAY_VANILLA -> false;
-			};
+		if (DoorHandling.isDoorEvent(id)) {
+			boolean iron = DoorHandling.isIronDoorEvent(id);
+			// Bypass always lets the game's sound through, without consulting an override.
+			if (FoleyClient.bypassed()) return false;
+			// An override, if one matches, owns the event entirely: no built-in tap when it handles
+			// the event, the game's sound when it declines it.
+			Boolean owned = override(sound, id);
+			if (owned != null) return owned;
+			if (FoleyClient.activeStructures() != null && FoleyClient.wants(FoleyConfig::doors)) {
+				FoleyClient.activeStructures().onDoorSkipped(minecraft, sound, iron);
+				return counted();
+			}
+			return false;
 		}
 		if (FoleyClient.activeStructures() != null) {
 			if (CHEST.contains(id)) {
+				// Bypass always lets the game's sound through, without consulting an override.
+				if (FoleyClient.bypassed()) return false;
+				Boolean owned = override(sound, id);
+				if (owned != null) return owned;
 				if (FoleyClient.wants(FoleyConfig::chests)) {
 					FoleyClient.activeStructures().onChestSkipped(minecraft, sound, false);
 					return counted();
@@ -149,6 +159,9 @@ public final class Replacements {
 				return false;
 			}
 			if (SHULKER.contains(id)) {
+				if (FoleyClient.bypassed()) return false;
+				Boolean owned = override(sound, id);
+				if (owned != null) return owned;
 				if (FoleyClient.wants(FoleyConfig::chests)) {
 					FoleyClient.activeStructures().onChestSkipped(minecraft, sound, true);
 					return counted();
@@ -156,12 +169,29 @@ public final class Replacements {
 				return false;
 			}
 			if (MINECART.contains(id)) {
+				if (FoleyClient.bypassed()) return false;
+				Boolean owned = override(sound, id);
+				if (owned != null) return owned;
 				// The game plays a constant drone while riding; we just let Foley's per-tick
 				// rush bed take over and skip the game's own.
 				return FoleyClient.wants(FoleyConfig::minecarts) && counted();
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * An override's verdict on {@code id}: TRUE when it handles the event (counted as replaced), FALSE when it
+	 * declines it (the game's sound plays), {@code null} when none matched and the built-in logic should run.
+	 */
+	private static Boolean override(SoundInstance sound, Identifier id) {
+		DoorHandling.Action action = DoorHandling.dispatch(id, sound.getX(), sound.getY(), sound.getZ());
+		if (action == DoorHandling.Action.OVERRIDE_HANDLED) {
+			counted();
+			return Boolean.TRUE;
+		}
+		if (action == DoorHandling.Action.OVERRIDE_VANILLA) return Boolean.FALSE;
+		return null;
 	}
 
 	private static boolean counted() {
