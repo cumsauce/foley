@@ -3,6 +3,24 @@
 The mod and the Rust workspace share one version; entries are grouped by that
 version. Playtest builds are `0.1.0-beta.N`.
 
+## Unreleased — generic sound overrides
+
+### Added
+
+- `foley-api` gains `SoundOverrideRegistry`, reachable as
+  `FoleyApi.soundOverrides()`: any addon can take over any vanilla sound Foley
+  already handles, not just doors. Overrides are keyed by an `Identifier`
+  predicate, so one registration can cover a family of events.
+- The last registered override that matches wins — returning true keeps the
+  vanilla event skipped, false lets it play. The registration handle
+  `unregister()`s itself, and `clear()` drops every override at once.
+- The global bypass still wins: when it's on, the override isn't consulted and
+  vanilla plays.
+- `DoorSoundHandler`/`doorHandler` stay as sugar for the door case; existing
+  door code keeps working unchanged.
+- Mob voice sounds are outside this registry: they run through Foley's separate
+  voice system.
+
 ## 0.1.0-beta.59 — pluggable door sounds
 
 ### Added

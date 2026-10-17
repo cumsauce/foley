@@ -148,9 +148,21 @@ In a pack, `assets/mymod/foley/voices.json`:
 }
 ```
 
-## Door sounds (S1)
+## Sound overrides (S1)
 
-A mod can take over the game's door and trapdoor sounds. Register a handler — in your `onFoleyReady`, or any time on the client thread — and Foley stops playing its own contact tap: each vanilla open or close event is handed to you with its id, its world position and whether it was iron. Return true when you played something, keeping the vanilla sound skipped; return false and the game's sound plays as the fallback.
+A mod can take over any vanilla sound Foley itself takes over. Register an override — in your `onFoleyReady`, or any time on the client thread — keyed by a predicate on the event id, and Foley stops playing its own sound for whatever matches: each vanilla event is handed to you with its id and its world position. Return true when you played something, keeping the vanilla sound skipped; return false and the game's sound plays as the fallback.
+
+```java
+// Override any vanilla sound Foley takes over, keyed by event id:
+api.soundOverrides().register(id -> id.getPath().startsWith("block.wooden_door."),
+        (event, x, y, z) -> {
+            api.sounds().play(Identifier.fromNamespaceAndPath("mymod", "door_creak"), x, y, z,
+                    SoundSource.BLOCKS, 0.6f, 1f);
+            return true;
+        });
+```
+
+Doors remain the common case, so `api.doorHandler(...)` and `DoorSoundHandler` stay as sugar over the same registry: they match the door and trapdoor events, tell you whether the event was iron, and Foley's built-in contact tap stops while a handler is set.
 
 ```java
 api.doorHandler((event, x, y, z, iron) -> {
@@ -160,7 +172,7 @@ api.doorHandler((event, x, y, z, iron) -> {
 });
 ```
 
-Open and close are told apart by the event id (`minecraft:block.wooden_door.open`, `minecraft:block.iron_trapdoor.close`, …). Foley's bypass wins: while bypassed the game's sound plays and the handler is not called. Whatever you play through `sounds().play` follows Foley's volume, bypass and per-tick one-shot budget; the callback itself does not spend that budget. `api.doorHandler(null)` restores Foley's built-in tap.
+Open and close are told apart by the event id (`minecraft:block.wooden_door.open`, `minecraft:block.iron_trapdoor.close`, …). Foley's bypass wins: while bypassed the game's sound plays and no override is consulted. Otherwise the last-registered override whose predicate matches decides; `register` returns a handle whose `unregister()` removes that one override, and `api.soundOverrides().clear()` removes them all — the door handler's sugar registration among them. Whatever you play through `sounds().play` follows Foley's volume, bypass and per-tick one-shot budget; the callback itself does not spend that budget. `api.doorHandler(null)` restores Foley's built-in tap. Mob voice sounds are not part of this registry: they run through Foley's separate voice system.
 
 ## What is deliberate
 
