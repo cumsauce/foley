@@ -122,9 +122,15 @@ impl Surf {
     }
 
     pub fn render(&mut self, out: &mut [f32]) {
-        // The client's height is not trusted: non-finite means silence, and a
-        // finite value clamps to the documented 0.2–3.0 m range so a huge
-        // height cannot saturate the wash.
+        // The client's height is not trusted, and the two failure modes are
+        // deliberately different — do not "unify" them:
+        //   * non-finite (NaN, ±∞) → silence: an unrepresentable height means
+        //     no shore; it is never sanitised into a huge-but-sounding value;
+        //   * finite → sanitised then clamped to the documented 0.2–3.0 m
+        //     range, so `height = 1e20` renders exactly like a 3.0 m bed
+        //     instead of saturating the wash.
+        // Verified by `nan_height_is_silent` and
+        // `a_huge_scene_clamps_to_the_bed_maximum`.
         let raw_height = self.scene.height;
         if !raw_height.is_finite() || raw_height <= 0.0 {
             self.go_silent(out);
@@ -188,7 +194,12 @@ impl Surf {
         };
         let seed = self.seed ^ self.counter.wrapping_mul(0x9E37_79B9_7F4A_7C15);
         self.counter += 1;
-        crate::outdoors::surf_into(self.scene.height, seed, &mut data, &mut self.bubbles);
+        // Sanitise-then-clamp at the boundary (the `render` gate means this
+        // is always finite, but the raw client value never leaves `surf.rs`):
+        // a finite 1e20 m bed synthesises exactly the 3.0 m wave, while
+        // non-finite heights never reach here — they silence in `render`.
+        let height = self.scene.height.clamp(0.2, 3.0);
+        crate::outdoors::surf_into(height, seed, &mut data, &mut self.bubbles);
         // `surf_into`'s natural backwash drain already shapes the tail; this
         // 50 ms linear fade guarantees an exact-zero end so a retiring grain
         // never clicks.
@@ -201,9 +212,7 @@ impl Surf {
         // edge (`shore = 1`), a floor of 0.4 still audible far away since
         // `height > 0` already gates full silence.
         let shore = self.scene.shore.clamp(0.0, 1.0);
-        let gain = GRAIN_GAIN
-            * self.scene.height.clamp(0.2, 3.0)
-            * (WAVE_DISTANCE_FLOOR + WAVE_DISTANCE_RANGE * shore);
+        let gain = GRAIN_GAIN * height * (WAVE_DISTANCE_FLOOR + WAVE_DISTANCE_RANGE * shore);
         self.grains.push(Grain { data, pos: 0, gain });
     }
 }
@@ -388,7 +397,10 @@ mod tests {
 
     #[test]
     fn nan_height_is_silent() {
-        // Non-finite heights — NaN and ±∞ — are treated as no shore.
+        // Non-finite heights — NaN and ±∞ — are treated as no shore. They
+        // are silenced on purpose, never sanitised/clamped into a huge but
+        // still-audible value (`a_huge_scene_clamps_to_the_bed_maximum`
+        // covers the finite counterpart).
         for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
             let mut s = Surf::new(9);
             s.set_scene(scene(bad, 1.0, 1.0));
@@ -397,24 +409,49 @@ mod tests {
                 out.iter().all(|x| *x == 0.0),
                 "height {bad} must render silence"
             );
+            assert!(
+                s.grains.is_empty(),
+                "height {bad} must leave no live grains, got {}",
+                s.grains.len()
+            );
+            assert_eq!(
+                s.pool.len() + s.grains.len(),
+                MAX_GRAINS,
+                "height {bad} must return every wave buffer to the pool"
+            );
         }
         // A height that turns non-finite while waves are sounding must also
-        // go silent, not spray NaN through the wash.
-        let mut s = Surf::new(9);
-        s.set_scene(scene(2.2, 1.0, 1.0));
-        let out = render_secs(&mut s, 3.0);
-        assert!(
-            out.iter().any(|x| *x != 0.0),
-            "precondition: the shore sounds"
-        );
-        s.set_scene(scene(f32::NAN, 1.0, 1.0));
-        let out = render_secs(&mut s, 3.0);
-        assert!(
-            out.iter().all(|x| *x == 0.0),
-            "a height that turns NaN mid-life must fall silent"
-        );
-        // A huge finite height clamps to the documented 3.0 m ceiling: the
-        // bed behaves exactly as at 3.0 m instead of saturating the wash.
+        // go silent — retiring every live grain, not spraying NaN through
+        // the wash or leaving a stale grain to resume.
+        for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+            let mut s = Surf::new(9);
+            s.set_scene(scene(2.2, 1.0, 1.0));
+            let out = render_secs(&mut s, 3.0);
+            assert!(
+                out.iter().any(|x| *x != 0.0),
+                "precondition: the shore sounds"
+            );
+            assert!(!s.grains.is_empty(), "precondition: grains are live");
+            s.set_scene(scene(bad, 1.0, 1.0));
+            let out = render_secs(&mut s, 3.0);
+            assert!(
+                out.iter().all(|x| *x == 0.0),
+                "a height that turns {bad} mid-life must fall silent"
+            );
+            assert!(
+                s.grains.is_empty(),
+                "going silent must retire the live grains, got {}",
+                s.grains.len()
+            );
+        }
+    }
+
+    #[test]
+    fn a_huge_scene_clamps_to_the_bed_maximum() {
+        // A *finite* 1e20 m height is not silence and not infinity: it
+        // sanitises then clamps to the documented 3.0 m ceiling, so the bed
+        // renders exactly what a 3.0 m bed renders for the same seed and
+        // state — finite samples throughout, never the silence path.
         let mut huge = Surf::new(9);
         huge.set_scene(scene(1e20, 1.0, 1.0));
         let mut three = Surf::new(9);
@@ -422,8 +459,36 @@ mod tests {
         let a = render_secs(&mut huge, 3.0);
         let b = render_secs(&mut three, 3.0);
         assert!(
+            a.iter().any(|x| *x != 0.0),
+            "a 1e20 m height must not render silence"
+        );
+        assert!(
+            a.iter().all(|x| x.is_finite()),
+            "the clamped bed must stay finite"
+        );
+        assert!(
             a.iter().eq(b.iter()),
             "a huge height must clamp to the 3.0 m ceiling, not saturate the wash"
+        );
+        assert!(
+            !huge.grains.is_empty(),
+            "the clamped bed must keep spawning waves"
+        );
+        // Mid-transition too: a live bed that jumps to 1e20 keeps sounding
+        // sample-for-sample like one that jumps to 3.0.
+        let mut huge = Surf::new(12);
+        huge.set_scene(scene(1.0, 1.0, 1.0));
+        let mut three = Surf::new(12);
+        three.set_scene(scene(1.0, 1.0, 1.0));
+        let _ = render_secs(&mut huge, 3.0);
+        let _ = render_secs(&mut three, 3.0);
+        huge.set_scene(scene(1e20, 1.0, 1.0));
+        three.set_scene(scene(3.0, 1.0, 1.0));
+        let a = render_secs(&mut huge, 3.0);
+        let b = render_secs(&mut three, 3.0);
+        assert!(
+            a.iter().eq(b.iter()),
+            "mid-life, 1e20 must behave exactly like 3.0"
         );
     }
 
