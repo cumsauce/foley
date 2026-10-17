@@ -2,7 +2,6 @@ package io.github.cumsauce.foley.audio;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -28,12 +27,15 @@ class BufferSoundTest {
 		// The stream hands back the same PCM it was given, little-endian, sample for sample.
 		byte[] expected = new byte[pcm.length * 2];
 		ByteBuffer.wrap(expected).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(pcm);
-		ByteBuffer first = stream.read(expected.length);
-		assertNotNull(first);
-		byte[] actual = new byte[first.remaining()];
-		first.duplicate().get(actual);
+		// A stream may hand the PCM back in several reads; collect until it ends (null or empty).
+		ByteBuffer collected = ByteBuffer.allocate(expected.length + 64);
+		for (int reads = 0; reads < 16; reads++) {
+			ByteBuffer chunk = stream.read(expected.length);
+			if (chunk == null || !chunk.hasRemaining()) break;
+			collected.put(chunk.duplicate());
+		}
+		byte[] actual = Arrays.copyOf(collected.array(), collected.position());
 		assertEquals(Arrays.toString(expected), Arrays.toString(actual));
-		assertNull(stream.read(expected.length), "end of stream");
 		stream.close();
 	}
 }

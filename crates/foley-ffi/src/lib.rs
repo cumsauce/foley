@@ -815,11 +815,11 @@ mod render_contract_tests {
         // `to_pcm` is tanh-squashed, so the ceiling is what it makes of
         // BED_CEILING (plus a hair for i16 rounding).
         let ceiling = to_pcm(BED_CEILING + 0.01) as i16;
-        for (i, &sample) in pcm[GLIDE_BLOCK..].iter().enumerate() {
+        for (i, &sample) in pcm.iter().enumerate() {
             assert!(
                 sample.abs() <= ceiling,
                 "sample {} of the onset: {} is above the ceiling {}",
-                i + GLIDE_BLOCK,
+                i,
                 sample,
                 ceiling
             );

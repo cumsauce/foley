@@ -19,6 +19,8 @@ class NativeBridgeTest {
 		assertEquals(usual, NativeBridge.sliceLength(usual, usual));
 		assertEquals(0, NativeBridge.sliceLength(0, usual));
 		assertEquals(1, NativeBridge.sliceLength(1, 1));
+		// A size_t past Long.MAX_VALUE reads back negative: refused too, never sliced.
+		assertThrows(FoleyException.class, () -> NativeBridge.sliceLength(-1, usual));
 	}
 
 	@Test
