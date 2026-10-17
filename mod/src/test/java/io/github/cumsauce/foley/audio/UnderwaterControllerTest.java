@@ -41,22 +41,16 @@ class UnderwaterControllerTest {
 	}
 
 	@Test
-	void stayingDryPastTheLingerClearsTheFlag() {
-		// Latched on, then fully dry: the flag holds through the linger, then lets go on the 20th tick.
-		boolean flag = true;
-		for (int dryFor = 1; dryFor < UnderwaterController.DRY_LINGER; dryFor++) {
-			flag = UnderwaterController.latchedSubmerged(flag, false, dryFor);
-			assertTrue(flag, "cleared after only " + dryFor + " dry ticks, before the linger");
-		}
-		flag = UnderwaterController.latchedSubmerged(flag, false, UnderwaterController.DRY_LINGER);
-		assertFalse(flag, "still set on the 20th dry tick — the linger is up");
-	}
-
-	@Test
 	void dry_latch_drops_on_tick_20() {
 		// The dry counter as tick() advances it, with the latch: a wet ear latches at once; then a
 		// fully dry run must hold the flag through the linger and let go on the 20th dry tick —
-		// DRY_LINGER's documented meaning — not the 21st.
+		// DRY_LINGER's documented meaning — not the 21st. The direct boundaries below pin an
+		// already-latched flag at 1 and DRY_LINGER - 1 dry ticks, independent of the counter.
+		assertTrue(
+				UnderwaterController.latchedSubmerged(true, false, 1), "latched flag cleared after only one dry tick");
+		assertTrue(
+				UnderwaterController.latchedSubmerged(true, false, UnderwaterController.DRY_LINGER - 1),
+				"latched flag cleared one tick before the linger");
 		boolean flag = UnderwaterController.latchedSubmerged(false, true, 0);
 		assertTrue(flag, "wet must latch");
 		int dryFor = 0;
