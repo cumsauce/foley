@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class NativeBridge {
 	/** Must equal {@code FOLEY_ABI_VERSION} in {@code foley.h}. */
-	public static final int ABI_VERSION = 23;
+	public static final int ABI_VERSION = 24;
 	/** Surfaces rain lands on, in the order its scene takes them. */
 	public static final int SURFACES = 7;
 	public static final int SAMPLE_RATE = 48_000;
@@ -75,6 +75,8 @@ public final class NativeBridge {
 	public static final int PRIMITIVE_TONE = 2;
 	public static final int PRIMITIVE_GUST = 3;
 	public static final int PRIMITIVE_AEOLIAN = 4;
+	/** A note block strike: instrument, note, character (M23). */
+	public static final int PRIMITIVE_NOTE = 5;
 
 	private static final ValueLayout.OfLong SIZE_T = JAVA_LONG;
 

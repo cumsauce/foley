@@ -51,7 +51,20 @@ public final class GeneratedSounds {
 			return otherwise;
 		}
 		long seed = 0x11FEL * (n + 1) + variant;
-		return switch (model.substring(0, split)) {
+		String stem = model.substring(0, split);
+		// A note block strike: note_<instrument>, n its pitch (0 to 24).
+		if (stem.startsWith("note_")) {
+			int instrument;
+			try {
+				instrument = Integer.parseInt(stem.substring("note_".length()));
+			} catch (NumberFormatException e) {
+				return otherwise;
+			}
+			if (instrument < 0 || instrument >= NoteBlocks.INSTRUMENTS.size()) return otherwise;
+			return bridge.renderPrimitive(NativeBridge.PRIMITIVE_NOTE, new float[] {instrument, n, character(seed)},
+					seed);
+		}
+		return switch (stem) {
 			case "bird" -> bridge.renderOneShot(NativeBridge.SHOT_BIRDSONG, n, seed);
 			case "crickets" -> bridge.renderOneShot(NativeBridge.SHOT_CRICKETS, Life.CRICKET_CELSIUS[n], seed);
 			case "frog" -> bridge.renderOneShot(NativeBridge.SHOT_FROG, Life.FROG_CM[n], seed);
@@ -67,6 +80,13 @@ public final class GeneratedSounds {
 			case "buzz" -> bridge.renderOneShot(NativeBridge.SHOT_BUZZ, n, seed);
 			default -> otherwise;
 		};
+	}
+
+	/** The seed's timbral character (0 to 1): the same note struck again, a little different each time. */
+	private static float character(long seed) {
+		long mixed = (seed ^ (seed >>> 30)) * 0xBF58476D1CE4E5B9L;
+		mixed = (mixed ^ (mixed >>> 27)) * 0x94D049BB133111EBL;
+		return ((mixed ^ (mixed >>> 31)) & 0xFFFFFF) / (float) 0xFFFFFF;
 	}
 
 	/**
