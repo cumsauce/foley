@@ -70,7 +70,13 @@ pub fn note_hz(instrument: u32, note: f32) -> Option<f32> {
 pub fn note(instrument: u32, note: f32, character: f32, seed: u64) -> Option<Vec<f32>> {
     let family = family(instrument)?;
     let hz = note_hz(instrument, note)?;
-    let character = character.clamp(0.0, 1.0);
+    // A non-finite `character` would poison damping, brightness and the
+    // loop gain with NaN; treat it as the neutral midpoint instead.
+    let character = if character.is_finite() {
+        character.clamp(0.0, 1.0)
+    } else {
+        0.5
+    };
     // The seed mixes the character too, so two hits of the same note with
     // different characters never share a noise burst.
     let seed = seed ^ u64::from(character.to_bits());
@@ -88,8 +94,9 @@ pub fn note(instrument: u32, note: f32, character: f32, seed: u64) -> Option<Vec
                 _ => (0.40, 0.50),
             };
             // `character` swings each hit's timbre around the voicing:
-            // softer hits ring a little longer and duller, harder ones
-            // snap out brighter and die sooner.
+            // a low character damps more, so the hit is duller and dies
+            // out sooner; a high character is plucked brighter and the
+            // string rings longer.
             let damping = (damping * (1.3 - 0.6 * character)).clamp(0.0, 1.0);
             let brightness = (brightness + 0.2 * (character - 0.5)).clamp(0.0, 1.0);
             pluck(hz, damping, brightness, seed)
@@ -188,5 +195,35 @@ mod tests {
     #[test]
     fn an_unknown_instrument_renders_nothing() {
         assert!(note(16, 12.0, 0.5, 1).is_none());
+    }
+
+    #[test]
+    fn a_plucked_note_renders_audible_finite_audio() {
+        let out = note(0, 12.0, 0.5, 7);
+        assert!(out.is_some(), "plucked note rendered nothing");
+        let out = out.unwrap();
+        assert!(!out.is_empty(), "plucked note is empty");
+        assert!(
+            out.iter().all(|x| x.is_finite()),
+            "plucked note has non-finite samples"
+        );
+        let peak = out.iter().fold(0.0f32, |m, x| m.max(x.abs()));
+        assert!(
+            peak > 0.05 && peak <= 1.0,
+            "peak {peak} not in (0.05, 1.0]: not audible, or clipping"
+        );
+        assert!(
+            out.len() <= (3.0 * SAMPLE_RATE as f32) as usize,
+            "plucked note runs past 3 s"
+        );
+        // The tail must be below -60 dB: a note that stops mid-cycle clicks.
+        let tail = &out[out.len().saturating_sub(100)..];
+        assert!(
+            tail.iter().all(|x| x.abs() < 1e-3),
+            "tail does not fade out — the note clicks off"
+        );
+        // An instrument past the table has no base and no pitch either.
+        assert!(base_hz(16).is_none());
+        assert!(note_hz(16, 12.0).is_none());
     }
 }
