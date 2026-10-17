@@ -274,7 +274,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 						settings.wind(), settings.thunder(), settings.water(), settings.fire(), settings.lava(),
 						settings.drips(), settings.strikes(), settings.footsteps(), settings.birds(),
 						settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(), settings.chests(),
-						settings.redstone(), settings.boats(), settings.sculk(), settings.caveAtmosphere(),
+						settings.redstone(), settings.boats(), settings.sculk(), settings.noteBlocks(), settings.caveAtmosphere(),
 						settings.rarerSpecies(), settings.underwater(), settings.aeolian(), true, true, true, true,
 						true, true, true, settings.village(), settings.settling(), settings.mobBrushes(),
 						settings.peacefulBreathing(), settings.ashDrift(), 1 << 2));
@@ -297,7 +297,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.volume(), settings.rain(), settings.wind(), settings.thunder(), settings.water(),
 					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
 					false, settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
-					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
+					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(), settings.noteBlocks(),
 					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
 					settings.biomeBeds(), settings.desertBeds(), settings.mushroomHum(), settings.caveColors(),
 					settings.deepDark(), settings.snowyHush(), settings.mangroveDrone(), settings.village(),
@@ -322,7 +322,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 						settings.wind(), settings.thunder(), settings.water(), settings.fire(), settings.lava(),
 						settings.drips(), settings.strikes(), settings.footsteps(), settings.birds(),
 						settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(), settings.chests(),
-						settings.redstone(), settings.boats(), settings.sculk(),
+						settings.redstone(), settings.boats(), settings.sculk(), settings.noteBlocks(),
 						settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
 						true, true, true, true, true, true, true, settings.village(),
 						settings.settling(), settings.mobBrushes(), settings.peacefulBreathing(), settings.ashDrift(),						1L << io.github.cumsauce.foley.audio.Voices.ADDON_GROUP));
@@ -339,7 +339,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.volume(), settings.rain(), settings.wind(), settings.thunder(), settings.water(),
 					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
 					settings.birds(), settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
-					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
+					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(), settings.noteBlocks(),
 					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
 					true, true, true, true, true, true, true, settings.village(),
 					settings.settling(), settings.mobBrushes(), settings.peacefulBreathing(), settings.ashDrift(),
@@ -366,7 +366,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.volume(), settings.rain(), settings.wind(), settings.thunder(), settings.water(),
 					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
 					settings.birds(), settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
-					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
+					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(), settings.noteBlocks(),
 					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
 					true, true, true, true, true, true, true, settings.village(),
 					settings.settling(), settings.mobBrushes(), settings.peacefulBreathing(), settings.ashDrift(),
@@ -405,7 +405,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			int beforeMuted = FoleyClient.replaced();
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, 0L)));
 			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CHEST_OPEN,
 					SoundSource.BLOCKS, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX() + 4,
@@ -581,7 +581,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			int beforeMutedAeolian = FoleyClient.aeolian().played();
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, false,
 					0L)));
 			singleplayer.getServer().waitFor(server -> server.getTickCount() > 100, 200);
@@ -608,7 +608,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			int beforeMutedBiome = FoleyClient.replaced();
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false,
 					0L)));
 			try {
@@ -631,7 +631,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			int villageMuted = villages.played();
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, false,
 					0L)));
 			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
@@ -712,7 +712,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			int beforeMutedBreath22 = context.computeOnClient(mc -> FoleyClient.peacefulBreathing().breaths());
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, false, 0L)));
 			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 200);
 			if (FoleyClient.peacefulBreathing().breaths() != beforeMutedBreath22) {

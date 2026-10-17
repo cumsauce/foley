@@ -82,6 +82,8 @@
 	"foley.settings.sculk": "Sculk",
 	"foley.settings.village": "Village Ambience",
 	"foley.settings.sculk.tooltip": "A sculk sensor rings when it triggers, and the sculk around it rings back.",
+	"foley.settings.noteBlocks": "Note Blocks",
+	"foley.settings.noteBlocks.tooltip": "Foley strikes each note block's instrument itself, at the block's own note.",
 	"foley.settings.section.structures": "Active structures",
 	"foley.settings.bypass.unbound": "Bind \"Bypass Foley\" in Controls to switch Foley off and on while you listen.",
 	"foley.settings.bypass.bound": "Press %s to switch Foley off and on while you listen.",
