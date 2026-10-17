@@ -427,7 +427,14 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
             synth,
             scratch: [0.0; GLIDE_BLOCK],
             envelope: 0.0,
-            guard: 1.0,
+            // At the floor, not unity: a fresh bed's envelope is empty, so
+            // `wanted` clamps to 1.0 and a guard left at 1.0 would pass a
+            // full-scale onset straight past BED_CEILING for as long as it
+            // takes the guard's slow fall to catch it. From the floor it
+            // can only climb towards `wanted` (0.0001 a sample), so
+            // `sample * guard` stays under the ceiling from the first
+            // sample, filter or no filter.
+            guard: 0.0,
             target: [0.0; MAX_PARAMS],
             heard: [0.0; MAX_PARAMS],
             params: 0,
@@ -775,6 +782,48 @@ mod render_contract_tests {
             buffer.iter().all(|sample| *sample != 0x5a5a),
             "every frame must be written by a successful render"
         );
+    }
+
+    /// A full-scale onset on a brand-new bed: its guard's envelope is empty,
+    /// so `wanted` clamps to unity and nothing but the guard itself can catch
+    /// the peak. A fire at full size is far louder than a speaker takes —
+    /// once the guard has had a block to act, no later sample may leave the
+    /// ceiling.
+    #[test]
+    fn a_full_scale_onset_never_leaves_above_the_ceiling() {
+        let _bed = bed(FOLEY_BED_FIRE);
+        // From silence: a sceneless bed's fire is out, and this renders one
+        // block of it.
+        let mut silence = vec![0i16; GLIDE_BLOCK];
+        // SAFETY: `_bed` is live and `silence` is writable for its length.
+        let code = unsafe { foley_bed_render(_bed, silence.as_mut_ptr(), silence.len()) };
+        assert_eq!(code, FOLEY_OK);
+        assert!(
+            silence.iter().all(|&s| s == 0),
+            "a sceneless bed renders silence"
+        );
+        // The onset: a bed's first scene snaps rather than glides, so the
+        // blaze is at full scale from the very next render's first sample.
+        let loud = [200.0f32, 1.0];
+        // SAFETY: `_bed` is live and `loud` is a scene of two finite floats.
+        let code = unsafe { foley_bed_set_scene(_bed, loud.as_ptr(), loud.len()) };
+        assert_eq!(code, FOLEY_OK);
+        let mut pcm = vec![0i16; 8 * GLIDE_BLOCK];
+        // SAFETY: `_bed` is live and `pcm` is writable for its length.
+        let code = unsafe { foley_bed_render(_bed, pcm.as_mut_ptr(), pcm.len()) };
+        assert_eq!(code, FOLEY_OK);
+        // `to_pcm` is tanh-squashed, so the ceiling is what it makes of
+        // BED_CEILING (plus a hair for i16 rounding).
+        let ceiling = to_pcm(BED_CEILING + 0.01) as i16;
+        for (i, &sample) in pcm[GLIDE_BLOCK..].iter().enumerate() {
+            assert!(
+                sample.abs() <= ceiling,
+                "sample {} of the onset: {} is above the ceiling {}",
+                i + GLIDE_BLOCK,
+                sample,
+                ceiling
+            );
+        }
     }
 }
 
