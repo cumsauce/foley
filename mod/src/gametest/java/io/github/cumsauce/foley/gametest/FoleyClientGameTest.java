@@ -274,7 +274,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 						settings.wind(), settings.thunder(), settings.water(), settings.fire(), settings.lava(),
 						settings.drips(), settings.strikes(), settings.footsteps(), settings.birds(),
 						settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(), settings.chests(),
-						settings.redstone(), settings.boats(), settings.sculk(), settings.caveAtmosphere(),
+						settings.redstone(), settings.boats(), settings.sculk(), settings.noteBlocks(), settings.caveAtmosphere(),
 						settings.rarerSpecies(), settings.underwater(), settings.aeolian(), true, true, true, true,
 						true, true, true, settings.village(), settings.settling(), settings.mobBrushes(),
 						settings.peacefulBreathing(), settings.ashDrift(), 1 << 2));
@@ -297,7 +297,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.volume(), settings.rain(), settings.wind(), settings.thunder(), settings.water(),
 					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
 					false, settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
-					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
+					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(), settings.noteBlocks(),
 					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
 					settings.biomeBeds(), settings.desertBeds(), settings.mushroomHum(), settings.caveColors(),
 					settings.deepDark(), settings.snowyHush(), settings.mangroveDrone(), settings.village(),
@@ -322,7 +322,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 						settings.wind(), settings.thunder(), settings.water(), settings.fire(), settings.lava(),
 						settings.drips(), settings.strikes(), settings.footsteps(), settings.birds(),
 						settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(), settings.chests(),
-						settings.redstone(), settings.boats(), settings.sculk(),
+						settings.redstone(), settings.boats(), settings.sculk(), settings.noteBlocks(),
 						settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
 						true, true, true, true, true, true, true, settings.village(),
 						settings.settling(), settings.mobBrushes(), settings.peacefulBreathing(), settings.ashDrift(),						1L << io.github.cumsauce.foley.audio.Voices.ADDON_GROUP));
@@ -339,7 +339,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.volume(), settings.rain(), settings.wind(), settings.thunder(), settings.water(),
 					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
 					settings.birds(), settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
-					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
+					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(), settings.noteBlocks(),
 					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
 					true, true, true, true, true, true, true, settings.village(),
 					settings.settling(), settings.mobBrushes(), settings.peacefulBreathing(), settings.ashDrift(),
@@ -366,7 +366,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.volume(), settings.rain(), settings.wind(), settings.thunder(), settings.water(),
 					settings.fire(), settings.lava(), settings.drips(), settings.strikes(), settings.footsteps(),
 					settings.birds(), settings.crickets(), settings.frogs(), settings.minecarts(), settings.doors(),
-					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(),
+					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(), settings.noteBlocks(),
 					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
 					true, true, true, true, true, true, true, settings.village(),
 					settings.settling(), settings.mobBrushes(), settings.peacefulBreathing(), settings.ashDrift(),
@@ -405,7 +405,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			int beforeMuted = FoleyClient.replaced();
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, 0L)));
 			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CHEST_OPEN,
 					SoundSource.BLOCKS, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX() + 4,
@@ -581,7 +581,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			int beforeMutedAeolian = FoleyClient.aeolian().played();
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, false,
 					0L)));
 			singleplayer.getServer().waitFor(server -> server.getTickCount() > 100, 200);
@@ -608,7 +608,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			int beforeMutedBiome = FoleyClient.replaced();
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false,
 					0L)));
 			try {
@@ -631,7 +631,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			int villageMuted = villages.played();
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, false,
 					0L)));
 			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
@@ -712,7 +712,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			int beforeMutedBreath22 = context.computeOnClient(mc -> FoleyClient.peacefulBreathing().breaths());
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, false, 0L)));
 			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 200);
 			if (FoleyClient.peacefulBreathing().breaths() != beforeMutedBreath22) {
@@ -721,6 +721,47 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			}
 			singleplayer.getServer().runCommand("kill @e[type=cow]");
 			singleplayer.getServer().runCommand("kill @e[type=sheep]");			context.runOnClient(mc -> FoleyClient.apply(settings));
+
+			// Note blocks (M23): a note block on gold is the bell (gold is the bell's material in vanilla), and a
+			// strike is Foley's; with `noteBlocks` off the game's own strike plays instead. The block sits a few
+			// blocks off so its tuning is read from the block rather than from whatever the player stands on.
+			// Absolute coordinates: runCommand's source may not sit at the player.
+			int[] bellAt = context.computeOnClient(mc -> new int[] {
+					(int) Math.floor(mc.player.getX()) + 3, (int) Math.floor(mc.player.getY()),
+					(int) Math.floor(mc.player.getZ())});
+			singleplayer.getServer().runCommand("setblock " + bellAt[0] + " " + (bellAt[1] - 1) + " " + bellAt[2]
+					+ " gold_block");
+			singleplayer.getServer().runCommand("setblock " + bellAt[0] + " " + bellAt[1] + " " + bellAt[2]
+					+ " note_block");
+			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
+			// The block is there before the strike: reading its tuning is the point of the step.
+			context.waitFor(mc -> mc.level != null && mc.level.getBlockState(
+					new net.minecraft.core.BlockPos(bellAt[0], bellAt[1], bellAt[2]))
+					.is(net.minecraft.world.level.block.Blocks.NOTE_BLOCK), 5 * 20);
+			context.runOnClient(mc -> FoleyClient.apply(settings.withNoteBlocks(true)));
+			int beforePlays = io.github.cumsauce.foley.audio.NoteBlocks.plays();
+			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(
+					SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.RECORDS, 1f, 1f, SoundInstance.createUnseededRandom(),
+					bellAt[0] + 0.5, bellAt[1] + 0.5, bellAt[2] + 0.5)));
+			if (io.github.cumsauce.foley.audio.NoteBlocks.plays() != beforePlays + 1) {
+				throw new AssertionError("M23 note block didn't play Foley's bell (plays delta="
+						+ (io.github.cumsauce.foley.audio.NoteBlocks.plays() - beforePlays) + ")");
+			}
+			// With `noteBlocks` off, the game keeps its strike: Foley does not play. The strike below finds the
+			// same note block in the same place as the one above — only the toggle differs.
+			context.runOnClient(mc -> FoleyClient.apply(settings.withNoteBlocks(false)));
+			int beforeMutedNotes = io.github.cumsauce.foley.audio.NoteBlocks.plays();
+			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(
+					SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.RECORDS, 1f, 1f, SoundInstance.createUnseededRandom(),
+					bellAt[0] + 0.5, bellAt[1] + 0.5, bellAt[2] + 0.5)));
+			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
+			if (io.github.cumsauce.foley.audio.NoteBlocks.plays() != beforeMutedNotes) {
+				throw new AssertionError("M23 played when its toggle was off (plays delta="
+						+ (io.github.cumsauce.foley.audio.NoteBlocks.plays() - beforeMutedNotes) + ")");
+			}
+			singleplayer.getServer().runCommand("setblock " + bellAt[0] + " " + bellAt[1] + " " + bellAt[2] + " air");
+			singleplayer.getServer().runCommand("setblock " + bellAt[0] + " " + (bellAt[1] - 1) + " " + bellAt[2] + " air");
+			context.runOnClient(mc -> FoleyClient.apply(settings));
 		}
 	}
 

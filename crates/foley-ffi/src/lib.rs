@@ -65,7 +65,8 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 /// 22: `foley_set_submerged` for the global 1 kHz low-pass on every Foley
 ///     stream (not voices) while the head is under.
 /// 23: surf as a placed bed (M17): `FOLEY_BED_SURF`, one continuous shore bed.
-pub const FOLEY_ABI_VERSION: u32 = 23;
+/// 24: note block instruments (M23): `FOLEY_PRIMITIVE_NOTE`.
+pub const FOLEY_ABI_VERSION: u32 = 24;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -158,6 +159,10 @@ pub const FOLEY_PRIMITIVE_NOISE: i32 = 1;
 pub const FOLEY_PRIMITIVE_TONE: i32 = 2;
 pub const FOLEY_PRIMITIVE_GUST: i32 = 3;
 pub const FOLEY_PRIMITIVE_AEOLIAN: i32 = 4;
+
+/// Note block instruments (M23): `instrument` (0 to 15), `note` (0 to 24,
+/// vanilla's note block note), `character` (0 to 1, a per-hit timbre).
+pub const FOLEY_PRIMITIVE_NOTE: i32 = 5;
 
 /// The most floats any primitive takes.
 pub const FOLEY_PRIMITIVE_MAX_FLOATS: usize = 4;
@@ -1272,6 +1277,13 @@ pub unsafe extern "C" fn foley_render_primitive(
                 gain(3)?,
                 seed,
             ),
+            FOLEY_PRIMITIVE_NOTE => foley_synth::note(
+                range("instrument", given(0)?, 0.0, 15.0)?.round() as u32,
+                range("note", given(1)?, 0.0, 24.0)?,
+                gain(2)?,
+                seed,
+            )
+            .ok_or_else(|| FfiError::invalid("unknown instrument"))?,
             _ => return Err(FfiError::invalid("unknown primitive")),
         };
         if let Some(dest) = out.get_mut(..sound.len()) {
@@ -1991,6 +2003,79 @@ mod tests {
                     9,
                     [1.0f32].as_ptr(),
                     1,
+                    7,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed
+                ),
+                FOLEY_ERR_INVALID_ARGUMENT
+            );
+        }
+    }
+
+    /// M23: every note block instrument (0 to 15) × every note (0 to 24)
+    /// renders non-silent PCM through `FOLEY_PRIMITIVE_NOTE`, and an
+    /// unknown instrument is rejected.
+    #[test]
+    fn every_note_block_instrument_and_note_renders() {
+        for instrument in 0..=15u32 {
+            for note in 0..=24 {
+                let params = [instrument as f32, note as f32, 0.5];
+                let mut needed = 0;
+                // SAFETY: a null buffer with capacity 0 is not written; `params`
+                // and `needed` are valid.
+                unsafe {
+                    assert_eq!(
+                        foley_render_primitive(
+                            FOLEY_PRIMITIVE_NOTE,
+                            params.as_ptr(),
+                            params.len(),
+                            7,
+                            std::ptr::null_mut(),
+                            0,
+                            &mut needed
+                        ),
+                        FOLEY_OK,
+                        "instrument {instrument} note {note}"
+                    );
+                }
+                assert!(
+                    needed > 100,
+                    "instrument {instrument} note {note}: {needed} samples"
+                );
+                let mut pcm = vec![0i16; needed];
+                // SAFETY: `pcm` is writable for `needed` samples.
+                unsafe {
+                    assert_eq!(
+                        foley_render_primitive(
+                            FOLEY_PRIMITIVE_NOTE,
+                            params.as_ptr(),
+                            params.len(),
+                            7,
+                            pcm.as_mut_ptr(),
+                            needed,
+                            &mut needed
+                        ),
+                        FOLEY_OK,
+                        "instrument {instrument} note {note}"
+                    );
+                }
+                // i16 PCM is finite and bounded by construction; only silence
+                // can fail.
+                assert!(
+                    pcm.iter().any(|&s| s.abs() > 500),
+                    "instrument {instrument} note {note} is silent"
+                );
+            }
+        }
+        let mut needed = 0;
+        // SAFETY: the check refuses before writing; every pointer is valid.
+        unsafe {
+            assert_eq!(
+                foley_render_primitive(
+                    FOLEY_PRIMITIVE_NOTE,
+                    [99.0f32, 12.0, 0.5].as_ptr(),
+                    3,
                     7,
                     std::ptr::null_mut(),
                     0,

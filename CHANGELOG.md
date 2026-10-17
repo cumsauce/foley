@@ -3,6 +3,23 @@
 The mod and the Rust workspace share one version; entries are grouped by that
 version. Playtest builds are `0.1.0-beta.N`.
 
+## 0.1.0-beta.61 — note block instruments (M23)
+
+### Added
+
+- Foley now plays its own note block strikes: sixteen instruments across five
+  modelled families (plucked string, struck modal bars and bells, membrane
+  drums, breath tubes, and the electronic bit and pling), each at any of the
+  block's twenty-five notes and eight timbral variants. Nothing is resampled.
+- `FOLEY_PRIMITIVE_NOTE` (`note(instrument, note, character, seed)`) renders a
+  strike on demand; ABI rises to 24.
+- `noteBlocks` in Options → Music & Sounds → Foley (default on) lets the
+  vanilla note block plays through instead.
+
+### Fixed
+
+- The note block's `character` knob now reaches its hat as well.
+
 ## 0.1.0-beta.60 — generic sound overrides
 
 ### Added

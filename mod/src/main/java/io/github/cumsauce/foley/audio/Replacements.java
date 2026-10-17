@@ -85,6 +85,8 @@ public final class Replacements {
 			return thunder != null && thunder.replacing() && counted();
 		}
 		Minecraft minecraft = Minecraft.getInstance();
+		// M23: note block strikes, taken for Foley's own instruments (the toggle is inside).
+		if (NoteBlocks.replace(sound, minecraft)) return true;
 		if (FoleyClient.placed() == null || minecraft.level == null || minecraft.player == null) return false;
 		boolean ambience = WATER.contains(id) || LAVA.contains(id) || FIRE.contains(id);
 		if (ambience) {

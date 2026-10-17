@@ -44,6 +44,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 	private final OptionInstance<Boolean> redstone;
 	private final OptionInstance<Boolean> boats;
 	private final OptionInstance<Boolean> sculk;
+	private final OptionInstance<Boolean> noteBlocks;
 	private final OptionInstance<Boolean> caveAtmosphere;
 	private final OptionInstance<Boolean> rarerSpecies;
 	private final OptionInstance<Boolean> underwater;
@@ -96,6 +97,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 		redstone = added("foley.settings.redstone", config.redstone());
 		boats = added("foley.settings.boats", config.boats());
 		sculk = added("foley.settings.sculk", config.sculk());
+		noteBlocks = replaced("foley.settings.noteBlocks", config.noteBlocks());
 		caveAtmosphere = added("foley.settings.caveAtmosphere", config.caveAtmosphere());
 		rarerSpecies = added("foley.settings.rarerSpecies", config.rarerSpecies());
 		underwater = added("foley.settings.underwater", config.underwater());
@@ -162,6 +164,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 		list.addSmall(minecarts, doors);
 		list.addSmall(chests, redstone);
 		list.addSmall(boats, sculk);
+		list.addSmall(noteBlocks, null);
 		list.addSmall(aeolian, null);
 
 		list.addHeader(Component.translatable("foley.settings.section.biome"));
@@ -237,7 +240,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 		}
 		FoleyConfig next = new FoleyConfig(volume.get(), rain.get(), wind.get(), thunder.get(), water.get(), fire.get(),
 				lava.get(), drips.get(), strikes.get(), footsteps.get(), birds.get(), crickets.get(), frogs.get(),
-				minecarts.get(), doors.get(), chests.get(), redstone.get(), boats.get(), sculk.get(),
+				minecarts.get(), doors.get(), chests.get(), redstone.get(), boats.get(), sculk.get(), noteBlocks.get(),
 				caveAtmosphere.get(), rarerSpecies.get(), underwater.get(), aeolian.get(), biomeBeds.get(),
 				desertBeds.get(), mushroomHum.get(), caveColors.get(), deepDark.get(), snowyHush.get(),
 				mangroveDrone.get(), village.get(), settling.get(), mobBrushes.get(), peacefulBreathing.get(), ashDrift.get(), voiced);
