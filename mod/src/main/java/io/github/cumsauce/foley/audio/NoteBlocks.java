@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.NoteBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -31,7 +32,19 @@ public final class NoteBlocks {
 	/** How many timbres each note is struck with; the instance's hash picks one of them. */
 	static final int VARIANTS = 8;
 
+	/**
+	 * How many strikes Foley has taken for its own instrument. Unlike {@code FoleyClient.replaced()} this counts the
+	 * strikes themselves rather than the sounds skipped, so a caller can tell a note Foley played from a note that fell
+	 * through to the game. For the client gametest.
+	 */
+	private static final AtomicInteger PLAYS = new AtomicInteger();
+
 	private NoteBlocks() {}
+
+	/** How many note block strikes Foley has played. For the client gametest. */
+	public static int plays() {
+		return PLAYS.get();
+	}
 
 	/** The instrument a vanilla note block sound id names ({@code block.note_block.<instrument>}), or −1. */
 	public static int instrument(Identifier id) {
@@ -87,6 +100,7 @@ public final class NoteBlocks {
 			minecraft.getSoundManager().play(AddonSounds.instance(EVENT.location(), bufferName(instrument, note, variant),
 					SoundSource.RECORDS, sound.getVolume() * FoleyClient.gain(), 1f, sound.getX(), sound.getY(),
 					sound.getZ()));
+			PLAYS.incrementAndGet();
 		}
 		return true;
 	}
