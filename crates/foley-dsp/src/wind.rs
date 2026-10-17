@@ -294,7 +294,7 @@ impl Wind {
 mod tests {
     use super::*;
     #[allow(unused_imports)]
-    use std::{vec, vec::Vec};
+    use std::{println, vec, vec::Vec};
 
     fn listen(scene: WindScene) -> f32 {
         let mut wind = Wind::new(5);
@@ -354,8 +354,8 @@ mod tests {
     /// while at an ordinary speed the leaves are still clearly heard.
     #[test]
     fn leaves_stay_level_matched_at_full_gale() {
-        fn render(speed: f32, leaves: f32) -> Vec<f32> {
-            let mut wind = Wind::new(5);
+        fn render(seed: u64, speed: f32, leaves: f32) -> Vec<f32> {
+            let mut wind = Wind::new(seed);
             wind.set_scene(WindScene {
                 speed,
                 exposure: 1.0,
@@ -368,21 +368,31 @@ mod tests {
         let peak = |s: &[f32]| s.iter().fold(0.0f32, |m, x| m.max(x.abs()));
         let rms = |s: &[f32]| (s.iter().map(|x| x * x).sum::<f32>() / s.len() as f32).sqrt();
 
-        let (gale, gale_bare) = (render(60.0, 1.0), render(60.0, 0.0));
-        let (calm, calm_bare) = (render(12.0, 1.0), render(12.0, 0.0));
-        // Diagnostics first, so a failure says by how much.
-        let (pg, pgb) = (peak(&gale), peak(&gale_bare));
-        let (rg, rgb) = (rms(&gale), rms(&gale_bare));
-        let (pc, pcb) = (peak(&calm), peak(&calm_bare));
-        let (rc, rcb) = (rms(&calm), rms(&calm_bare));
-        // Full gale: combined peak stays well under the guard's 0.4 ceiling,
-        // and the leaves do not double the bed's loudness there; at an
-        // ordinary wind the leaves still raise the RMS noticeably.
-        assert!(
-            pg <= 0.25 && rg <= 2.0 * rgb && rc > 1.15 * rcb,
-            "gale peak {pg} (bare {pgb}), gale rms {rg} vs bare {rgb}; \
-             12 m/s rms {rc} vs bare {rcb} (peaks {pc} vs {pcb})"
-        );
+        // Gusts are seeded: one seed's swells could sit where another's
+        // don't, so the bounds are checked across several seeds rather
+        // than trusted from a single lucky draw.
+        for &seed in &[5, 11, 23, 42, 777] {
+            let (gale, gale_bare) = (render(seed, 60.0, 1.0), render(seed, 60.0, 0.0));
+            let (calm, calm_bare) = (render(seed, 12.0, 1.0), render(seed, 12.0, 0.0));
+            // Diagnostics first, so a failure says by how much.
+            let (pg, pgb) = (peak(&gale), peak(&gale_bare));
+            let (rg, rgb) = (rms(&gale), rms(&gale_bare));
+            let (pc, pcb) = (peak(&calm), peak(&calm_bare));
+            let (rc, rcb) = (rms(&calm), rms(&calm_bare));
+            println!(
+                "seed {seed}: gale peak {pg} (bare {pgb}), gale rms {rg} (bare {rgb}); \
+                 12 m/s rms {rc} (bare {rcb}), peak {pc} (bare {pcb})"
+            );
+            // Full gale: combined peak stays well under the guard's 0.4
+            // ceiling, and the leaves do not double the bed's loudness
+            // there; at an ordinary wind the leaves still raise the RMS
+            // noticeably.
+            assert!(
+                pg <= 0.25 && rg <= 2.0 * rgb && rc > 1.15 * rcb,
+                "seed {seed}: gale peak {pg} (bare {pgb}), gale rms {rg} vs bare {rgb}; \
+                 12 m/s rms {rc} vs bare {rcb} (peaks {pc} vs {pcb})"
+            );
+        }
     }
 
     #[test]
