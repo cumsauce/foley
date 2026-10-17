@@ -157,9 +157,9 @@ public final class AddonSounds {
 		return toBuffer(BedSound.FORMAT, pcm);
 	}
 
-	/** {@code pcm} (48 kHz mono, 16-bit) as a sound buffer, or null for nothing. */
+	/** {@code pcm} (48 kHz mono, 16-bit) as a sound buffer, or null for nothing (silence included). */
 	static @Nullable SoundBuffer toBuffer(javax.sound.sampled.AudioFormat format, short @Nullable [] pcm) {
-		if (pcm == null) return null;
+		if (pcm == null || pcm.length == 0) return null;
 		ByteBuffer data = ByteBuffer.allocateDirect(pcm.length * 2).order(ByteOrder.LITTLE_ENDIAN);
 		data.asShortBuffer().put(pcm);
 		return new SoundBuffer(data, format);

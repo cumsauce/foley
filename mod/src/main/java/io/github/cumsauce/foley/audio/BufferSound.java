@@ -52,10 +52,13 @@ public final class BufferSound extends AbstractSoundInstance {
 	@Override
 	public CompletableFuture<AudioStream> getAudioStream(net.minecraft.client.sounds.SoundBufferLibrary loader,
 			Identifier id, boolean repeat) {
-		ByteBuffer bytes = ByteBuffer.allocateDirect(pcm.length * 2).order(ByteOrder.LITTLE_ENDIAN);
-		bytes.asShortBuffer().put(pcm);
+		// A direct buffer has no backing array, so the stream reads a heap copy of the same PCM.
+		byte[] heap = new byte[pcm.length * 2];
+		ByteBuffer.wrap(heap).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(pcm);
+		ByteBuffer bytes = ByteBuffer.allocateDirect(heap.length).order(ByteOrder.LITTLE_ENDIAN);
+		bytes.put(heap).flip();
 		SoundBuffer buffer = new SoundBuffer(bytes, format);
-		InputStream in = new ByteArrayInputStream(bytes.array());
+		InputStream in = new ByteArrayInputStream(heap);
 		return CompletableFuture.completedFuture(new BufferStream(in, format));
 	}
 

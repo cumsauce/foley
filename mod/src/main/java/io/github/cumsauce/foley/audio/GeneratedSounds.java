@@ -2,8 +2,6 @@ package io.github.cumsauce.foley.audio;
 
 import com.mojang.blaze3d.audio.SoundBuffer;
 import io.github.cumsauce.foley.natives.NativeBridge;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.Nullable;
 
@@ -51,14 +49,22 @@ public final class GeneratedSounds {
 			return otherwise;
 		}
 		long seed = 0x11FEL * (n + 1) + variant;
+		// A table-indexed variant is bounds-checked first: an out-of-range model name (from
+		// sounds.json or a pack) falls through to {@code otherwise} rather than throwing or
+		// handing native an out-of-range index.
 		return switch (model.substring(0, split)) {
 			case "bird" -> bridge.renderOneShot(NativeBridge.SHOT_BIRDSONG, n, seed);
-			case "crickets" -> bridge.renderOneShot(NativeBridge.SHOT_CRICKETS, Life.CRICKET_CELSIUS[n], seed);
-			case "frog" -> bridge.renderOneShot(NativeBridge.SHOT_FROG, Life.FROG_CM[n], seed);
-			case "surf" -> bridge.renderOneShot(NativeBridge.SHOT_SURF, Life.SURF_M[n], seed);
+			case "crickets" -> n >= 0 && n < Life.CRICKET_CELSIUS.length
+					? bridge.renderOneShot(NativeBridge.SHOT_CRICKETS, Life.CRICKET_CELSIUS[n], seed)
+					: otherwise;
+			case "frog" -> n >= 0 && n < Life.FROG_CM.length
+					? bridge.renderOneShot(NativeBridge.SHOT_FROG, Life.FROG_CM[n], seed)
+					: otherwise;
 			case "woodpecker" -> bridge.renderOneShot(NativeBridge.SHOT_WOODPECKER, 0, seed);
 			case "owl" -> bridge.renderOneShot(NativeBridge.SHOT_OWL, 0, seed);
-			case "cicadas" -> bridge.renderOneShot(NativeBridge.SHOT_CICADAS, Life.CICADA_CELSIUS[n], seed);
+			case "cicadas" -> n >= 0 && n < Life.CICADA_CELSIUS.length
+					? bridge.renderOneShot(NativeBridge.SHOT_CICADAS, Life.CICADA_CELSIUS[n], seed)
+					: otherwise;
 			case "howl" -> bridge.renderOneShot(NativeBridge.SHOT_HOWL, 0, seed);
 			case "brush" -> bridge.renderOneShot(NativeBridge.SHOT_BRUSH, n, seed);
 			case "ice" -> bridge.renderOneShot(NativeBridge.SHOT_ICE_SINGING, 0, seed);
@@ -143,9 +149,7 @@ public final class GeneratedSounds {
 			case "drip_lava" -> bridge.renderOneShot(NativeBridge.SHOT_LAVA_DRIP, 1f, 0x1A7A + variant);
 			default -> life(bridge, model, variant, contact(bridge, model, variant));
 		};
-		if (pcm == null) return null;
-		ByteBuffer data = ByteBuffer.allocateDirect(pcm.length * 2).order(ByteOrder.LITTLE_ENDIAN);
-		data.asShortBuffer().put(pcm);
-		return new SoundBuffer(data, BedSound.FORMAT);
+		// Null and zero-length PCM are both "no sound": a buffer of nothing plays nothing.
+		return AddonSounds.toBuffer(BedSound.FORMAT, pcm);
 	}
 }
