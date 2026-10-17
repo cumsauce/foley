@@ -3,6 +3,8 @@
 // mappings are configured, as in the root project.
 plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	// Lets sibling projects depend on the API from mavenLocal.
+	id 'maven-publish'
 }
 
 base {
@@ -18,6 +20,8 @@ java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(25)
 	}
+	// Published next to the API jar so consumers can read the API's sources in their IDE.
+	withSourcesJar()
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -35,4 +39,17 @@ processResources {
 jar {
 	from(rootProject.file('../LICENSE-MIT'))
 	from(rootProject.file('../LICENSE-APACHE'))
+}
+
+// Publishes io.github.cumsauce:foley-api:<mod version> to mavenLocal for sibling projects. `archivesName` names the
+// jar, but the publication's artifactId defaults to the project name ("api"), so it is set explicitly.
+publishing {
+	publications {
+		maven(MavenPublication) {
+			from components.java
+			groupId = 'io.github.cumsauce'
+			artifactId = 'foley-api'
+			version = project.version
+		}
+	}
 }
