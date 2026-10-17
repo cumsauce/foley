@@ -202,4 +202,24 @@ class DoorHandlingTest {
 		assertEquals(DoorHandling.Action.NONE, DoorHandling.dispatch(WOODEN_DOOR_CLOSE, 0, 0, 0),
 				"the registry's clear empties the same list");
 	}
+
+	@Test
+	void nonDoorEventHonoursAnOverride() {
+		Identifier rain = Identifier.fromNamespaceAndPath("minecraft", "weather.rain");
+		Identifier chest = Identifier.fromNamespaceAndPath("minecraft", "block.chest.open");
+		DoorHandling.register(id -> id.equals(rain), (event, x, y, z) -> true);
+		assertEquals(DoorHandling.Action.OVERRIDE_HANDLED, DoorHandling.dispatch(rain, 4, 5, 6));
+		assertEquals(DoorHandling.Action.NONE, DoorHandling.dispatch(chest, 4, 5, 6),
+				"an unrelated event is not matched");
+		DoorHandling.clearOverrides();
+		assertEquals(DoorHandling.Action.NONE, DoorHandling.dispatch(rain, 4, 5, 6));
+	}
+
+	@Test
+	void decliningOverrideYieldsVanillaForAnyFamily() {
+		Identifier thunder = Identifier.fromNamespaceAndPath("minecraft", "entity.lightning_bolt.thunder");
+		DoorHandling.register(id -> id.equals(thunder), (event, x, y, z) -> false);
+		assertEquals(DoorHandling.Action.OVERRIDE_VANILLA, DoorHandling.dispatch(thunder, 0, 0, 0));
+	}
+
 }

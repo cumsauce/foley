@@ -55,6 +55,13 @@ final class DoorHandling {
 			Identifier.fromNamespaceAndPath("minecraft", "block.iron_trapdoor.open"),
 			Identifier.fromNamespaceAndPath("minecraft", "block.iron_trapdoor.close"));
 
+	/** The game's iron door and trapdoor events: exactly the iron members of {@link #DOORS}. */
+	private static final Set<Identifier> IRON_DOORS = Set.of(
+			Identifier.fromNamespaceAndPath("minecraft", "block.iron_door.open"),
+			Identifier.fromNamespaceAndPath("minecraft", "block.iron_door.close"),
+			Identifier.fromNamespaceAndPath("minecraft", "block.iron_trapdoor.open"),
+			Identifier.fromNamespaceAndPath("minecraft", "block.iron_trapdoor.close"));
+
 	/** Registered overrides, in registration order; dispatch walks them backwards. */
 	private static final List<Entry> OVERRIDES = new CopyOnWriteArrayList<>();
 
@@ -70,7 +77,7 @@ final class DoorHandling {
 
 	/** Whether {@code event} is the iron variant of a door or trapdoor sound. */
 	static boolean isIronDoorEvent(Identifier event) {
-		return event.getPath().contains("iron");
+		return IRON_DOORS.contains(event);
 	}
 
 	/**
