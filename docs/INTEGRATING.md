@@ -182,8 +182,8 @@ Every event below is skipped in the game's sound engine and replaced by Foley's 
 |---|---|---|---|
 | Doors / trapdoors (wood & iron) | `ActiveStructures` | `doors` | `block.wooden_door.*`, `block.iron_door.*`, `block.wooden_trapdoor.*`, `block.iron_trapdoor.*` |
 | Rain | `RainController` | `rain` | `weather.rain`, `weather.rain.above` |
-| Thunder | `ThunderController` | `thunder` | `entity.lightning_bolt.thunder*` |
-| Ambience (water / lava / fire) | `Surroundings` | `water`, `lava`, `fire` | `ambient.water`, `block.lava.ambient`, `block.fire.ambient`, `block.campfire.crackle` |
+| Thunder | `ThunderController` | `thunder` | `entity.lightning_bolt.thunder`, `entity.lightning_bolt.impact` |
+| Ambience (water / lava / fire) | `Surroundings` | `water`, `lava`, `fire` | `ambient.water`, `block.lava.ambient`, `block.lava.pop`, `block.fire.ambient`, `block.campfire.crackle` |
 | Drips | `GeneratedSounds` | `drips` | `block.pointed_dripstone.drip_*` |
 | Chests / ender chests | `ActiveStructures` | `chests` | `block.chest.*`, `block.ender_chest.*` |
 | Shulker boxes | `ActiveStructures` | `chests` | `block.shulker_box.*` |
