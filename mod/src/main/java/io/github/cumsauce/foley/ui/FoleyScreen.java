@@ -241,7 +241,7 @@ public final class FoleyScreen extends OptionsSubScreen {
 		FoleyConfig next = new FoleyConfig(volume.get(), rain.get(), wind.get(), thunder.get(), water.get(), fire.get(),
 				lava.get(), drips.get(), strikes.get(), footsteps.get(), birds.get(), crickets.get(), frogs.get(),
 				minecarts.get(), doors.get(), chests.get(), redstone.get(), boats.get(), sculk.get(), noteBlocks.get(),
-				caveAtmosphere.get(), rarerSpecies.get(), underwater.get(), aeolian.get(), biomeBeds.get(),
+				FoleyClient.config().blocks(), FoleyClient.config().explosions(), caveAtmosphere.get(), rarerSpecies.get(), underwater.get(), aeolian.get(), biomeBeds.get(),
 				desertBeds.get(), mushroomHum.get(), caveColors.get(), deepDark.get(), snowyHush.get(),
 				mangroveDrone.get(), village.get(), settling.get(), mobBrushes.get(), peacefulBreathing.get(), ashDrift.get(), voiced);
 		if (!next.equals(initial)) FoleyClient.apply(next);

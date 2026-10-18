@@ -699,16 +699,18 @@ Density rather than new models:
 
 - **Done:** `NoteBlocks.replace` now consults `DoorHandling.dispatch` after the bypass check and before the `noteBlocks` toggle — handled → skip, declined → vanilla, no match → the built-in strike and its toggle, identical to every other family. Unknown instruments still fall through to vanilla. Three tests (`anOverrideWinsOverTheBuiltInStrike`, `aDecliningOverrideLeavesTheStrikeToVanilla`, `anUnrelatedOverrideDoesNotOwnAStrike`) pin the wiring; `NoteBlocksTest` 9/9 green. The takeover table in `docs/INTEGRATING.md` gained its note-block row. The note family keeps its own `PLAYS` counter (an override-handled strike is the addon's, not Foley's).
 
-## M26 plan: block break, place and digging
+## M26 results: block break, place and digging (2026-10-18)
 
-- Skip vanilla break/place/dig events when a new `blocks` toggle is on, synthesizing from Foley's contact/material primitives (`renderOneShot` contact taps, settling stone).
-- Start narrow: stone, wood, gravel, sand, glass — the loudest and most frequent; other materials fall through to vanilla.
-- **Tests:** per-material taken/declined, toggle, bypass, override; no double-sound.
+- **Done:** `Replacements` skips `block.<material>.{hit,place,fall,break}` on the narrow-start materials while `blocks` is on, through the standard family shape (bypass → vanilla; override verdict; then the toggle). The id rule and verdict live in a new package-private `Blocks` class (`Replacements`' statics load `SoundEvents`, which cannot class-init in plain unit tests). The contact layer is the existing `Layers` synthesis, played explicitly in the skip path (the vanilla skip prevents the `SoundEngineMixin` else-branch from running it), as M24 does.
+- **Toggle:** `blocks` (new, default on) sits in Options → Music & Sounds → Foley, next to `explosions`. `Layers` now plays non-step contacts when `strikes || blocks`, so a break/place/dig contact still sounds when the player has turned the additive `strikes` layer off but kept the `blocks` takeover on.
+- **Narrow start:** stone, wood, gravel, sand, glass only. Other materials (deepslate, netherrack, dirt, grass, …), entity sounds and foreign namespaces fall through to vanilla — those materials stay *layered* under `strikes` until they're promoted.
+- **Tests:** `BlocksReplacementTest` (9 tests) pins the 5×4 material/contact table, siblings (`.step`, `.ambient`), other materials, entity/foreign ids, toggle off, override owns/declines, bypass neutral. Full suite 127 green.
 
 ## M27 plan: explosions
 
-- Skip vanilla explosion events (creeper, TNT, end crystal, firework) when an `explosions` toggle is on; synthesize a physical bang (low boom + debris) with distance scaling.
-- **Tests:** taken/declined per event, distance scaling sanity, toggle, bypass, override.
+- Skip vanilla explosion events (creeper, TNT, end crystal, firework) when the new `explosions` toggle is on; synthesize a physical bang (low boom + debris) with distance scaling.
+- **Not started:** the bang needs a dedicated primitive; Foley has no explosion synthesis today and none of the existing shots (`SHOT_*`) or contacts is a bang. This is a Rust-side piece (a new `FOLEY_SHOT_*`/primitive + ABI bump) plus the Java wiring, and it is a separate, larger task than M24–M26. The `explosions` toggle is already plumbed through `FoleyConfig` (default off until the synthesis lands, so no vanilla explosions are silenced).
+- **Tests (when built):** taken/declined per event, distance scaling sanity, toggle, bypass, override.
 
 ## M28 plan: redstone, boats, sculk as replacements
 

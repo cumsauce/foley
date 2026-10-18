@@ -46,7 +46,10 @@ public final class Layers {
 		} else {
 			return;
 		}
-		if (!FoleyClient.wants(contact == NativeBridge.CONTACT_STEP ? FoleyConfig::footsteps : FoleyConfig::strikes)) {
+		boolean layerWanted = (contact == NativeBridge.CONTACT_STEP)
+				? FoleyClient.config().footsteps()
+				: (FoleyClient.config().strikes() || FoleyClient.config().blocks());
+		if (!layerWanted) {
 			return;
 		}
 		Minecraft minecraft = Minecraft.getInstance();
