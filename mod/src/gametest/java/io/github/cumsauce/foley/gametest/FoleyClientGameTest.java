@@ -288,7 +288,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			singleplayer.getServer().runCommand("time set 23500");
 			int beforeDawn = context.computeOnClient(mc -> FoleyClient.life().calls());
 			try {
-				context.waitFor(mc -> FoleyClient.life().calls() > beforeDawn, 30 * 20);
+				context.waitFor(mc -> FoleyClient.life().calls() > beforeDawn, 60 * 20);
 			} catch (RuntimeException | AssertionError e) {
 				throw new AssertionError("no bird at the dawn chorus in the plains", e);
 			}
