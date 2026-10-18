@@ -1,4 +1,4 @@
-use crate::{BandPass, Rng, SAMPLE_RATE};
+use crate::{BandPass, Rng};
 use crate::{LowPass, Wobble, smooth};
 #[allow(unused_imports)] // Some of these are in core; the rest come from std.
 use foley_math::Float as _;
@@ -43,8 +43,10 @@ const LEAF_STEP: f32 = 0.056;
 const GUST_LEAD: f32 = 0.8;
 /// The speed is updated this often, samples.
 const BLOCK: usize = 64;
-/// Gust blocks the ear lags behind the leaves.
-const LEAD: usize = (GUST_LEAD * SAMPLE_RATE as f32 / BLOCK as f32) as usize;
+/// Gust blocks the ear lags behind the leaves: the cap on the ring, sized
+/// at the highest rate the FFI allows (192 kHz); each instance holds as
+/// many blocks as its own rate gives, clamped to this.
+pub const MAX_LEAD: usize = (GUST_LEAD * 192_000.0 / BLOCK as f32) as usize;
 /// Rendered and thrown away when a fresh bed takes its first scene, so the
 /// filters and the leaves' slow envelopes reach their steady state before the
 /// first sample is heard: a bed started fresh (a cave left, a setting switched
@@ -65,8 +67,13 @@ pub struct Wind {
     /// Recent speeds, a block apart: a gust sweeps through the trees upwind
     /// before it reaches the ear, so the leaves hear the speed now and the
     /// ear the speed of [`GUST_LEAD`] ago.
-    /// A ring of the last [`LEAD`] speeds, the next written at `next`.
-    history: [f32; LEAD],
+    /// A ring of the last `lead` speeds, the next written at `next`.
+    history: [f32; MAX_LEAD],
+    /// The rate this bed renders at, Hz.
+    sample_rate: u32,
+    /// How many speeds the ring holds at that rate: the gust lead in
+    /// blocks, clamped to [`MAX_LEAD`].
+    lead: usize,
     next: usize,
     filled: usize,
     ear: f32,
@@ -99,29 +106,34 @@ pub struct Wind {
 }
 
 impl Wind {
-    pub fn new(seed: u64) -> Wind {
+    pub fn new(seed: u64, sample_rate: u32) -> Wind {
         Wind {
             rng: Rng::new(seed),
             scene: WindScene::CALM,
             speed: 0.0,
-            history: [0.0; LEAD],
+            sample_rate,
+            lead: ((GUST_LEAD * sample_rate as f32 / BLOCK as f32) as usize).clamp(1, MAX_LEAD),
+            history: [0.0; MAX_LEAD],
             next: 0,
             filled: 0,
             ear: 0.0,
-            roar: BandPass::new(150.0, 0.7),
-            whoosh: BandPass::new(600.0, 1.2),
-            rustle: BandPass::new(1800.0, 1.0),
+            roar: BandPass::new_at(150.0, 0.7, sample_rate),
+            whoosh: BandPass::new_at(600.0, 1.2, sample_rate),
+            rustle: BandPass::new_at(1800.0, 1.0, sample_rate),
             rustle_envelope: 0.0,
             until_rustle: 0.0,
-            leaf: [BandPass::new(1300.0, 0.7), BandPass::new(2600.0, 1.0)],
-            leaf_air: LowPass::new(2000.0),
+            leaf: [
+                BandPass::new_at(1300.0, 0.7, sample_rate),
+                BandPass::new_at(2600.0, 1.0, sample_rate),
+            ],
+            leaf_air: LowPass::new_at(2000.0, sample_rate),
             leaf_near: 0.0,
             leaf_envelope: 0.0,
             leaf_heard: 0.0,
             rustle_heard: 0.0,
             until_leaf: 0.0,
-            flutter: Wobble::new(6.0, 4.0, 0.3, 1.5),
-            creak: BandPass::new(900.0, 3.0),
+            flutter: Wobble::new_at(6.0, 4.0, 0.3, 1.5, sample_rate),
+            creak: BandPass::new_at(900.0, 3.0, sample_rate),
             creak_left: 0.0,
             creak_phase: 0.0,
             creak_hz: 0.0,
@@ -147,7 +159,7 @@ impl Wind {
     }
 
     fn gust(&mut self) {
-        let dt = BLOCK as f32 / SAMPLE_RATE as f32;
+        let dt = BLOCK as f32 / self.sample_rate as f32;
         let mean = self.scene.speed.max(0.0);
         let sigma = TURBULENCE * mean;
         // dU = (mean - U) dt / τ + σ √(2 dt / τ) dW
@@ -156,19 +168,24 @@ impl Wind {
             (mean - self.speed) * dt / GUST_TIME + sigma * (2.0 * dt / GUST_TIME).sqrt() * noise;
         self.speed = self.speed.max(0.0);
         self.history[self.next] = self.speed;
-        self.next = (self.next + 1) % LEAD;
-        self.filled = (self.filled + 1).min(LEAD);
+        self.next = (self.next + 1) % self.lead;
+        self.filled = (self.filled + 1).min(self.lead);
         // The oldest kept: the first, until the ring has filled.
-        self.ear = self.history[if self.filled < LEAD { 0 } else { self.next }];
+        self.ear = self.history[if self.filled < self.lead {
+            0
+        } else {
+            self.next
+        }];
         let indoors = 1.0 - self.scene.exposure.clamp(0.0, 1.0);
         // Pitch rises with speed; indoors only the low part gets through.
         let centre = (80.0 + 25.0 * self.ear) * (1.0 - 0.6 * indoors);
-        self.roar.tune(centre, 0.7);
-        self.whoosh.tune(centre * 4.0 * (1.0 - 0.7 * indoors), 1.2);
+        self.roar.tune_at(centre, 0.7, self.sample_rate);
+        let whoosh_hz = centre * 4.0 * (1.0 - 0.7 * indoors);
+        self.whoosh.tune_at(whoosh_hz, 1.2, self.sample_rate);
     }
 
     /// Trees round about. Leaves are up where the wind is stronger than at
-    /// the ear, and overhead even where the canopy hides the sky, so they're
+    /// the ear, and overhead even where the canopy hides the sky, so they are
     /// heard under it. They rustle as many tiny collisions, more the harder it
     /// blows (rate ∝ U²), fluttering, with a gust's swell now and then; in a
     /// strong wind, boughs creak.
@@ -198,7 +215,7 @@ impl Wind {
         // never under a third of its mean (a step of 0.65 on average, at
         // `rate`, each lasting 1 / (1 - LEAF_DECAY) samples). Chance gaps
         // between the swishes left 20 ms holes in a light breeze.
-        let mean = rate / SAMPLE_RATE as f32 * 0.65 * LEAF_STEP / (1.0 - LEAF_DECAY);
+        let mean = rate / self.sample_rate as f32 * 0.65 * LEAF_STEP / (1.0 - LEAF_DECAY);
         let swishes = self.leaf_envelope.max(mean / 3.0).min(1.5);
         // About 5 ms to rise: no leaf starts with a click.
         self.leaf_heard += 0.004 * (swishes - self.leaf_heard);
@@ -230,8 +247,9 @@ impl Wind {
         // crowns brings their highs with it.
         if self.samples.is_multiple_of(BLOCK) {
             self.leaf_near += (self.rustle_heard.min(1.0) - self.leaf_near)
-                * (BLOCK as f32 / (0.6 * SAMPLE_RATE as f32));
-            self.leaf_air.tune(1500.0 + 3500.0 * self.leaf_near);
+                * (BLOCK as f32 / (0.6 * self.sample_rate as f32));
+            let cutoff = 1500.0 + 3500.0 * self.leaf_near;
+            self.leaf_air.tune_at(cutoff, self.sample_rate);
         }
         // Darker, so a little more: the same presence as the bright leaves had.
         out = 1.4 * self.leaf_air.process(out);
@@ -254,14 +272,15 @@ impl Wind {
             // gentle one is eerie, not restful.
             self.creak_left = 0.3 + 0.6 * self.rng.unit();
             self.creak_hz = 120.0 + 200.0 * self.rng.unit();
-            self.creak.tune(500.0 + 900.0 * self.rng.unit(), 3.0);
+            let hz = 500.0 + 900.0 * self.rng.unit();
+            self.creak.tune_at(hz, 3.0, self.sample_rate);
         }
         out
     }
 
     /// The next `out.len()` samples.
     pub fn render(&mut self, out: &mut [f32]) {
-        let dt = 1.0 / SAMPLE_RATE as f32;
+        let dt = 1.0 / self.sample_rate as f32;
         let exposure = self.scene.exposure.clamp(0.0, 1.0);
         for sample in out {
             if self.samples.is_multiple_of(BLOCK) {
@@ -293,11 +312,12 @@ impl Wind {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
     #[allow(unused_imports)]
     use std::{println, vec, vec::Vec};
 
     fn listen(scene: WindScene) -> f32 {
-        let mut wind = Wind::new(5);
+        let mut wind = Wind::new(5, SAMPLE_RATE);
         wind.set_scene(scene);
         let mut out = vec![0.0; 4 * SAMPLE_RATE as usize];
         wind.render(&mut out);
@@ -338,7 +358,7 @@ mod tests {
         // Energy over 4 s; the leaves are dark (1 to 3 kHz), so less of it
         // than their presence suggests.
         assert!(under > 4.0 * bare && under > 0.12, "{under} vs {bare}");
-        let mut wind = Wind::new(2);
+        let mut wind = Wind::new(2, SAMPLE_RATE);
         wind.set_scene(WindScene {
             speed: 12.0,
             exposure: 1.0,
@@ -355,7 +375,7 @@ mod tests {
     #[test]
     fn leaves_stay_level_matched_at_full_gale() {
         fn render(seed: u64, speed: f32, leaves: f32) -> Vec<f32> {
-            let mut wind = Wind::new(seed);
+            let mut wind = Wind::new(seed, SAMPLE_RATE);
             wind.set_scene(WindScene {
                 speed,
                 exposure: 1.0,
@@ -397,7 +417,7 @@ mod tests {
 
     #[test]
     fn gusts_wander_round_the_mean() {
-        let mut wind = Wind::new(9);
+        let mut wind = Wind::new(9, SAMPLE_RATE);
         wind.set_scene(WindScene {
             speed: 10.0,
             exposure: 1.0,

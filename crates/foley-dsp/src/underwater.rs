@@ -3,7 +3,7 @@
 //! bed: one bed is always running (it's silent when the head is above sea level).
 
 use crate::Fixed;
-use crate::{Bubble, Rng, SAMPLE_RATE};
+use crate::{Bubble, Rng};
 
 /// What the underwater bed is told about the world: a single `level` 0..=1, the
 /// controller's glide of how submerged the listener is (depth and movement). At
@@ -39,10 +39,12 @@ pub struct Underwater {
     voices: Fixed<Bubble, MAX_VOICES>,
     /// Pressure tone's running phase.
     phase: f32,
+    /// The rate this bed renders at.
+    sample_rate: u32,
 }
 
 impl Underwater {
-    pub fn new(seed: u64) -> Underwater {
+    pub fn new(seed: u64, sample_rate: u32) -> Underwater {
         Underwater {
             rng: Rng::new(seed),
             scene: UnderwaterScene::DRY,
@@ -51,6 +53,7 @@ impl Underwater {
             until_next: 0.0,
             voices: Fixed::new(),
             phase: 0.0,
+            sample_rate,
         }
     }
 
@@ -63,7 +66,8 @@ impl Underwater {
     }
 
     pub fn render(&mut self, out: &mut [f32]) {
-        let dt = 1.0 / SAMPLE_RATE as f32;
+        let sample_rate = self.sample_rate;
+        let dt = 1.0 / sample_rate as f32;
         // Glide level over about a second (matches the spec's emerging fade).
         // TAU = 0.3 s so by 1 s we're 96% there and the bed is essentially
         // silent.
@@ -80,8 +84,11 @@ impl Underwater {
                     if self.voices.len() < MAX_VOICES {
                         // Log-uniform 0.5 to 6 mm, like the water bed's babbling bubbles.
                         let radius = 0.0005 * 12.0f32.powf(self.rng.unit());
-                        self.voices
-                            .push(Bubble::new(radius, 0.02 * (0.5 + self.rng.unit())));
+                        self.voices.push(Bubble::new_at(
+                            radius,
+                            0.02 * (0.5 + self.rng.unit()),
+                            sample_rate,
+                        ));
                     }
                 }
             }
@@ -103,6 +110,7 @@ impl Underwater {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
     #[allow(unused_imports)]
     use std::{vec, vec::Vec};
 
@@ -113,7 +121,7 @@ mod tests {
 
     #[test]
     fn a_submerged_bed_renders_bubbles_and_pressure() {
-        let mut bed = Underwater::new(1);
+        let mut bed = Underwater::new(1, SAMPLE_RATE);
         bed.set_scene(UnderwaterScene::UNDER);
         let mut out = vec![0.0f32; SAMPLE_RATE as usize]; // 1 second
         bed.render(&mut out);
@@ -132,7 +140,7 @@ mod tests {
 
     #[test]
     fn a_dry_bed_is_silent() {
-        let mut bed = Underwater::new(2);
+        let mut bed = Underwater::new(2, SAMPLE_RATE);
         bed.set_scene(UnderwaterScene::DRY);
         let mut out = vec![0.0f32; SAMPLE_RATE as usize];
         bed.render(&mut out);
@@ -143,7 +151,7 @@ mod tests {
     fn a_bed_glides_to_silence_when_level_drops() {
         // Start under, then drop to dry mid-render: the bed's glide fades it to
         // silence over about a second.
-        let mut bed = Underwater::new(3);
+        let mut bed = Underwater::new(3, SAMPLE_RATE);
         bed.set_scene(UnderwaterScene::UNDER);
         let mut first = vec![0.0f32; SAMPLE_RATE as usize];
         bed.render(&mut first);

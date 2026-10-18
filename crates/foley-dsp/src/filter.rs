@@ -16,14 +16,24 @@ pub struct BandPass {
 
 impl BandPass {
     pub fn new(centre: f32, q: f32) -> BandPass {
+        BandPass::new_at(centre, q, SAMPLE_RATE)
+    }
+
+    /// As [`BandPass::new`], at the host's sample rate.
+    pub fn new_at(centre: f32, q: f32, sample_rate: u32) -> BandPass {
         let mut filter = BandPass::default();
-        filter.tune(centre, q);
+        filter.tune_at(centre, q, sample_rate);
         filter
     }
 
     /// Moves the band, keeping the filter's state so it doesn't click.
     pub fn tune(&mut self, centre: f32, q: f32) {
-        let w = TAU * centre.clamp(20.0, 0.45 * SAMPLE_RATE as f32) / SAMPLE_RATE as f32;
+        self.tune_at(centre, q, SAMPLE_RATE)
+    }
+
+    /// As [`BandPass::tune`], at the host's sample rate.
+    pub fn tune_at(&mut self, centre: f32, q: f32, sample_rate: u32) {
+        let w = TAU * centre.clamp(20.0, 0.45 * sample_rate as f32) / sample_rate as f32;
         let alpha = w.sin() / (2.0 * q.max(0.1));
         let a0 = 1.0 + alpha;
         self.b = [alpha / a0, 0.0, -alpha / a0];
@@ -51,13 +61,23 @@ pub struct LowPass {
 
 impl LowPass {
     pub fn new(cutoff: f32) -> LowPass {
+        LowPass::new_at(cutoff, SAMPLE_RATE)
+    }
+
+    /// As [`LowPass::new`], at the host's sample rate.
+    pub fn new_at(cutoff: f32, sample_rate: u32) -> LowPass {
         let mut filter = LowPass::default();
-        filter.tune(cutoff);
+        filter.tune_at(cutoff, sample_rate);
         filter
     }
 
     pub fn tune(&mut self, cutoff: f32) {
-        self.a = 1.0 - (-TAU * cutoff.max(1.0) / SAMPLE_RATE as f32).exp();
+        self.tune_at(cutoff, SAMPLE_RATE)
+    }
+
+    /// As [`LowPass::tune`], at the host's sample rate.
+    pub fn tune_at(&mut self, cutoff: f32, sample_rate: u32) {
+        self.a = 1.0 - (-TAU * cutoff.max(1.0) / sample_rate as f32).exp();
     }
 
     pub fn process(&mut self, x: f32) -> f32 {

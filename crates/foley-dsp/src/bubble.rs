@@ -29,6 +29,8 @@ pub struct Bubble {
     amplitude: f32,
     /// e^(-damping / rate): the envelope's step a sample.
     step: f32,
+    /// 1 / rate: how much one sample advances time.
+    dt: f32,
     /// The ring as a phasor (re, im) turned by (cos, sin) of its step a
     /// sample, refreshed every [`REFRESH`] samples as the pitch rises.
     phasor: [f32; 2],
@@ -42,6 +44,11 @@ const REFRESH: u32 = 32;
 
 impl Bubble {
     pub fn new(radius: f32, loudness: f32) -> Bubble {
+        Bubble::new_at(radius, loudness, SAMPLE_RATE)
+    }
+
+    /// As [`Bubble::new`], at the host's sample rate.
+    pub fn new_at(radius: f32, loudness: f32, sample_rate: u32) -> Bubble {
         let frequency = minnaert_hz(radius);
         let damping = core::f32::consts::PI * frequency * DAMPING;
         Bubble {
@@ -50,7 +57,8 @@ impl Bubble {
             rise: 0.1 * damping,
             // Bigger bubbles radiate more: amplitude grows with r^1.5.
             amplitude: loudness * (radius / 0.001).powf(1.5),
-            step: (-damping / SAMPLE_RATE as f32).exp(),
+            step: (-damping / sample_rate as f32).exp(),
+            dt: 1.0 / sample_rate as f32,
             phasor: [1.0, 0.0],
             turn: [1.0, 0.0],
             age: 0.0,
@@ -71,7 +79,7 @@ impl Bubble {
 
     /// The next sample.
     pub fn sample(&mut self) -> f32 {
-        let dt = 1.0 / SAMPLE_RATE as f32;
+        let dt = self.dt;
         if self.samples.is_multiple_of(REFRESH) {
             let frequency = self.frequency * (1.0 + self.rise * self.age);
             let angle = TAU * frequency * dt;

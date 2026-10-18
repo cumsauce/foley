@@ -3,7 +3,7 @@ use core::f32::consts::{PI, TAU};
 use foley_math::Float as _;
 
 use crate::Wobble;
-use crate::{BandPass, Fixed, LowPass, Rng, SAMPLE_RATE};
+use crate::{BandPass, Fixed, LowPass, Rng};
 
 /// The fire near the listener.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -48,15 +48,15 @@ struct Ring {
 }
 
 impl Ring {
-    /// Rings at `hz`, losing `per_second` nepers a second.
-    fn new(amplitude: f32, hz: f32, per_second: f32) -> Ring {
-        let step = TAU * hz / SAMPLE_RATE as f32;
+    /// Rings at `hz`, losing `per_second` nepers a second, at `rate` Hz.
+    fn new(amplitude: f32, hz: f32, per_second: f32, rate: f32) -> Ring {
+        let step = TAU * hz / rate;
         Ring {
             re: amplitude,
             im: 0.0,
             cos: step.cos(),
             sin: step.sin(),
-            decay: (-per_second / SAMPLE_RATE as f32).exp(),
+            decay: (-per_second / rate).exp(),
         }
     }
 
@@ -81,7 +81,6 @@ struct Tick {
 }
 
 const MAX_TICKS: usize = 25;
-const TICK_SAMPLES: u32 = (0.003 * SAMPLE_RATE as f32) as u32;
 
 /// A sound played out sample by sample from a little state: a pop, a hiss
 /// of sap, a log settling.
@@ -127,31 +126,30 @@ impl Default for Event {
 }
 
 impl Event {
-    fn snap(rng: &mut Rng, amplitude: f32) -> Event {
+    fn snap(rng: &mut Rng, amplitude: f32, rate: f32) -> Event {
         let hz = 1500.0 + 3000.0 * rng.unit();
         let per_second = 300.0 + 400.0 * rng.unit();
         Event::Snap {
-            ring: Ring::new(amplitude, hz, per_second),
-            left: (6.0 / per_second * SAMPLE_RATE as f32) as u32,
+            ring: Ring::new(amplitude, hz, per_second, rate),
+            left: (6.0 / per_second * rate) as u32,
         }
     }
 
-    fn hiss(rng: &mut Rng) -> Event {
+    fn hiss(rng: &mut Rng, rate: f32) -> Event {
         let seconds = 0.5 + 1.5 * rng.unit();
         Event::Hiss {
-            band: BandPass::new(3000.0 + 3000.0 * rng.unit(), 3.0),
-            wander: LowPass::new(4.0),
+            band: BandPass::new_at(3000.0 + 3000.0 * rng.unit(), 3.0, rate as u32),
+            wander: LowPass::new_at(4.0, rate as u32),
             whistle: rng.unit() < 0.33,
             hz: 2000.0 + 2000.0 * rng.unit(),
             phase: 0.0,
             at: 0,
-            length: (seconds * SAMPLE_RATE as f32) as u32,
+            length: (seconds * rate) as u32,
         }
     }
 
-    fn settle(rng: &mut Rng) -> Event {
-        let rate = SAMPLE_RATE as f32;
-        let knock = Ring::new(0.12, 150.0 + 200.0 * rng.unit(), 30.0);
+    fn settle(rng: &mut Rng, rate: f32, tick_samples: u32) -> Event {
+        let knock = Ring::new(0.12, 150.0 + 200.0 * rng.unit(), 30.0, rate);
         let mut ticks = [Tick::default(); MAX_TICKS];
         let count = 10 + (rng.unit() * 15.0) as usize;
         let mut ticks_end = 0;
@@ -161,7 +159,7 @@ impl Event {
                 amplitude: 0.01 + 0.03 * rng.unit(),
                 hz: 2000.0 + 4000.0 * rng.unit(),
             };
-            ticks_end = ticks_end.max(tick.start + TICK_SAMPLES);
+            ticks_end = ticks_end.max(tick.start + tick_samples);
         }
         Event::Settle {
             knock,
@@ -174,8 +172,7 @@ impl Event {
     }
 
     /// The next sample, or None once it's over.
-    fn next(&mut self, rng: &mut Rng) -> Option<f32> {
-        let rate = SAMPLE_RATE as f32;
+    fn next(&mut self, rng: &mut Rng, rate: f32, tick_samples: u32) -> Option<f32> {
         match self {
             Event::Snap { ring, left } => {
                 *left = left.checked_sub(1)?;
@@ -218,7 +215,7 @@ impl Event {
                 }
                 let mut s = knock.next();
                 for tick in ticks[..*count].iter().filter(|_| *at < *ticks_end) {
-                    if let Some(i) = at.checked_sub(tick.start).filter(|i| *i < TICK_SAMPLES) {
+                    if let Some(i) = at.checked_sub(tick.start).filter(|i| *i < tick_samples) {
                         let t = i as f32 / rate;
                         s += tick.amplitude * (-1500.0 * t).exp() * (TAU * tick.hz * t).sin();
                     }
@@ -268,24 +265,33 @@ pub struct Fire {
     flame: BandPass,
     until_hiss: f32,
     until_settle: f32,
+    /// The rate this bed renders at.
+    sample_rate: u32,
+    /// Samples in one ember tick: 3 ms at this bed's rate.
+    tick_samples: u32,
 }
 
 impl Fire {
-    pub fn new(seed: u64) -> Fire {
+    pub fn new(seed: u64, sample_rate: u32) -> Fire {
         Fire {
             rng: Rng::new(seed),
             scene: FireScene::OUT,
-            roar: [LowPass::new(300.0), LowPass::new(300.0)],
+            roar: [
+                LowPass::new_at(300.0, sample_rate),
+                LowPass::new_at(300.0, sample_rate),
+            ],
             puff: 0.0,
             until_crackle: 0.0,
             crackles: Fixed::new(),
             last: 0.0,
             events: Fixed::new(),
             samples: 0,
-            flicker: Wobble::new(10.0, 4.0, 0.2, 2.0),
-            flame: BandPass::new(1500.0, 0.8),
+            flicker: Wobble::new_at(10.0, 4.0, 0.2, 2.0, sample_rate),
+            flame: BandPass::new_at(1500.0, 0.8, sample_rate),
             until_hiss: 0.0,
             until_settle: 0.0,
+            sample_rate,
+            tick_samples: (0.003 * sample_rate as f32) as u32,
         }
     }
 
@@ -294,12 +300,14 @@ impl Fire {
         let size = scene.size.clamp(0.0, 256.0);
         let cutoff = 350.0 / (1.0 + 0.25 * size.sqrt());
         for filter in &mut self.roar {
-            filter.tune(cutoff);
+            filter.tune_at(cutoff, self.sample_rate);
         }
     }
 
     pub fn render(&mut self, out: &mut [f32]) {
-        let dt = 1.0 / SAMPLE_RATE as f32;
+        let sample_rate = self.sample_rate as f32;
+        let tick_samples = self.tick_samples;
+        let dt = 1.0 / sample_rate;
         let size = self.scene.size.clamp(0.0, 256.0);
         let gain = self.scene.gain.clamp(0.0, 1.0);
         // The fire's width, m, if its blocks were a disc.
@@ -331,7 +339,8 @@ impl Fire {
                             step: (-dt / time).exp(),
                         });
                         if energy >= SNAP_ENERGY && !self.events.is_full() {
-                            let snap = Event::snap(&mut self.rng, 0.012 * energy.sqrt());
+                            let snap =
+                                Event::snap(&mut self.rng, 0.012 * energy.sqrt(), sample_rate);
                             self.events.push(snap);
                         }
                     }
@@ -359,7 +368,7 @@ impl Fire {
                 if self.until_hiss <= 0.0 {
                     self.until_hiss = self.rng.exponential(HISSES * root);
                     if !self.events.is_full() {
-                        let event = Event::hiss(&mut self.rng);
+                        let event = Event::hiss(&mut self.rng, sample_rate);
                         self.events.push(event);
                     }
                 }
@@ -367,7 +376,7 @@ impl Fire {
                 if self.until_settle <= 0.0 {
                     self.until_settle = self.rng.exponential(SETTLES * root);
                     if !self.events.is_full() {
-                        let event = Event::settle(&mut self.rng);
+                        let event = Event::settle(&mut self.rng, sample_rate, tick_samples);
                         self.events.push(event);
                     }
                 }
@@ -375,7 +384,7 @@ impl Fire {
             let mut extra = 0.0;
             let mut over = false;
             for event in &mut self.events {
-                match event.next(&mut self.rng) {
+                match event.next(&mut self.rng, sample_rate, tick_samples) {
                     Some(s) => extra += s,
                     None => over = true,
                 }
@@ -396,11 +405,12 @@ impl Fire {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
     #[allow(unused_imports)]
     use std::{vec, vec::Vec};
 
     fn rms(scene: FireScene) -> f32 {
-        let mut fire = Fire::new(3);
+        let mut fire = Fire::new(3, SAMPLE_RATE);
         fire.set_scene(scene);
         let mut out = vec![0.0; 2 * SAMPLE_RATE as usize];
         fire.render(&mut out);
@@ -424,7 +434,7 @@ mod tests {
 
     #[test]
     fn crackles_are_mostly_small() {
-        let mut fire = Fire::new(1);
+        let mut fire = Fire::new(1, SAMPLE_RATE);
         fire.set_scene(FireScene {
             size: 10.0,
             gain: 1.0,

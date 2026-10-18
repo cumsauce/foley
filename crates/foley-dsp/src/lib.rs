@@ -39,6 +39,9 @@ pub use crate::wobble::{Wobble, smooth};
 /// Samples a second, for everything Foley makes.
 pub const SAMPLE_RATE: u32 = 48_000;
 
+/// The sample rate a bed takes when the host doesn't ask for another.
+pub const DEFAULT_SAMPLE_RATE: u32 = SAMPLE_RATE;
+
 /// Converts to 16-bit PCM, softly limiting so loud moments never wrap.
 pub fn to_pcm(sample: f32) -> i16 {
     (sample.tanh() * f32::from(i16::MAX)) as i16

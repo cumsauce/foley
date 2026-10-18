@@ -4,7 +4,7 @@ use foley_math::Float as _;
 use crate::Fixed;
 use core::f32::consts::{PI, TAU};
 
-use crate::{LowPass, Rng, SAMPLE_RATE};
+use crate::{LowPass, Rng};
 
 /// The lava near the listener.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -39,8 +39,8 @@ struct Burst {
 }
 
 impl Burst {
-    fn new(rng: &mut Rng) -> Burst {
-        let rate = SAMPLE_RATE as f32;
+    fn new(rng: &mut Rng, sample_rate: u32) -> Burst {
+        let rate = sample_rate as f32;
         // Bubble radius, m: 1 to 6 cm, mostly small.
         let radius = 0.01 * 6f32.powf(rng.unit().powf(1.5));
         let opening = radius * (0.3 + 0.4 * rng.unit());
@@ -105,16 +105,22 @@ pub struct Lava {
     rumble: [LowPass; 2],
     until_burst: f32,
     bursts: Fixed<Burst, MAX_VOICES>,
+    /// The rate this bed renders at.
+    sample_rate: u32,
 }
 
 impl Lava {
-    pub fn new(seed: u64) -> Lava {
+    pub fn new(seed: u64, sample_rate: u32) -> Lava {
         Lava {
             rng: Rng::new(seed),
             scene: LavaScene::NONE,
-            rumble: [LowPass::new(60.0), LowPass::new(60.0)],
+            rumble: [
+                LowPass::new_at(60.0, sample_rate),
+                LowPass::new_at(60.0, sample_rate),
+            ],
             until_burst: 0.0,
             bursts: Fixed::new(),
+            sample_rate,
         }
     }
 
@@ -123,7 +129,8 @@ impl Lava {
     }
 
     pub fn render(&mut self, out: &mut [f32]) {
-        let dt = 1.0 / SAMPLE_RATE as f32;
+        let sample_rate = self.sample_rate;
+        let dt = 1.0 / sample_rate as f32;
         let area = self.scene.area.clamp(0.0, 1000.0);
         let gain = self.scene.gain.clamp(0.0, 1.0);
         let rate = (BURSTS * area).min(MAX_BURSTS);
@@ -134,7 +141,7 @@ impl Lava {
                 while self.until_burst <= 0.0 {
                     self.until_burst += self.rng.exponential(rate);
                     if self.bursts.len() < MAX_VOICES {
-                        self.bursts.push(Burst::new(&mut self.rng));
+                        self.bursts.push(Burst::new(&mut self.rng, sample_rate));
                     }
                 }
             }
@@ -155,6 +162,7 @@ impl Lava {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
     #[allow(unused_imports)]
     use std::{vec, vec::Vec};
 
@@ -169,7 +177,7 @@ mod tests {
 
     #[test]
     fn lava_bubbles_and_rumbles() {
-        let mut lava = Lava::new(2);
+        let mut lava = Lava::new(2, SAMPLE_RATE);
         lava.set_scene(LavaScene {
             area: 20.0,
             gain: 1.0,

@@ -24,8 +24,13 @@ pub struct Wobble {
 
 impl Wobble {
     pub fn new(hz: f32, depth: f32, low: f32, high: f32) -> Wobble {
+        Wobble::new_at(hz, depth, low, high, crate::SAMPLE_RATE)
+    }
+
+    /// As [`Wobble::new`], at the host's sample rate.
+    pub fn new_at(hz: f32, depth: f32, low: f32, high: f32, sample_rate: u32) -> Wobble {
         Wobble {
-            filter: LowPass::new(hz),
+            filter: LowPass::new_at(hz, sample_rate),
             depth,
             low,
             high,

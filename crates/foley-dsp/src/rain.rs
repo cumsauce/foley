@@ -133,10 +133,17 @@ pub struct Struck {
     click_step: f32,
     age: f32,
     decay: f32,
+    /// 1 / rate: how much one sample advances time.
+    dt: f32,
 }
 
 impl Struck {
     pub fn new(rng: &mut Rng, surface: Surface, amplitude: f32) -> Struck {
+        Struck::new_at(rng, surface, amplitude, SAMPLE_RATE)
+    }
+
+    /// As [`Struck::new`], at the host's sample rate.
+    pub fn new_at(rng: &mut Rng, surface: Surface, amplitude: f32, sample_rate: u32) -> Struck {
         // Modes (frequency range, decay per second) for each surface.
         let (low, high, decay, click): (f32, f32, f32, f32) = match surface {
             Surface::Stone => (3000.0, 7000.0, 900.0, 0.8),
@@ -146,7 +153,7 @@ impl Struck {
             Surface::Metal => (700.0, 3200.0, 35.0, 0.3),
             Surface::Soft | Surface::Water => (250.0, 1200.0, 700.0, 0.35),
         };
-        let rate = SAMPLE_RATE as f32;
+        let rate = sample_rate as f32;
         let mut mode = |gain: f32| {
             let f = low * (high / low).powf(rng.unit());
             let mode_decay = decay * (0.8 + 0.4 * rng.unit());
@@ -162,13 +169,14 @@ impl Struck {
             modes,
             click: amplitude * click,
             click_step: (-4000.0 / rate).exp(),
+            dt: 1.0 / rate,
             age: 0.0,
             decay,
         }
     }
 
     pub fn sample(&mut self, noise: f32) -> f32 {
-        let dt = 1.0 / SAMPLE_RATE as f32;
+        let dt = self.dt;
         // Decays as running products: the same curve as e^(-dt), far cheaper.
         self.click *= self.click_step;
         let mut out = self.click * noise;
@@ -213,10 +221,12 @@ pub struct Rain {
     /// The sizzle of the whole surface of water round about, near 14 kHz.
     sizzle: BandPass,
     samples: u64,
+    /// The rate this bed renders at.
+    sample_rate: u32,
 }
 
 impl Rain {
-    pub fn new(seed: u64) -> Rain {
+    pub fn new(seed: u64, sample_rate: u32) -> Rain {
         Rain {
             rng: Rng::new(seed),
             scene: RainScene::DRY,
@@ -225,8 +235,9 @@ impl Rain {
             hiss: 0.0,
             hiss_low: 0.0,
             shelter: 0.0,
-            sizzle: BandPass::new(13_500.0, 1.2),
+            sizzle: BandPass::new_at(13_500.0, 1.2, sample_rate),
             samples: 0,
+            sample_rate,
         }
     }
 
@@ -299,29 +310,31 @@ impl Rain {
             if (0.8..=1.1).contains(&d) {
                 let radius = 0.00020 + 0.00005 * self.rng.unit();
                 self.voices.push(Voice::Bubble(
-                    Bubble::new(radius, amplitude * 6.0).with_rise(0.02),
+                    Bubble::new_at(radius, amplitude * 6.0, self.sample_rate).with_rise(0.02),
                 ));
             } else if d > 2.2 && self.rng.unit() < 0.15 {
                 let radius = 0.0006 + 0.0009 * self.rng.unit();
                 self.voices.push(Voice::Bubble(
-                    Bubble::new(radius, amplitude * 0.1).with_rise(0.02),
+                    Bubble::new_at(radius, amplitude * 0.1, self.sample_rate).with_rise(0.02),
                 ));
             }
             // The splash itself, softly.
-            self.voices.push(Voice::Struck(Struck::new(
+            self.voices.push(Voice::Struck(Struck::new_at(
                 &mut self.rng,
                 Surface::Soft,
                 amplitude * 0.25,
+                self.sample_rate,
             )));
             return;
         }
-        let struck = Struck::new(&mut self.rng, surface, amplitude);
+        let struck = Struck::new_at(&mut self.rng, surface, amplitude, self.sample_rate);
         self.voices.push(Voice::Struck(struck));
     }
 
     /// The next `out.len()` samples.
     pub fn render(&mut self, out: &mut [f32]) {
-        let dt = 1.0 / SAMPLE_RATE as f32;
+        let sample_rate = self.sample_rate;
+        let dt = 1.0 / sample_rate as f32;
         let rate = self.near_rate();
         let brightness: f32 = {
             let total: f32 = self.scene.surfaces.iter().sum::<f32>().max(1e-6);
@@ -338,7 +351,7 @@ impl Rain {
         let roofed = if self.scene.roof.is_some() { 1.0 } else { 0.0 };
         let smoothing_at = |shelter: f32| {
             let cutoff = open_cutoff + (600.0 - open_cutoff) * shelter;
-            1.0 - (-TAU * cutoff / SAMPLE_RATE as f32).exp()
+            1.0 - (-TAU * cutoff / sample_rate as f32).exp()
         };
         let mut smoothing = smoothing_at(self.shelter);
         let level = 0.012 * (self.scene.rate / 10.0).sqrt() * (0.3 + brightness);
@@ -349,7 +362,7 @@ impl Rain {
         let sizzle = 0.07 * (self.scene.rate / 10.0).sqrt() * water;
         for sample in out {
             if self.samples.is_multiple_of(64) {
-                self.shelter += (roofed - self.shelter) * (64.0 / (0.3 * SAMPLE_RATE as f32));
+                self.shelter += (roofed - self.shelter) * (64.0 / (0.3 * sample_rate as f32));
                 smoothing = smoothing_at(self.shelter);
             }
             if rate > 0.0 {
@@ -402,7 +415,7 @@ mod tests {
 
     /// Energy and zero-crossing rate (a measure of brightness) of 2 s.
     fn listen(scene: RainScene) -> (f32, f32) {
-        let mut rain = Rain::new(3);
+        let mut rain = Rain::new(3, SAMPLE_RATE);
         rain.set_scene(scene);
         let mut out = vec![0.0; 2 * SAMPLE_RATE as usize];
         rain.render(&mut out);
@@ -416,7 +429,7 @@ mod tests {
 
     #[test]
     fn the_drop_flux_follows_marshall_palmer() {
-        let mut rain = Rain::new(1);
+        let mut rain = Rain::new(1, SAMPLE_RATE);
         rain.set_scene(scene(10.0, Surface::Stone));
         // About 4 500 drops per m² per second at 10 mm/h: N₀ ∫ e^(-ΛD) v(D) dD.
         let flux = rain.near_rate() / NEAR_AREA;

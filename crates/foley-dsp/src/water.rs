@@ -3,7 +3,7 @@ use foley_math::Float as _;
 
 use crate::Fixed;
 use crate::Wobble;
-use crate::{BandPass, Bubble, LowPass, Rng, SAMPLE_RATE};
+use crate::{BandPass, Bubble, LowPass, Rng};
 
 /// The moving water near the listener.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -90,6 +90,8 @@ pub struct Water {
     lapping: Wobble,
     distance: [LowPass; 2],
     samples: usize,
+    /// The rate this bed renders at.
+    sample_rate: u32,
 }
 
 /// How fast what's heard follows the scene, seconds.
@@ -98,7 +100,7 @@ const GLIDE: f32 = 0.4;
 const BLOCK: usize = 64;
 
 impl Water {
-    pub fn new(seed: u64) -> Water {
+    pub fn new(seed: u64, sample_rate: u32) -> Water {
         Water {
             rng: Rng::new(seed),
             scene: WaterScene::STILL,
@@ -106,14 +108,24 @@ impl Water {
             fresh: true,
             until_next: 0.0,
             voices: Fixed::new(),
-            roar: [LowPass::new(500.0), LowPass::new(500.0)],
-            spray: LowPass::new(9000.0),
-            surge: Wobble::new(3.0, 5.0, 0.3, 1.8),
-            ripple: BandPass::new(3200.0, 0.7),
-            rush: [BandPass::new(900.0, 0.6), BandPass::new(350.0, 0.9)],
-            lapping: Wobble::new(1.2, 6.0, 0.4, 1.8),
-            distance: [LowPass::new(16000.0), LowPass::new(16000.0)],
+            roar: [
+                LowPass::new_at(500.0, sample_rate),
+                LowPass::new_at(500.0, sample_rate),
+            ],
+            spray: LowPass::new_at(9000.0, sample_rate),
+            surge: Wobble::new_at(3.0, 5.0, 0.3, 1.8, sample_rate),
+            ripple: BandPass::new_at(3200.0, 0.7, sample_rate),
+            rush: [
+                BandPass::new_at(900.0, 0.6, sample_rate),
+                BandPass::new_at(350.0, 0.9, sample_rate),
+            ],
+            lapping: Wobble::new_at(1.2, 6.0, 0.4, 1.8, sample_rate),
+            distance: [
+                LowPass::new_at(16000.0, sample_rate),
+                LowPass::new_at(16000.0, sample_rate),
+            ],
             samples: 0,
+            sample_rate,
         }
     }
 
@@ -126,7 +138,8 @@ impl Water {
     }
 
     pub fn render(&mut self, out: &mut [f32]) {
-        let dt = 1.0 / SAMPLE_RATE as f32;
+        let sample_rate = self.sample_rate;
+        let dt = 1.0 / sample_rate as f32;
         let glide = BLOCK as f32 * dt / GLIDE;
         let (mut rate, mut boost, mut plunging, mut roar_level, mut rush_level) =
             (0.0, 1.0, 0.0, 0.0, 0.0);
@@ -162,7 +175,9 @@ impl Water {
                 // Further away, water loses a little of its sparkle (the ground
                 // takes some highs; Earshot adds the air's own absorption).
                 let cutoff = 6000.0 + 14000.0 * h.gain.sqrt();
-                self.distance.iter_mut().for_each(|f| f.tune(cutoff));
+                self.distance
+                    .iter_mut()
+                    .for_each(|f| f.tune_at(cutoff, sample_rate));
             }
             self.samples += 1;
             if rate > 0.0 {
@@ -178,7 +193,8 @@ impl Water {
                             (babble_radius(&mut self.rng), 0.02)
                         };
                         let loudness = loudness * boost * (0.5 + self.rng.unit());
-                        self.voices.push(Bubble::new(radius, loudness));
+                        self.voices
+                            .push(Bubble::new_at(radius, loudness, self.sample_rate));
                     }
                 }
             }
@@ -218,11 +234,12 @@ impl Water {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
     #[allow(unused_imports)]
     use std::{vec, vec::Vec};
 
     fn rms(scene: WaterScene) -> f32 {
-        let mut water = Water::new(3);
+        let mut water = Water::new(3, SAMPLE_RATE);
         water.set_scene(scene);
         let mut out = vec![0.0; 2 * SAMPLE_RATE as usize];
         water.render(&mut out);

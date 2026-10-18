@@ -4,7 +4,7 @@
 
 use core::f32::consts::TAU;
 
-use crate::{LowPass, Rng, SAMPLE_RATE, Wobble};
+use crate::{LowPass, Rng, Wobble};
 
 /// What the cave round the listener is like.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -113,12 +113,14 @@ pub struct Cave {
     /// output detector can't reliably see them in a mix with drips.
     #[cfg(test)]
     stones_fired: u32,
+    /// The rate this bed renders at.
+    sample_rate: u32,
 }
 
 impl Cave {
-    pub fn new(seed: u64) -> Cave {
+    pub fn new(seed: u64, sample_rate: u32) -> Cave {
         let mut rng = Rng::new(seed);
-        let rate = SAMPLE_RATE as f32;
+        let rate = sample_rate as f32;
         let attack = 1.0 - (-1.0 / (0.001 * rate)).exp();
         let decay = (-1.0 / (DRIP_MS * 0.001 * rate * 0.3)).exp();
         let voices = [(); VOICES].map(|()| DripVoice {
@@ -143,6 +145,7 @@ impl Cave {
             samples: 0,
             #[cfg(test)]
             stones_fired: 0,
+            sample_rate,
         }
     }
 
@@ -162,7 +165,7 @@ impl Cave {
     }
 
     pub fn render(&mut self, out: &mut [f32]) {
-        let rate = SAMPLE_RATE as f32;
+        let rate = self.sample_rate as f32;
         let dt = 1.0 / rate;
         let depth = self.scene.depth.clamp(0.0, 1.0);
         let mass = self.scene.mass.clamp(0.0, 1.0);
@@ -275,6 +278,7 @@ impl Cave {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
     #[allow(unused_imports)]
     use std::{vec, vec::Vec};
 
@@ -283,7 +287,7 @@ mod tests {
     }
 
     fn render_with(scene: CaveScene, seed: u64) -> Vec<f32> {
-        let mut c = Cave::new(seed);
+        let mut c = Cave::new(seed, SAMPLE_RATE);
         c.set_scene(scene);
         let mut out = vec![0.0; SAMPLE_RATE as usize];
         c.render(&mut out);
@@ -406,7 +410,7 @@ mod tests {
         // stone transients (Poisson at 0.04/s × 30 s = 1.2 expected). The
         // audio output can't reliably reveal them in a mix with drips, so
         // we read the internal counter (test-only).
-        let mut c = Cave::new(11);
+        let mut c = Cave::new(11, SAMPLE_RATE);
         c.set_scene(CaveScene {
             depth: 1.0,
             mass: 1.0,
@@ -426,7 +430,7 @@ mod tests {
     #[test]
     fn settling_stones_dont_fire_in_a_dry_cave() {
         // A dry cave has drips = 0, so the stones gate is closed.
-        let mut c = Cave::new(13);
+        let mut c = Cave::new(13, SAMPLE_RATE);
         c.set_scene(CaveScene {
             depth: 1.0,
             mass: 1.0,
