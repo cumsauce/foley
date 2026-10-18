@@ -3,6 +3,30 @@
 The mod and the Rust workspace share one version; entries are grouped by that
 version. Playtest builds are `0.1.0-beta.N`.
 
+## 0.1.0-beta.62 — footsteps, blocks and explosions take over
+
+### Added
+
+- Foley now replaces the game's block **footsteps** with its own, and takes over
+  them through the generic override registry like every other family. Once on,
+  steps no longer play twice; `footsteps` in Options → Music & Sounds → Foley
+  still gives them back.
+- Block **break, place and digging** are Foley's too, under a new `blocks`
+  setting (default on). It starts narrow — stone, wood, gravel, sand and glass —
+  built from the existing contact synthesis; every other material still layers
+  under the game's sound.
+- **Explosions** booms are Foley's own: a new bang — a gliding sub boom, the
+  shock front's broadband crack and seeded debris — whose blast radius sets its
+  pitch, length and tail (at most three seconds). It plays through
+  `FOLEY_SHOT_BOOM`, ABI rises to 25.
+
+### Changed
+
+- Note block strikes now go through the override registry, so an addon override
+  wins over the `noteBlocks` setting exactly as it does for every other family.
+- Contact layers (break/place/dig) now sound when either `strikes` or `blocks`
+  is on, so taking a family over works with the additive layer switched off.
+
 ## 0.1.0-beta.61 — note block instruments (M23)
 
 ### Added
