@@ -685,6 +685,46 @@ Density rather than new models:
 - **The toggle:** `noteBlocks` (index 19 of `FoleyConfig`, default on) sits in Options → Music & Sounds → Foley. Off, `Replacements` declines the strike and the game's own note plays. On, Foley plays its buffer and `SoundEngineMixin` skips the game's. A `NoteBlocks.plays()` counter records each strike Foley actually played, for the gametest — `FoleyClient.replaced()` on its own cannot tell a note Foley took from one it skipped.
 - **Tests:** Rust — the instrument table's family mapping and the unknown-instrument boundary, the pitch law at note 12, and a measured-fundamental pin per family across the range (`note.rs`), plus the rendered-buffer path through `synthesize`. Java — `NoteBlocksTest` pins the buffer name, the unknown-instrument pass-through, a taken harp strike, and the pitch fall-back; the config round-trip and the Foley screen cover the toggle. All green: `cargo test --workspace --lib` (99 synth, 29 dsp, 22 ffi + 1 ignored) and 84 Java tests, with `compileGametestJava` compiling. A client gametest places a note block on gold, strikes the bell and asserts Foley played it (counter up, game's strike skipped), then switches `noteBlocks` off and asserts Foley neither plays nor replaces; it runs CI-side only (Linux/Xvfb) and has not been executed locally.
 
+## M24 onward: vanilla takeover, family by family (2026-10-17)
+
+**Policy:** when Foley synthesizes a family of sounds and the family's toggle is on, Foley **replaces** the vanilla events for that family — the game's own sounds are skipped — exactly as rain, thunder, ambience, drips, doors, chests, shulkers, minecarts and note blocks already do. Global bypass always lets vanilla through, and every family goes through the generic override registry (beta.60) so other mods can take it in turn. A family Foley only *layers* today is not finished until it replaces.
+
+## M24 plan: footsteps
+
+- Skip the vanilla step/dig events in `Replacements` when `footsteps` is on; Foley's `Layers` synthesis is already the replacement. Today the two double up: Foley layers and vanilla still plays.
+- Events: the `SoundEvents.*_STEP` family (all walkable block materials) and the dig/land variants, keyed by the sound id prefix per material.
+- Follow the standard branch shape: bypass → vanilla; `override(...)` verdict; else `wants(FoleyConfig::footsteps)` decides skip+synthesize vs vanilla.
+- **Tests:** with the toggle on the vanilla step is skipped and Foley's layer plays; off, vanilla plays; bypass neutral; an override wins.
+- **Exit:** walking sounds on every material come from Foley alone.
+
+## M25 plan: note blocks join the override registry
+
+- `NoteBlocks.replace` is the one takeover branch that does not consult `DoorHandling.dispatch`/`override(...)`. Route strikes through it so a mod can own note-block events like any other family (handled → skip, declined → vanilla).
+- Keep the `noteBlocks` toggle and the existing pass-through for unknown instruments (26.3's trumpets and mob-head imitations stay vanilla).
+- **Tests:** an override matching `block.note_block.*` wins over the built-in strike; declined → vanilla; toggle off + no override → vanilla.
+- **Exit:** every takeover family has identical override semantics (closes the audit's only remaining asymmetry).
+
+## M26 plan: block break, place and digging
+
+- Skip vanilla break/place/dig events when a new `blocks` toggle is on, synthesizing from Foley's contact/material primitives (`renderOneShot` contact taps, settling stone).
+- Start narrow: stone, wood, gravel, sand, glass — the loudest and most frequent; other materials fall through to vanilla.
+- **Tests:** per-material taken/declined, toggle, bypass, override; no double-sound.
+
+## M27 plan: explosions
+
+- Skip vanilla explosion events (creeper, TNT, end crystal, firework) when an `explosions` toggle is on; synthesize a physical bang (low boom + debris) with distance scaling.
+- **Tests:** taken/declined per event, distance scaling sanity, toggle, bypass, override.
+
+## M28 plan: redstone, boats, sculk as replacements
+
+- Today these are additive layers (`Layers`/`ActiveStructures`/`Brush`) under still-playing vanilla events. When the family's toggle is on, skip the vanilla counterpart so Foley replaces rather than doubles: redstone (pistons, levers, buttons), boats (paddles, splash), sculk (shrieker, catalyst).
+- **Exit:** the policy above holds for every family; audited against the takeover table in `docs/INTEGRATING.md`, which grows a row per family.
+
+## Out of scope (decided)
+
+- Mob one-shots (hurt, death, steps) stay vanilla — see Decided #2.
+- Music discs, UI, eating, potions, elytra, villager chatter: no synthesis planned; they stay vanilla unless a later milestone claims them.
+
 ## Risks
 
 | Risk | Mitigation |
