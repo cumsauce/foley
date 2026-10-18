@@ -4,8 +4,8 @@
 use std::time::Instant;
 
 use foley_synth::{
-    Contact, Fire, FireScene, Lava, LavaScene, Material, Rain, RainScene, SAMPLE_RATE, Surface,
-    Water, WaterScene, Wind, WindScene, contact, fracture, strike,
+    contact, fracture, strike, Contact, Fire, FireScene, Lava, LavaScene, Material, Rain,
+    RainScene, Surface, Water, WaterScene, Wind, WindScene, SAMPLE_RATE,
 };
 
 /// Renders a bed's next samples.
@@ -19,7 +19,7 @@ fn main() {
         std::env::consts::ARCH
     );
     for rate in [2.0, 10.0, 50.0] {
-        let mut bed = Rain::new(1);
+        let mut bed = Rain::new(1, foley_dsp::DEFAULT_SAMPLE_RATE);
         let mut surfaces = [0.0; 7];
         for surface in [Surface::Water, Surface::Stone, Surface::Leaves] {
             surfaces[surface as usize] = 1.0 / 3.0;
@@ -43,7 +43,7 @@ fn main() {
     }
     table += "\n### Wind bed\n\n| Wind speed | Time per second of audio | Share of a core |\n| --- | --- | --- |\n";
     for speed in [3.0, 10.0, 25.0] {
-        let mut bed = Wind::new(1);
+        let mut bed = Wind::new(1, foley_dsp::DEFAULT_SAMPLE_RATE);
         bed.set_scene(WindScene {
             speed,
             exposure: 1.0,
@@ -63,7 +63,7 @@ fn main() {
     }
     table += "\n### Water, fire and lava beds\n\n| Bed | Time per second of audio | Share of a core |\n| --- | --- | --- |\n";
     let mut beds: Vec<(&str, Renderer)> = Vec::new();
-    let mut stream = Water::new(1);
+    let mut stream = Water::new(1, foley_dsp::DEFAULT_SAMPLE_RATE);
     stream.set_scene(WaterScene {
         flow: 20.0,
         falls: 0.0,
@@ -73,7 +73,7 @@ fn main() {
         "Stream, 20 blocks flowing",
         Box::new(move |out| stream.render(out)),
     ));
-    let mut fall = Water::new(1);
+    let mut fall = Water::new(1, foley_dsp::DEFAULT_SAMPLE_RATE);
     fall.set_scene(WaterScene {
         flow: 20.0,
         falls: 10.0,
@@ -83,13 +83,13 @@ fn main() {
         "Waterfall, 10 blocks landing",
         Box::new(move |out| fall.render(out)),
     ));
-    let mut fire = Fire::new(1);
+    let mut fire = Fire::new(1, foley_dsp::DEFAULT_SAMPLE_RATE);
     fire.set_scene(FireScene {
         size: 20.0,
         gain: 1.0,
     });
     beds.push(("Fire, 20 blocks", Box::new(move |out| fire.render(out))));
-    let mut lava = Lava::new(1);
+    let mut lava = Lava::new(1, foley_dsp::DEFAULT_SAMPLE_RATE);
     lava.set_scene(LavaScene {
         area: 200.0,
         gain: 1.0,
@@ -111,7 +111,13 @@ fn main() {
     table += "\n### Thunder\n\nMade once a flash, on the stream thread.\n\n| Flash | Time to make it | Length |\n| --- | --- | --- |\n";
     for distance in [300.0, 4000.0] {
         let start = Instant::now();
-        let sound = strike([distance, 0.0, 0.0], 1, 15.0, 90.0);
+        let sound = strike(
+            [distance, 0.0, 0.0],
+            1,
+            15.0,
+            90.0,
+            foley_dsp::DEFAULT_SAMPLE_RATE,
+        );
         table += &format!(
             "| {distance} m away | {:.1} ms | {:.1} s |\n",
             start.elapsed().as_secs_f64() * 1e3,
@@ -126,13 +132,19 @@ fn main() {
         ("gravel", Material::Granular),
     ] {
         let start = Instant::now();
-        let _ = contact(Contact::Tap, material, 3.0, 1);
+        let _ = contact(
+            Contact::Tap,
+            material,
+            3.0,
+            1,
+            foley_dsp::DEFAULT_SAMPLE_RATE,
+        );
         table += &format!(
             "| Tap on {name} | {:.2} ms |\n",
             start.elapsed().as_secs_f64() * 1e3
         );
         let start = Instant::now();
-        let _ = fracture(material, 1);
+        let _ = fracture(material, 1, foley_dsp::DEFAULT_SAMPLE_RATE);
         table += &format!(
             "| {name} breaking | {:.2} ms |\n",
             start.elapsed().as_secs_f64() * 1e3
@@ -163,7 +175,7 @@ fn main() {
         ),
     ] {
         let start = Instant::now();
-        let sound = foley_synth::voice(mob, call, 1);
+        let sound = foley_synth::voice(mob, call, 1, foley_dsp::DEFAULT_SAMPLE_RATE);
         table += &format!(
             "| {name} | {:.1} ms | {:.1} s |\n",
             start.elapsed().as_secs_f64() * 1e3,

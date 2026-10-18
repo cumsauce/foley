@@ -13,7 +13,7 @@ fn main() {
         ("storm woods", 6.0, 0.6, 1.0),
     ];
     for (name, speed, exposure, leaves) in scenes {
-        let mut wind = Wind::new(3);
+        let mut wind = Wind::new(3, foley_dsp::DEFAULT_SAMPLE_RATE);
         wind.set_scene(WindScene {
             speed,
             exposure,

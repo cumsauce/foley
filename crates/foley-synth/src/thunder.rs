@@ -1,5 +1,5 @@
-use crate::{LowPass, Rng, absorption_cutoff};
-use std::sync::mpsc::{Receiver, SyncSender, TryRecvError, TrySendError, sync_channel};
+use crate::{absorption_cutoff, LowPass, Rng};
+use std::sync::mpsc::{sync_channel, Receiver, SyncSender, TryRecvError, TrySendError};
 
 const SPEED_OF_SOUND: f32 = 343.0;
 const ATMOSPHERE: f32 = 101_325.0;
@@ -242,9 +242,6 @@ fn n_wave(
 #[derive(Debug)]
 pub struct Thunder {
     scene: ThunderScene,
-    /// The bed's seed, as the other beds take one at construction. Strikes
-    /// carry their own seed too, mixed with this one.
-    seed: u64,
     /// Samples per second every sound this bed makes is rendered at.
     rate: u32,
     /// Work for the thread that makes the thunder: strikes, and finished
@@ -282,7 +279,10 @@ impl Default for Thunder {
 
 impl Thunder {
     /// Starts the bed and its thread, which lasts as long as it does.
-    pub fn new(seed: u64, sample_rate: u32) -> Thunder {
+    /// `seed` is accepted for constructor uniformity with the other beds: a
+    /// thunder bed is silent until struck, and each strike carries its own
+    /// seed, so nothing is mixed with this one.
+    pub fn new(_seed: u64, sample_rate: u32) -> Thunder {
         // Bounded, so sending and receiving never allocate: at most
         // `MAX_STRIKES` are ever in flight each way.
         let (jobs, inbox) = sync_channel::<Job>(2 * MAX_STRIKES);
@@ -346,7 +346,6 @@ impl Thunder {
             .ok();
         Thunder {
             scene: ThunderScene::DEFAULT,
-            seed,
             rate: sample_rate,
             jobs: Some(jobs),
             ready,
@@ -388,7 +387,7 @@ impl Thunder {
         }
         let job = Job::Strike {
             base,
-            seed: self.seed ^ seed,
+            seed,
             celsius: self.scene.celsius,
             humidity: self.scene.humidity,
         };

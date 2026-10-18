@@ -1,7 +1,7 @@
 //! Writes every mob's calls to WAV files, for listening outside the game:
 //! `cargo run --release -p foley-synth --example voice_samples -- <dir>`.
 
-use foley_synth::{Call, Mob, SAMPLE_RATE, to_pcm, voice};
+use foley_synth::{to_pcm, voice, Call, Mob, SAMPLE_RATE};
 
 fn main() -> std::io::Result<()> {
     let dir = std::env::args().nth(1).unwrap_or_else(|| "samples".into());
@@ -41,7 +41,11 @@ fn main() -> std::io::Result<()> {
             // Three renditions in a row, half a second apart.
             let mut pcm = Vec::new();
             for seed in 1..=3 {
-                pcm.extend(voice(mob, call, seed).iter().map(|s| to_pcm(*s)));
+                pcm.extend(
+                    voice(mob, call, seed, foley_dsp::DEFAULT_SAMPLE_RATE)
+                        .iter()
+                        .map(|s| to_pcm(*s)),
+                );
                 pcm.extend(std::iter::repeat_n(0i16, SAMPLE_RATE as usize / 2));
             }
             let name = format!("{dir}/{mob:?}-{call:?}.wav").to_lowercase();

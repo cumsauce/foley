@@ -8,7 +8,7 @@
 //! a small frog, a big one). 0–8 kHz, log magnitude;
 //! each row spans its whole sound.
 
-use foley_synth::{Call, Mob, cicadas, howl, owl, surf, voice, woodpecker};
+use foley_synth::{cicadas, howl, owl, surf, voice, woodpecker, Call, Mob};
 
 const N: usize = 1024;
 const HOP: usize = 256;
@@ -51,14 +51,14 @@ fn main() -> std::io::Result<()> {
     let rows: Vec<Vec<f32>> = if set == "drips" {
         use foley_synth::{drip_into_water, drip_on_stone, frog, lava_drip};
         vec![
-            drip_into_water(0.0015, 2),
-            drip_on_stone(0.0025, 3),
-            lava_drip(4),
-            frog(4.0, 6),
-            frog(12.0, 7),
+            drip_into_water(0.0015, 2, foley_dsp::DEFAULT_SAMPLE_RATE),
+            drip_on_stone(0.0025, 3, foley_dsp::DEFAULT_SAMPLE_RATE),
+            lava_drip(4, foley_dsp::DEFAULT_SAMPLE_RATE),
+            frog(4.0, 6, foley_dsp::DEFAULT_SAMPLE_RATE),
+            frog(12.0, 7, foley_dsp::DEFAULT_SAMPLE_RATE),
         ]
     } else if set == "steps" {
-        use foley_synth::{Contact, Material, contact};
+        use foley_synth::{contact, Contact, Material};
         [
             Material::Stone,
             Material::Wood,
@@ -67,25 +67,25 @@ fn main() -> std::io::Result<()> {
             Material::Snow,
         ]
         .iter()
-        .map(|m| contact(Contact::Step, *m, 1.0, 3))
+        .map(|m| contact(Contact::Step, *m, 1.0, 3, foley_dsp::DEFAULT_SAMPLE_RATE))
         .collect()
     } else if set == "birds" {
         foley_synth::Bird::ALL
             .iter()
-            .map(|bird| foley_synth::bird_call(*bird, 1))
+            .map(|bird| foley_synth::bird_call(*bird, 1, foley_dsp::DEFAULT_SAMPLE_RATE))
             .collect()
     } else if set == "outdoors" {
         vec![
-            surf(1.5, 1),
-            woodpecker(2),
-            owl(3),
-            cicadas(30.0, 4),
-            howl(5),
+            surf(1.5, 1, foley_dsp::DEFAULT_SAMPLE_RATE),
+            woodpecker(2, foley_dsp::DEFAULT_SAMPLE_RATE),
+            owl(3, foley_dsp::DEFAULT_SAMPLE_RATE),
+            cicadas(30.0, 4, foley_dsp::DEFAULT_SAMPLE_RATE),
+            howl(5, foley_dsp::DEFAULT_SAMPLE_RATE),
         ]
     } else {
         calls
             .iter()
-            .map(|(mob, call)| voice(*mob, *call, 1))
+            .map(|(mob, call)| voice(*mob, *call, 1, foley_dsp::DEFAULT_SAMPLE_RATE))
             .collect()
     };
     let height = rows.len() * (BINS + 4);
