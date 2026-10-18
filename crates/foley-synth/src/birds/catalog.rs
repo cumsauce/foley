@@ -5,36 +5,35 @@
 //! to sound like a taiga, every species from the real call of the bird that
 //! lives there.
 
-use crate::SAMPLE_RATE;
-use crate::birds::Bird;
-use crate::birds::Birds;
 use crate::birds::bird_call;
 use crate::birds::engine2::{Phrase, Segment, SegmentKind};
+use crate::birds::Bird;
+use crate::birds::Birds;
 use crate::dsp::normalize;
 
 /// One phrase for the species, rendered from `seed`.
-pub fn birdsong2(bird: Birds, seed: u64) -> Vec<f32> {
+pub fn birdsong2(bird: Birds, seed: u64, sample_rate: u32) -> Vec<f32> {
     // The nine originals (M5) keep the calls Life has always played, at
     // their legacy levels: they ride at the end of the catalogue and
     // delegate to the (engine-2 migrated) `bird_call`.
     match bird {
-        Birds::Crow => return bird_call(Bird::Crow, seed),
-        Birds::Dove => return bird_call(Bird::Dove, seed),
-        Birds::Robin => return bird_call(Bird::Robin, seed),
-        Birds::Cardinal => return bird_call(Bird::Cardinal, seed),
-        Birds::Chickadee => return bird_call(Bird::Chickadee, seed),
-        Birds::HerringGull => return bird_call(Bird::Gull, seed),
-        Birds::CommonLoon => return bird_call(Bird::Loon, seed),
-        Birds::Jay => return bird_call(Bird::Jay, seed),
-        Birds::Warbler => return bird_call(Bird::Warbler, seed),
+        Birds::Crow => return bird_call(Bird::Crow, seed, sample_rate),
+        Birds::Dove => return bird_call(Bird::Dove, seed, sample_rate),
+        Birds::Robin => return bird_call(Bird::Robin, seed, sample_rate),
+        Birds::Cardinal => return bird_call(Bird::Cardinal, seed, sample_rate),
+        Birds::Chickadee => return bird_call(Bird::Chickadee, seed, sample_rate),
+        Birds::HerringGull => return bird_call(Bird::Gull, seed, sample_rate),
+        Birds::CommonLoon => return bird_call(Bird::Loon, seed, sample_rate),
+        Birds::Jay => return bird_call(Bird::Jay, seed, sample_rate),
+        Birds::Warbler => return bird_call(Bird::Warbler, seed, sample_rate),
         _ => {}
     }
     let phrase = phrase_for(bird);
-    let samples = phrase.render(seed);
+    let samples = phrase.render(seed, sample_rate);
     let mut samples = samples;
     samples.extend(std::iter::repeat_n(
         0.0,
-        (0.05 * SAMPLE_RATE as f32) as usize,
+        (0.05 * sample_rate as f32) as usize,
     ));
     normalize(samples, 0.4)
 }

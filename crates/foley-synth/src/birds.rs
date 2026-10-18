@@ -9,7 +9,7 @@
 use std::f32::consts::TAU;
 
 use crate::dsp::{add_at, normalize, smooth};
-use crate::{BandPass, LowPass, Rng, SAMPLE_RATE};
+use crate::{BandPass, LowPass, Rng};
 
 pub mod catalog;
 pub mod engine1;
@@ -228,23 +228,23 @@ impl Birds {
 
 /// One call or song of `bird`; each `seed` a different individual and
 /// rendition.
-pub fn bird_call(bird: Bird, seed: u64) -> Vec<f32> {
+pub fn bird_call(bird: Bird, seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed ^ 0xB12D);
     let out = match bird {
-        Bird::Crow => crow(&mut rng),
-        Bird::Dove => dove(&mut rng),
-        Bird::Robin => robin(&mut rng),
-        Bird::Cardinal => cardinal(&mut rng),
-        Bird::Chickadee => chickadee(&mut rng),
-        Bird::Gull => gull(&mut rng),
-        Bird::Loon => loon(&mut rng),
-        Bird::Jay => jay(&mut rng),
-        Bird::Warbler => warbler(&mut rng),
+        Bird::Crow => crow(&mut rng, sample_rate),
+        Bird::Dove => dove(&mut rng, sample_rate),
+        Bird::Robin => robin(&mut rng, sample_rate),
+        Bird::Cardinal => cardinal(&mut rng, sample_rate),
+        Bird::Chickadee => chickadee(&mut rng, sample_rate),
+        Bird::Gull => gull(&mut rng, sample_rate),
+        Bird::Loon => loon(&mut rng, sample_rate),
+        Bird::Jay => jay(&mut rng, sample_rate),
+        Bird::Warbler => warbler(&mut rng, sample_rate),
     };
     let mut out = out;
     out.extend(std::iter::repeat_n(
         0.0,
-        (0.05 * SAMPLE_RATE as f32) as usize,
+        (0.05 * sample_rate as f32) as usize,
     ));
     out
 }
@@ -274,11 +274,12 @@ pub(crate) fn whistle_internal(
     harmonic: f32,
     (attack, release): (f32, f32),
     rng: &mut Rng,
+    sample_rate: u32,
 ) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let n = (seconds * rate) as usize;
     let mut phase = 0.0f32;
-    let mut waver = LowPass::new(25.0);
+    let mut waver = LowPass::new_at(25.0, sample_rate);
     let attack = (attack * rate).min(n as f32 / 2.0);
     let release = (release * rate).min(n as f32 / 2.0);
     (0..n)
@@ -298,8 +299,8 @@ pub(crate) fn whistle_internal(
 /// every other one weaker (the period doubling that makes it rasp), with
 /// turbulent breath, through the throat and beak's resonances near 1.2, 2
 /// and 3 kHz; its pitch sags at the end.
-fn crow(rng: &mut Rng) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+fn crow(rng: &mut Rng, sample_rate: u32) -> Vec<f32> {
+    let rate = sample_rate as f32;
     let f0 = 450.0 + 200.0 * rng.unit();
     let tract = 0.9 + 0.2 * rng.unit();
     let caws = 2 + (rng.unit() * 4.0) as usize;
@@ -314,6 +315,7 @@ fn crow(rng: &mut Rng) -> Vec<f32> {
             |t| pitch * (1.0 + 0.06 * (t * 5.0).min(1.0) - 0.2 * t * t),
             [1200.0 * tract, 2000.0 * tract, 3100.0 * tract],
             0.55,
+            sample_rate,
         );
         add_at(&mut out, (at * rate) as usize, &caw, 1.0 - 0.1 * c as f32);
         at += seconds + 0.2 + 0.2 * rng.unit();
@@ -331,15 +333,16 @@ fn harsh(
     pitch: impl Fn(f32) -> f32,
     formants: [f32; 3],
     doubling: f32,
+    sample_rate: u32,
 ) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let n = (seconds * rate) as usize;
     let mut filters = [
-        BandPass::new(formants[0], 5.0),
-        BandPass::new(formants[1], 6.0),
-        BandPass::new(formants[2], 7.0),
+        BandPass::new_at(formants[0], 5.0, sample_rate),
+        BandPass::new_at(formants[1], 6.0, sample_rate),
+        BandPass::new_at(formants[2], 7.0, sample_rate),
     ];
-    let mut breath = BandPass::new(formants[1], 1.2);
+    let mut breath = BandPass::new_at(formants[1], 1.2, sample_rate);
     let mut note = Vec::with_capacity(n);
     let (mut until, mut odd, mut strength, mut pulse) = (0.0f32, false, 1.0f32, 0.0f32);
     for i in 0..n {
@@ -369,8 +372,8 @@ fn harsh(
 
 /// A herring gull's long call: a few long, rising-then-falling "kyow"s, then
 /// a run of quick laughing "ha"s, each harsh, its pulses near 800 Hz.
-fn gull(rng: &mut Rng) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+fn gull(rng: &mut Rng, sample_rate: u32) -> Vec<f32> {
+    let rate = sample_rate as f32;
     let f0 = 700.0 + 200.0 * rng.unit();
     let formants = [1700.0, 2900.0, 4200.0];
     let mut out = Vec::new();
@@ -382,12 +385,20 @@ fn gull(rng: &mut Rng) -> Vec<f32> {
             |t| f0 * (1.0 + 0.5 * (std::f32::consts::PI * t).sin()),
             formants,
             0.85,
+            sample_rate,
         );
         add_at(&mut out, (at * rate) as usize, &note, 1.0);
         at += 0.5;
     }
     for k in 0..4 + (rng.unit() * 6.0) as usize {
-        let note = harsh(rng, 0.11, |t| f0 * 1.3 * (1.0 - 0.15 * t), formants, 0.85);
+        let note = harsh(
+            rng,
+            0.11,
+            |t| f0 * 1.3 * (1.0 - 0.15 * t),
+            formants,
+            0.85,
+            sample_rate,
+        );
         add_at(&mut out, (at * rate) as usize, &note, 0.9 - 0.05 * k as f32);
         at += 0.16;
     }
@@ -396,8 +407,8 @@ fn gull(rng: &mut Rng) -> Vec<f32> {
 
 /// A blue jay's "jay! jay!": two to four loud, harsh, falling calls, pulses
 /// near 1 kHz, bright with the beak's resonances at 2.5 to 5 kHz.
-fn jay(rng: &mut Rng) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+fn jay(rng: &mut Rng, sample_rate: u32) -> Vec<f32> {
+    let rate = sample_rate as f32;
     let f0 = 950.0 + 250.0 * rng.unit();
     let mut out = Vec::new();
     let mut at = 0.0f32;
@@ -408,6 +419,7 @@ fn jay(rng: &mut Rng) -> Vec<f32> {
             |t| f0 * (1.15 - 0.35 * t),
             [2500.0, 3600.0, 5000.0],
             0.7,
+            sample_rate,
         );
         add_at(&mut out, (at * rate) as usize, &note, 1.0);
         at += 0.35 + 0.15 * rng.unit();
@@ -418,8 +430,8 @@ fn jay(rng: &mut Rng) -> Vec<f32> {
 /// A common loon's wail across a lake at dusk: one to three long, pure,
 /// mournful notes, sliding up from about 600 Hz to near 1 kHz and back, each
 /// a couple of seconds, with a slow waver.
-fn loon(rng: &mut Rng) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+fn loon(rng: &mut Rng, sample_rate: u32) -> Vec<f32> {
+    let rate = sample_rate as f32;
     let f = 580.0 + 80.0 * rng.unit();
     let mut out = Vec::new();
     let mut at = 0.0f32;
@@ -431,7 +443,7 @@ fn loon(rng: &mut Rng) -> Vec<f32> {
     for contour in &notes[..1 + (rng.unit() * 3.0) as usize] {
         let contour: Vec<(f32, f32)> = contour.iter().map(|&(t, k)| (t, k * f)).collect();
         let seconds = 1.6 + 0.6 * rng.unit();
-        let note = whistle_internal(&contour, seconds, 0.3, (0.15, 0.4), rng);
+        let note = whistle_internal(&contour, seconds, 0.3, (0.15, 0.4), rng, sample_rate);
         add_at(&mut out, (at * rate) as usize, &note, 1.0);
         at += seconds + 0.3;
     }
@@ -440,8 +452,8 @@ fn loon(rng: &mut Rng) -> Vec<f32> {
 
 /// A yellow warbler's "sweet sweet sweet, I'm so sweet": quick whistled
 /// notes between 3.5 and 7 kHz, quickening, ending in an upslur.
-fn warbler(rng: &mut Rng) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+fn warbler(rng: &mut Rng, sample_rate: u32) -> Vec<f32> {
+    let rate = sample_rate as f32;
     let k = 0.9 + 0.2 * rng.unit();
     let mut out = Vec::new();
     let mut at = 0.0f32;
@@ -454,7 +466,7 @@ fn warbler(rng: &mut Rng) -> Vec<f32> {
             vec![(0.0, 6200.0 * k), (0.5, 4300.0 * k), (1.0, 5200.0 * k)]
         };
         let seconds = if last { 0.16 } else { 0.08 };
-        let note = whistle_internal(&contour, seconds, 0.05, (0.008, 0.02), rng);
+        let note = whistle_internal(&contour, seconds, 0.05, (0.008, 0.02), rng, sample_rate);
         add_at(&mut out, (at * rate) as usize, &note, 1.0);
         at += seconds + 0.12 * (1.0 - 0.07 * i as f32);
     }
@@ -465,8 +477,8 @@ fn warbler(rng: &mut Rng) -> Vec<f32> {
 /// and down, then two or three lower "oo"s, each a soft, nearly pure tone
 /// near 500 Hz, swelling in slowly through the shut beak, with a breath of
 /// air in it.
-fn dove(rng: &mut Rng) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+fn dove(rng: &mut Rng, sample_rate: u32) -> Vec<f32> {
+    let rate = sample_rate as f32;
     let f = 470.0 + 90.0 * rng.unit();
     // (start, length, contour as fractions of f).
     let mut notes: Vec<(f32, f32, Contour)> = vec![
@@ -488,7 +500,7 @@ fn dove(rng: &mut Rng) -> Vec<f32> {
         notes.push((2.4, 0.5, vec![(0.0, 0.94), (1.0, 0.88)]));
     }
     let mut out = Vec::new();
-    let mut breath = BandPass::new(f, 4.0);
+    let mut breath = BandPass::new_at(f, 4.0, sample_rate);
     for (start, length, contour) in notes {
         let contour: Vec<(f32, f32)> = contour.iter().map(|&(t, k)| (t, k * f)).collect();
         let mut note = whistle_internal(
@@ -497,6 +509,7 @@ fn dove(rng: &mut Rng) -> Vec<f32> {
             0.1,
             (0.08, 0.15),
             rng,
+            sample_rate,
         );
         for (i, s) in note.iter_mut().enumerate() {
             let t = i as f32 / (length * rate);
@@ -509,8 +522,8 @@ fn dove(rng: &mut Rng) -> Vec<f32> {
 
 /// An American robin: three to six caroled phrases of two or three notes,
 /// each note a quick slur between 1.8 and 3.4 kHz; a few kinds of phrase per bird, never the same twice running.
-fn robin(rng: &mut Rng) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+fn robin(rng: &mut Rng, sample_rate: u32) -> Vec<f32> {
+    let rate = sample_rate as f32;
     let low = 1800.0 + 300.0 * rng.unit();
     let high = low * (1.5 + 0.2 * rng.unit());
     let pick = |rng: &mut Rng| low * (high / low).powf(rng.unit());
@@ -537,7 +550,7 @@ fn robin(rng: &mut Rng) -> Vec<f32> {
         last = kind;
         for contour in &kinds[kind] {
             let seconds = 0.09 + 0.05 * rng.unit();
-            let note = whistle_internal(contour, seconds, 0.2, (0.01, 0.025), rng);
+            let note = whistle_internal(contour, seconds, 0.2, (0.01, 0.025), rng, sample_rate);
             add_at(
                 &mut out,
                 (at * rate) as usize,
@@ -553,8 +566,8 @@ fn robin(rng: &mut Rng) -> Vec<f32> {
 
 /// A northern cardinal: three to six loud slurred whistles ("cheer", down
 /// from 4 to 2 kHz, or "wheet", up), then often a quick run of "birdy"s.
-fn cardinal(rng: &mut Rng) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+fn cardinal(rng: &mut Rng, sample_rate: u32) -> Vec<f32> {
+    let rate = sample_rate as f32;
     let k = 0.92 + 0.16 * rng.unit();
     let cheer: Vec<(f32, f32)> = if rng.unit() < 0.65 {
         vec![(0.0, 3900.0 * k), (0.15, 4300.0 * k), (1.0, 1900.0 * k)]
@@ -566,14 +579,14 @@ fn cardinal(rng: &mut Rng) -> Vec<f32> {
     let repeats = 3 + (rng.unit() * 4.0) as usize;
     let seconds = 0.22 + 0.08 * rng.unit();
     for _ in 0..repeats {
-        let note = whistle_internal(&cheer, seconds, 0.05, (0.015, 0.04), rng);
+        let note = whistle_internal(&cheer, seconds, 0.05, (0.015, 0.04), rng, sample_rate);
         add_at(&mut out, (at * rate) as usize, &note, 1.0);
         at += seconds + 0.08 + 0.05 * rng.unit();
     }
     if rng.unit() < 0.6 {
         let birdy = [(0.0, 2200.0 * k), (0.6, 3900.0 * k), (1.0, 3300.0 * k)];
         for _ in 0..5 + (rng.unit() * 5.0) as usize {
-            let note = whistle_internal(&birdy, 0.07, 0.05, (0.008, 0.015), rng);
+            let note = whistle_internal(&birdy, 0.07, 0.05, (0.008, 0.015), rng, sample_rate);
             add_at(&mut out, (at * rate) as usize, &note, 0.85);
             at += 0.11;
         }
@@ -585,8 +598,8 @@ fn cardinal(rng: &mut Rng) -> Vec<f32> {
 /// the second a whole tone lower, near 4 and 3.5 kHz. Otherwise its call,
 /// "chick-a-dee-dee-dee": two quick high notes, then buzzy "dee"s, each a
 /// stack of harmonics of about 450 Hz, loudest near 3.5 kHz.
-fn chickadee(rng: &mut Rng) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+fn chickadee(rng: &mut Rng, sample_rate: u32) -> Vec<f32> {
+    let rate = sample_rate as f32;
     let k = 0.95 + 0.1 * rng.unit();
     let mut out = Vec::new();
     if rng.unit() < 0.6 {
@@ -596,6 +609,7 @@ fn chickadee(rng: &mut Rng) -> Vec<f32> {
             0.02,
             (0.03, 0.05),
             rng,
+            sample_rate,
         );
         let bee = whistle_internal(
             &[
@@ -608,6 +622,7 @@ fn chickadee(rng: &mut Rng) -> Vec<f32> {
             0.02,
             (0.02, 0.06),
             rng,
+            sample_rate,
         );
         add_at(&mut out, 0, &fee, 1.0);
         add_at(&mut out, (0.47 * rate) as usize, &bee, 0.8);
@@ -619,6 +634,7 @@ fn chickadee(rng: &mut Rng) -> Vec<f32> {
         0.0,
         (0.005, 0.01),
         rng,
+        sample_rate,
     );
     let a = whistle_internal(
         &[(0.0, 4200.0 * k), (1.0, 3200.0 * k)],
@@ -626,6 +642,7 @@ fn chickadee(rng: &mut Rng) -> Vec<f32> {
         0.0,
         (0.005, 0.01),
         rng,
+        sample_rate,
     );
     add_at(&mut out, 0, &chick, 0.8);
     add_at(&mut out, (0.07 * rate) as usize, &a, 0.6);
@@ -658,6 +675,7 @@ fn chickadee(rng: &mut Rng) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
 
     /// The pitch round the loudest moment, from zero crossings.
     fn pitch(s: &[f32]) -> f32 {
@@ -681,7 +699,7 @@ mod tests {
     fn every_bird_is_finite_bounded_and_short() {
         for bird in Bird::ALL {
             for seed in 0..6 {
-                let s = bird_call(bird, seed);
+                let s = bird_call(bird, seed, SAMPLE_RATE);
                 assert!(
                     s.iter().all(|x| x.is_finite() && x.abs() <= 0.5),
                     "{bird:?}"
@@ -694,14 +712,14 @@ mod tests {
 
     #[test]
     fn a_dove_coos_low_and_songbirds_whistle_high() {
-        let dove = pitch(&bird_call(Bird::Dove, 1));
+        let dove = pitch(&bird_call(Bird::Dove, 1, SAMPLE_RATE));
         assert!((380.0..700.0).contains(&dove), "dove {dove} Hz");
-        let cardinal = pitch(&bird_call(Bird::Cardinal, 1));
+        let cardinal = pitch(&bird_call(Bird::Cardinal, 1, SAMPLE_RATE));
         assert!(
             (1500.0..5000.0).contains(&cardinal),
             "cardinal {cardinal} Hz"
         );
-        let robin = pitch(&bird_call(Bird::Robin, 1));
+        let robin = pitch(&bird_call(Bird::Robin, 1, SAMPLE_RATE));
         assert!((1500.0..4500.0).contains(&robin), "robin {robin} Hz");
     }
 
@@ -724,8 +742,8 @@ mod tests {
     fn engine2_matches_engine1_within_audible_tolerance() {
         for bird in Bird::ALL {
             for seed in 0..6 {
-                let v1 = engine1::bird_call(bird, seed);
-                let v2 = bird_call(bird, seed);
+                let v1 = engine1::bird_call(bird, seed, SAMPLE_RATE);
+                let v2 = bird_call(bird, seed, SAMPLE_RATE);
                 let corr = pearson(&v1, &v2);
                 assert!(corr > 0.9, "{bird:?} seed {seed}: corr {corr:.3}");
             }
@@ -738,7 +756,7 @@ mod tests {
     fn every_catalogue_bird_is_finite_bounded_and_short() {
         for bird in Birds::ALL {
             for seed in 0..6 {
-                let s = catalog::birdsong2(bird, seed);
+                let s = catalog::birdsong2(bird, seed, SAMPLE_RATE);
                 assert!(
                     s.iter().all(|x| x.is_finite() && x.abs() <= 0.5),
                     "{bird:?} seed {seed}"

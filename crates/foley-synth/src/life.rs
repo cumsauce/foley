@@ -68,8 +68,8 @@ fn cricket(celsius: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
 
 /// A bird singing (M5): `species` picks one of the real birds Foley knows
 /// ([`Bird::of`]), `seed` the individual and rendition.
-pub fn birdsong(species: u32, seed: u64) -> Vec<f32> {
-    bird_call(Bird::of(species), seed)
+pub fn birdsong(species: u32, seed: u64, sample_rate: u32) -> Vec<f32> {
+    bird_call(Bird::of(species), seed, sample_rate)
 }
 
 /// A frog of body length `size_cm` calling (M5): glottal pulses, 60 to

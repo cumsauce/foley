@@ -13,7 +13,7 @@
 use std::f32::consts::TAU;
 
 use crate::dsp::{add_at, normalize};
-use crate::{BandPass, LowPass, Rng, SAMPLE_RATE};
+use crate::{BandPass, LowPass, Rng};
 
 /// Frequency-modulated whistled note. A sinusoid at `contour(t)` Hz, with a
 /// sinusoidal modulator on top of depth `fm_depth_hz` at rate `fm_rate_hz`
@@ -30,11 +30,12 @@ pub fn fm(
     harmonic: f32,
     (attack, release): (f32, f32),
     rng: &mut Rng,
+    sample_rate: u32,
 ) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let n = (seconds * rate) as usize;
     let mut phase = 0.0f32;
-    let mut waver = LowPass::new(25.0);
+    let mut waver = LowPass::new_at(25.0, sample_rate);
     let attack = (attack * rate).min(n as f32 / 2.0);
     let release = (release * rate).min(n as f32 / 2.0);
     (0..n)
@@ -54,12 +55,19 @@ pub fn fm(
 /// An amplitude-modulated trill: a sine at `base_hz` summed with another at
 /// `base_hz + sweep_hz`, with a `0.5 + 0.5·sin(2π·am_hz·t)` envelope. The
 /// hermit thrush's opening spiral and the pine warbler's run sit on this.
-pub fn trill(base_hz: f32, sweep_hz: f32, seconds: f32, am_hz: f32, rng: &mut Rng) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+pub fn trill(
+    base_hz: f32,
+    sweep_hz: f32,
+    seconds: f32,
+    am_hz: f32,
+    rng: &mut Rng,
+    sample_rate: u32,
+) -> Vec<f32> {
+    let rate = sample_rate as f32;
     let n = (seconds * rate) as usize;
     let mut phase1 = 0.0f32;
     let mut phase2 = 0.0f32;
-    let mut waver = LowPass::new(20.0);
+    let mut waver = LowPass::new_at(20.0, sample_rate);
     let mut out = Vec::with_capacity(n);
     for i in 0..n {
         let t = i as f32 / rate;
@@ -75,11 +83,11 @@ pub fn trill(base_hz: f32, sweep_hz: f32, seconds: f32, am_hz: f32, rng: &mut Rn
 /// A short broadband burst at `centre_hz` with quality `q`: 5 to 10 ms of
 /// band-passed noise, exp attack and release. The basis of inhaled chips and
 /// rattles.
-pub fn chip(centre_hz: f32, q: f32, rng: &mut Rng) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+pub fn chip(centre_hz: f32, q: f32, rng: &mut Rng, sample_rate: u32) -> Vec<f32> {
+    let rate = sample_rate as f32;
     let dur_ms = 5.0 + 5.0 * rng.unit();
     let n = ((dur_ms / 1000.0) * rate) as usize;
-    let mut band = BandPass::new(centre_hz * (1.0 + 0.04 * rng.signed()), q);
+    let mut band = BandPass::new_at(centre_hz * (1.0 + 0.04 * rng.signed()), q, sample_rate);
     let mut out = Vec::with_capacity(n);
     for i in 0..n {
         let t = i as f32 / n as f32;
@@ -92,14 +100,20 @@ pub fn chip(centre_hz: f32, q: f32, rng: &mut Rng) -> Vec<f32> {
 /// A Poisson of [`chip`] calls at `rate_hz` for `seconds`, each at a slightly
 /// perturbed `centre_hz`. Used for snow bunting's rattle and varied thrush's
 /// second note.
-pub fn rattle(centre_hz: f32, rate_hz: f32, seconds: f32, rng: &mut Rng) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+pub fn rattle(
+    centre_hz: f32,
+    rate_hz: f32,
+    seconds: f32,
+    rng: &mut Rng,
+    sample_rate: u32,
+) -> Vec<f32> {
+    let rate = sample_rate as f32;
     let total = (seconds * rate) as usize;
     let mut out = vec![0.0f32; total];
     let mut t = 0.0f32;
     while t < seconds {
         let center = centre_hz * (1.0 + 0.05 * rng.signed());
-        let burst = chip(center, 1.0, rng);
+        let burst = chip(center, 1.0, rng, sample_rate);
         let at = (t * rate) as usize;
         let gain = 0.6 + 0.4 * rng.unit();
         add_at(&mut out, at, &burst, gain);
@@ -110,10 +124,16 @@ pub fn rattle(centre_hz: f32, rate_hz: f32, seconds: f32, rng: &mut Rng) -> Vec<
 
 /// A croak/rasp: `pulse_count` short, low-pitch pulses with strong breath
 /// noise — hornbills, guan, roadrunner's clatter.
-pub fn croak(pulse_count: usize, base_hz: f32, breath_db: f32, rng: &mut Rng) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+pub fn croak(
+    pulse_count: usize,
+    base_hz: f32,
+    breath_db: f32,
+    rng: &mut Rng,
+    sample_rate: u32,
+) -> Vec<f32> {
+    let rate = sample_rate as f32;
     let mut out = Vec::new();
-    let mut noise = BandPass::new(base_hz, 1.5);
+    let mut noise = BandPass::new_at(base_hz, 1.5, sample_rate);
     let breath = (breath_db / 20.0).exp();
     for _ in 0..pulse_count {
         let pulse_dur = 0.025 + 0.02 * rng.unit();
@@ -137,15 +157,15 @@ pub fn croak(pulse_count: usize, base_hz: f32, breath_db: f32, rng: &mut Rng) ->
 
 /// A long pure-tone pulse with a slow amplitude decay: boreal owl, great grey
 /// owl, snowy owl.
-pub fn hoot(centre_hz: f32, seconds: f32, rng: &mut Rng) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+pub fn hoot(centre_hz: f32, seconds: f32, rng: &mut Rng, sample_rate: u32) -> Vec<f32> {
+    let rate = sample_rate as f32;
     let n = (seconds * rate) as usize;
     let mut phase = 0.0f32;
     let tau = seconds / 3.0;
     let attack = (0.04 * rate) as usize;
     let attack = attack.min(n / 2);
     let mut phase2 = 0.0f32;
-    let mut waver = LowPass::new(8.0);
+    let mut waver = LowPass::new_at(8.0, sample_rate);
     (0..n)
         .map(|i| {
             let t = i as f32 / n as f32;
@@ -161,23 +181,17 @@ pub fn hoot(centre_hz: f32, seconds: f32, rng: &mut Rng) -> Vec<f32> {
 /// A drum: `decay_s` seconds of taps at `rate_hz` strikes/s, loudness falling
 /// over the decay. Gila woodpecker's faster roll vs. the spruce grouse's
 /// slower one.
-pub fn drum(rate_hz: f32, decay_s: f32, rng: &mut Rng) -> Vec<f32> {
+pub fn drum(rate_hz: f32, decay_s: f32, rng: &mut Rng, sample_rate: u32) -> Vec<f32> {
     use crate::{contact, Contact, Material};
-    let total = (decay_s * SAMPLE_RATE as f32) as usize;
+    let total = (decay_s * sample_rate as f32) as usize;
     let mut out = vec![0.0f32; total];
     let mut at = 0.0f32;
     let interval = 1.0 / rate_hz;
     let mut strike = 0u64;
     while at < decay_s {
-        let tap = contact(
-            Contact::Tap,
-            Material::Wood,
-            6.0,
-            strike,
-            crate::SAMPLE_RATE,
-        );
+        let tap = contact(Contact::Tap, Material::Wood, 6.0, strike, sample_rate);
         let env = (-4.0 * at / decay_s).exp();
-        let sample = (at * SAMPLE_RATE as f32) as usize;
+        let sample = (at * sample_rate as f32) as usize;
         add_at(&mut out, sample, &tap, env);
         at += interval;
         strike += 1;
@@ -250,13 +264,13 @@ impl Phrase {
 
     /// Renders this phrase to PCM. Per-segment randomness is seeded from
     /// `seed`; the same `seed` reproduces the same call.
-    pub fn render(&self, seed: u64) -> Vec<f32> {
+    pub fn render(&self, seed: u64, sample_rate: u32) -> Vec<f32> {
         let mut rng = Rng::new(seed);
         let mut out = Vec::new();
         let mut at = 0.0f32;
         for seg in &self.segments {
-            let rendered = render_segment(&mut rng, seg);
-            let sample_pos = (at * SAMPLE_RATE as f32) as usize;
+            let rendered = render_segment(&mut rng, seg, sample_rate);
+            let sample_pos = (at * sample_rate as f32) as usize;
             add_at(&mut out, sample_pos, &rendered, seg.gain);
             at += seg.seconds;
         }
@@ -267,7 +281,7 @@ impl Phrase {
     }
 }
 
-fn render_segment(rng: &mut Rng, seg: &Segment) -> Vec<f32> {
+fn render_segment(rng: &mut Rng, seg: &Segment, sample_rate: u32) -> Vec<f32> {
     let seconds = seg.seconds;
     match &seg.kind {
         SegmentKind::Whistle {
@@ -275,7 +289,14 @@ fn render_segment(rng: &mut Rng, seg: &Segment) -> Vec<f32> {
             attack,
             release,
             harmonic,
-        } => crate::birds::whistle_internal(contour, seconds, *harmonic, (*attack, *release), rng),
+        } => crate::birds::whistle_internal(
+            contour,
+            seconds,
+            *harmonic,
+            (*attack, *release),
+            rng,
+            sample_rate,
+        ),
         SegmentKind::Fm {
             contour,
             depth_hz,
@@ -290,21 +311,24 @@ fn render_segment(rng: &mut Rng, seg: &Segment) -> Vec<f32> {
             0.1,
             (*attack, *release),
             rng,
+            sample_rate,
         ),
         SegmentKind::Trill {
             base_hz,
             sweep_hz,
             am_hz,
-        } => trill(*base_hz, *sweep_hz, seconds, *am_hz, rng),
-        SegmentKind::Chip { centre_hz, q } => chip(*centre_hz, *q, rng),
-        SegmentKind::Rattle { centre_hz, rate_hz } => rattle(*centre_hz, *rate_hz, seconds, rng),
+        } => trill(*base_hz, *sweep_hz, seconds, *am_hz, rng, sample_rate),
+        SegmentKind::Chip { centre_hz, q } => chip(*centre_hz, *q, rng, sample_rate),
+        SegmentKind::Rattle { centre_hz, rate_hz } => {
+            rattle(*centre_hz, *rate_hz, seconds, rng, sample_rate)
+        }
         SegmentKind::Croak {
             pulse_count,
             base_hz,
             breath_db,
-        } => croak(*pulse_count, *base_hz, *breath_db, rng),
-        SegmentKind::Hoot { centre_hz } => hoot(*centre_hz, seconds, rng),
-        SegmentKind::Drum { rate_hz, decay_s } => drum(*rate_hz, *decay_s, rng),
+        } => croak(*pulse_count, *base_hz, *breath_db, rng, sample_rate),
+        SegmentKind::Hoot { centre_hz } => hoot(*centre_hz, seconds, rng, sample_rate),
+        SegmentKind::Drum { rate_hz, decay_s } => drum(*rate_hz, *decay_s, rng, sample_rate),
     }
 }
 
@@ -335,6 +359,7 @@ fn contour_at(contour: &[(f32, f32)], t: f32) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
 
     fn rms(s: &[f32]) -> f32 {
         (s.iter().map(|x| x * x).sum::<f32>() / s.len().max(1) as f32).sqrt()
@@ -350,6 +375,7 @@ mod tests {
             0.05,
             (0.02, 0.05),
             &mut Rng::new(1),
+            SAMPLE_RATE,
         );
         assert!(out.iter().all(|x| x.is_finite() && x.abs() <= 1.5));
         assert!(rms(&out) > 0.01);
@@ -358,7 +384,7 @@ mod tests {
 
     #[test]
     fn trill_is_rapidly_amplitude_modulated() {
-        let out = trill(2500.0, 100.0, 0.4, 10.0, &mut Rng::new(2));
+        let out = trill(2500.0, 100.0, 0.4, 10.0, &mut Rng::new(2), SAMPLE_RATE);
         // 0.4s × 10Hz × 2 peaks each cycle = ~8 peaks
         let mut peaks = 0;
         for w in out.windows(80) {
@@ -371,14 +397,14 @@ mod tests {
 
     #[test]
     fn chip_is_short_and_broadband() {
-        let out = chip(5000.0, 1.0, &mut Rng::new(3));
+        let out = chip(5000.0, 1.0, &mut Rng::new(3), SAMPLE_RATE);
         assert!(out.len() < 800);
         assert!(out.iter().any(|x| x.abs() > 0.05));
     }
 
     #[test]
     fn rattle_has_many_chips() {
-        let out = rattle(4000.0, 30.0, 0.3, &mut Rng::new(4));
+        let out = rattle(4000.0, 30.0, 0.3, &mut Rng::new(4), SAMPLE_RATE);
         // 30 Hz × 0.3 s = 9 chips expected. Detect distinct runs of sound
         // (a chip's amplitude > 0.1) separated by > 5 ms of quiet.
         let mut onsets = 0;
@@ -402,20 +428,20 @@ mod tests {
 
     #[test]
     fn croak_is_low_and_breathy() {
-        let out = croak(4, 400.0, 0.6, &mut Rng::new(5));
+        let out = croak(4, 400.0, 0.6, &mut Rng::new(5), SAMPLE_RATE);
         assert!(out.len() < SAMPLE_RATE as usize);
         assert!(rms(&out) > 0.01);
     }
 
     #[test]
     fn hoot_is_a_long_pure_tone() {
-        let out = hoot(400.0, 1.0, &mut Rng::new(6));
+        let out = hoot(400.0, 1.0, &mut Rng::new(6), SAMPLE_RATE);
         assert!(rms(&out) > 0.1);
     }
 
     #[test]
     fn drum_strikes_at_the_given_rate() {
-        let out = drum(20.0, 0.5, &mut Rng::new(7));
+        let out = drum(20.0, 0.5, &mut Rng::new(7), SAMPLE_RATE);
         // ~10 strikes; count distinct onset peaks above 0.05 separated by
         // > 5 ms of quiet.
         let mut onsets = 0;
@@ -461,7 +487,7 @@ mod tests {
                 gain: 0.7,
             },
         ]);
-        let out = phrase.render(8);
+        let out = phrase.render(8, SAMPLE_RATE);
         // Phrase has 0.15 + 0.2 = 0.35 s of audio at 48 kHz.
         assert!(out.len() > 5_000 && out.len() < (1.0 * SAMPLE_RATE as f32) as usize);
     }
