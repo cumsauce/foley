@@ -6,7 +6,7 @@
 
 use std::f32::consts::TAU;
 
-use foley_dsp::{BandPass, LowPass, Rng, SAMPLE_RATE};
+use foley_dsp::{BandPass, LowPass, Rng};
 
 /// The seven biome bed kinds, in the order `FOLEY_BED_BIOME` takes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -62,6 +62,7 @@ pub struct BiomeScene {
 #[derive(Debug)]
 pub struct Biome {
     seed: u64,
+    sample_rate: u32,
     scene: BiomeScene,
     state: BiomeState,
 }
@@ -147,16 +148,17 @@ struct MangroveState {
 }
 
 impl Biome {
-    pub fn new(seed: u64) -> Self {
+    pub fn new(seed: u64, sample_rate: u32) -> Self {
         let mut s = Self {
             seed,
+            sample_rate,
             scene: BiomeScene {
                 kind: BiomeKind::Desert,
                 intensity: 0.0,
                 sub: 0.0,
                 gain: 0.0,
             },
-            state: BiomeState::Desert(DesertState::new(seed)),
+            state: BiomeState::Desert(DesertState::new(seed, sample_rate)),
         };
         s.set_scene(BiomeScene {
             kind: BiomeKind::Desert,
@@ -170,15 +172,27 @@ impl Biome {
     pub fn set_scene(&mut self, scene: BiomeScene) {
         if scene.kind != self.scene.kind {
             self.state = match scene.kind {
-                BiomeKind::Desert => BiomeState::Desert(DesertState::new(self.seed ^ 0xDE5)),
-                BiomeKind::Mushroom => BiomeState::Mushroom(MushroomState::new(self.seed ^ 0xC1A)),
-                BiomeKind::Lush => BiomeState::Lush(LushState::new(self.seed ^ 0x1A5)),
-                BiomeKind::Dripstone => {
-                    BiomeState::Dripstone(DripstoneState::new(self.seed ^ 0xD21))
+                BiomeKind::Desert => {
+                    BiomeState::Desert(DesertState::new(self.seed ^ 0xDE5, self.sample_rate))
                 }
-                BiomeKind::DeepDark => BiomeState::DeepDark(DeepDarkState::new(self.seed ^ 0xD4A)),
-                BiomeKind::Snow => BiomeState::Snow(SnowState::new(self.seed ^ 0x5AD)),
-                BiomeKind::Mangrove => BiomeState::Mangrove(MangroveState::new(self.seed ^ 0x4A0)),
+                BiomeKind::Mushroom => {
+                    BiomeState::Mushroom(MushroomState::new(self.seed ^ 0xC1A, self.sample_rate))
+                }
+                BiomeKind::Lush => {
+                    BiomeState::Lush(LushState::new(self.seed ^ 0x1A5, self.sample_rate))
+                }
+                BiomeKind::Dripstone => {
+                    BiomeState::Dripstone(DripstoneState::new(self.seed ^ 0xD21, self.sample_rate))
+                }
+                BiomeKind::DeepDark => {
+                    BiomeState::DeepDark(DeepDarkState::new(self.seed ^ 0xD4A, self.sample_rate))
+                }
+                BiomeKind::Snow => {
+                    BiomeState::Snow(SnowState::new(self.seed ^ 0x5AD, self.sample_rate))
+                }
+                BiomeKind::Mangrove => {
+                    BiomeState::Mangrove(MangroveState::new(self.seed ^ 0x4A0, self.sample_rate))
+                }
             };
         }
         self.scene = scene;
@@ -193,30 +207,30 @@ impl Biome {
             return;
         }
         match &mut self.state {
-            BiomeState::Desert(s) => s.render(out, self.scene, gain),
-            BiomeState::Mushroom(s) => s.render(out, self.scene, gain),
-            BiomeState::Lush(s) => s.render(out, self.scene, gain),
-            BiomeState::Dripstone(s) => s.render(out, self.scene, gain),
-            BiomeState::DeepDark(s) => s.render(out, self.scene, gain),
-            BiomeState::Snow(s) => s.render(out, self.scene, gain),
-            BiomeState::Mangrove(s) => s.render(out, self.scene, gain),
+            BiomeState::Desert(s) => s.render(out, self.scene, gain, self.sample_rate),
+            BiomeState::Mushroom(s) => s.render(out, self.scene, gain, self.sample_rate),
+            BiomeState::Lush(s) => s.render(out, self.scene, gain, self.sample_rate),
+            BiomeState::Dripstone(s) => s.render(out, self.scene, gain, self.sample_rate),
+            BiomeState::DeepDark(s) => s.render(out, self.scene, gain, self.sample_rate),
+            BiomeState::Snow(s) => s.render(out, self.scene, gain, self.sample_rate),
+            BiomeState::Mangrove(s) => s.render(out, self.scene, gain, self.sample_rate),
         }
     }
 }
 
 impl DesertState {
-    fn new(seed: u64) -> Self {
+    fn new(seed: u64, sample_rate: u32) -> Self {
         Self {
             rng: Rng::new(seed),
             until_grain: 0.0,
             until_vortex: 0.0,
             vortex: None,
-            whistle: BandPass::new(1500.0, 8.0),
+            whistle: BandPass::new_at(1500.0, 8.0, sample_rate),
         }
     }
 
-    fn render(&mut self, out: &mut [f32], scene: BiomeScene, gain: f32) {
-        let rate = SAMPLE_RATE as f32;
+    fn render(&mut self, out: &mut [f32], scene: BiomeScene, gain: f32, sample_rate: u32) {
+        let rate = sample_rate as f32;
         let intensity = scene.intensity.clamp(0.0, 1.0);
         let grain_rate = (200.0 * intensity).max(0.0);
         let mean_grain_dt = if grain_rate > 0.0 {
@@ -247,7 +261,7 @@ impl DesertState {
                 self.vortex = Some(Vortex {
                     length: (1.5 * rate) as usize,
                     at: 0,
-                    band: BandPass::new(200.0, 1.2),
+                    band: BandPass::new_at(200.0, 1.2, sample_rate),
                 });
             }
             let mut vortex_s = 0.0f32;
@@ -274,17 +288,17 @@ impl DesertState {
 }
 
 impl MushroomState {
-    fn new(seed: u64) -> Self {
+    fn new(seed: u64, sample_rate: u32) -> Self {
         Self {
             rng: Rng::new(seed),
             phase_low: 0.0,
             phase_high: 0.0,
-            band: BandPass::new(300.0, 4.0),
+            band: BandPass::new_at(300.0, 4.0, sample_rate),
         }
     }
 
-    fn render(&mut self, out: &mut [f32], scene: BiomeScene, gain: f32) {
-        let rate = SAMPLE_RATE as f32;
+    fn render(&mut self, out: &mut [f32], scene: BiomeScene, gain: f32, sample_rate: u32) {
+        let rate = sample_rate as f32;
         let intensity = scene.intensity.clamp(0.0, 1.0);
         let tone_gain = 0.05 * intensity;
         let dt = 1.0 / rate;
@@ -299,16 +313,16 @@ impl MushroomState {
 }
 
 impl LushState {
-    fn new(seed: u64) -> Self {
+    fn new(seed: u64, sample_rate: u32) -> Self {
         Self {
             rng: Rng::new(seed),
             until_burst: 0.0,
-            band: BandPass::new(4000.0, 0.7),
+            band: BandPass::new_at(4000.0, 0.7, sample_rate),
         }
     }
 
-    fn render(&mut self, out: &mut [f32], scene: BiomeScene, gain: f32) {
-        let rate = SAMPLE_RATE as f32;
+    fn render(&mut self, out: &mut [f32], scene: BiomeScene, gain: f32, sample_rate: u32) {
+        let rate = sample_rate as f32;
         let intensity = scene.intensity.clamp(0.0, 1.0);
         let burst_period = 0.3 * rate;
         let burst_gain = 0.4 * intensity;
@@ -326,17 +340,17 @@ impl LushState {
 }
 
 impl DripstoneState {
-    fn new(seed: u64) -> Self {
+    fn new(seed: u64, sample_rate: u32) -> Self {
         Self {
             rng: Rng::new(seed),
             until_drip: 0.0,
             drip_env: 0.0,
-            rumble: LowPass::new(80.0),
+            rumble: LowPass::new_at(80.0, sample_rate),
         }
     }
 
-    fn render(&mut self, out: &mut [f32], scene: BiomeScene, gain: f32) {
-        let rate = SAMPLE_RATE as f32;
+    fn render(&mut self, out: &mut [f32], scene: BiomeScene, gain: f32, sample_rate: u32) {
+        let rate = sample_rate as f32;
         let intensity = scene.intensity.clamp(0.0, 1.0);
         let drip_period = 2.0 * rate;
         let rumble_gain = 0.05 * intensity;
@@ -359,7 +373,7 @@ impl DripstoneState {
 }
 
 impl DeepDarkState {
-    fn new(seed: u64) -> Self {
+    fn new(seed: u64, _sample_rate: u32) -> Self {
         Self {
             rng: Rng::new(seed),
             phase: 0.0,
@@ -368,8 +382,8 @@ impl DeepDarkState {
         }
     }
 
-    fn render(&mut self, out: &mut [f32], scene: BiomeScene, gain: f32) {
-        let rate = SAMPLE_RATE as f32;
+    fn render(&mut self, out: &mut [f32], scene: BiomeScene, gain: f32, sample_rate: u32) {
+        let rate = sample_rate as f32;
         let intensity = scene.intensity.clamp(0.0, 1.0);
         let hum_gain = 0.4 * intensity;
         let scuttle_total = (scene.sub.clamp(0.0, 2.0)) as u32;
@@ -389,7 +403,7 @@ impl DeepDarkState {
                 self.scuttle = Some(Scuttle {
                     length: (0.4 * rate) as usize,
                     at: 0,
-                    band: BandPass::new(2000.0, 0.5),
+                    band: BandPass::new_at(2000.0, 0.5, sample_rate),
                 });
             }
             let mut scuttle_s = 0.0f32;
@@ -409,21 +423,21 @@ impl DeepDarkState {
 }
 
 impl SnowState {
-    fn new(seed: u64) -> Self {
+    fn new(seed: u64, sample_rate: u32) -> Self {
         Self {
             rng: Rng::new(seed),
-            band: BandPass::new(2000.0, 0.5),
-            lpf: LowPass::new(4000.0),
+            band: BandPass::new_at(2000.0, 0.5, sample_rate),
+            lpf: LowPass::new_at(4000.0, sample_rate),
             lpf_cutoff: 4000.0,
         }
     }
 
-    fn render(&mut self, out: &mut [f32], scene: BiomeScene, gain: f32) {
+    fn render(&mut self, out: &mut [f32], scene: BiomeScene, gain: f32, sample_rate: u32) {
         let intensity = scene.intensity.clamp(0.0, 1.0);
         // The LPF: 4 kHz at intensity 0, 2 kHz at intensity 1 (more absorption).
         let cutoff = 4000.0 - 2000.0 * intensity;
         if (self.lpf_cutoff - cutoff).abs() > 1.0 {
-            self.lpf.tune(cutoff);
+            self.lpf.tune_at(cutoff, sample_rate);
             self.lpf_cutoff = cutoff;
         }
         let texture_gain = 0.2 * intensity;
@@ -436,14 +450,14 @@ impl SnowState {
 }
 
 impl MangroveState {
-    fn new(seed: u64) -> Self {
+    fn new(seed: u64, sample_rate: u32) -> Self {
         Self {
             rng: Rng::new(seed),
-            band: BandPass::new(4000.0, 0.6),
+            band: BandPass::new_at(4000.0, 0.6, sample_rate),
         }
     }
 
-    fn render(&mut self, out: &mut [f32], scene: BiomeScene, gain: f32) {
+    fn render(&mut self, out: &mut [f32], scene: BiomeScene, gain: f32, _sample_rate: u32) {
         let intensity = scene.intensity.clamp(0.0, 1.0);
         let drone_gain = (0.005 * scene.sub.clamp(0.0, 200.0)).min(0.5) * intensity;
         for sample in out.iter_mut() {
@@ -456,6 +470,7 @@ impl MangroveState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use foley_dsp::SAMPLE_RATE;
 
     fn rms(s: &[f32]) -> f32 {
         (s.iter().map(|x| x * x).sum::<f32>() / s.len().max(1) as f32).sqrt()
@@ -469,7 +484,7 @@ mod tests {
         seed: u64,
         blocks: usize,
     ) -> Vec<f32> {
-        let mut bed = Biome::new(seed);
+        let mut bed = Biome::new(seed, SAMPLE_RATE);
         bed.set_scene(BiomeScene {
             kind,
             intensity,
