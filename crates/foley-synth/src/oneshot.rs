@@ -1,12 +1,12 @@
 use crate::dsp::add_at;
-use crate::{Bubble, LowPass, Rng, SAMPLE_RATE, Surface, noise_burst};
+use crate::{noise_burst, Bubble, LowPass, Rng, Surface};
 use foley_dsp::Struck;
 
 /// A short click: `seconds` of noise through a low-pass at `cutoff`,
 /// decaying.
-fn click(seconds: f32, cutoff: f32, amplitude: f32, rng: &mut Rng) -> Vec<f32> {
-    let n = ((seconds * SAMPLE_RATE as f32) as usize).max(2);
-    let mut low = LowPass::new(cutoff);
+fn click(seconds: f32, cutoff: f32, amplitude: f32, rng: &mut Rng, sample_rate: u32) -> Vec<f32> {
+    let n = ((seconds * sample_rate as f32) as usize).max(2);
+    let mut low = LowPass::new_at(cutoff, sample_rate);
     (0..n)
         .map(|i| amplitude * (1.0 - i as f32 / n as f32).powi(2) * low.process(rng.signed()))
         .collect()
@@ -35,12 +35,12 @@ fn ring(bubble: &mut Bubble) -> Vec<f32> {
 /// carried by the water it sets moving: a short reflection off the surface
 /// and, often, a second droplet the crown throws off — which is what makes
 /// it read as a drop landing rather than as a ping.
-pub fn drip_into_water(radius: f32, seed: u64) -> Vec<f32> {
+pub fn drip_into_water(radius: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     // The entry: the drop breaking the surface, eased in over 0.15 ms so the
     // first sample is a rise and not a step the speaker reproduces as a click.
-    let mut contact = click(0.0015, 5000.0, 0.12, &mut rng);
+    let mut contact = click(0.0015, 5000.0, 0.12, &mut rng, sample_rate);
     let ease = (0.00015 * rate) as usize;
     for (i, x) in contact.iter_mut().enumerate() {
         if i < ease {
@@ -53,13 +53,13 @@ pub fn drip_into_water(radius: f32, seed: u64) -> Vec<f32> {
     // one: a drop that only splashed was a whisper of a 12 ms tick, which
     // read as a glitch rather than as water. Variants differ in size and
     // in the droplets that follow, never in whether they sound at all.
-    let mut bubble = Bubble::new(radius, 1.0);
+    let mut bubble = Bubble::new_at(radius, 1.0, sample_rate);
     let ringing = ring(&mut bubble);
     add_at(&mut out, (0.0012 * rate) as usize, &ringing, 1.0);
     // The surface answering: a quiet, low-passed reflection of the cavity
     // collapsing, ~6 ms behind the bubble and about a third as loud. This
     // is the mass under the ping.
-    let mut echo = Bubble::new(radius * 1.6, 0.3).with_rise(0.0);
+    let mut echo = Bubble::new_at(radius * 1.6, 0.3, sample_rate).with_rise(0.0);
     let mut reflected = ring(&mut echo);
     reflected.iter_mut().for_each(|x| *x *= 0.6);
     add_at(&mut out, (0.0072 * rate) as usize, &reflected, 1.0);
@@ -68,32 +68,32 @@ pub fn drip_into_water(radius: f32, seed: u64) -> Vec<f32> {
     // the second "drip" the ear expects from a real drop.
     if rng.unit() < 0.75 {
         let at = ((0.026 + 0.030 * rng.unit()) * rate) as usize;
-        let mut droplet = Bubble::new(radius * (0.45 + 0.25 * rng.unit()), 0.55);
+        let mut droplet = Bubble::new_at(radius * (0.45 + 0.25 * rng.unit()), 0.55, sample_rate);
         let plink = ring(&mut droplet);
         add_at(&mut out, at, &plink, 1.0);
     }
     // Level follows the drop, peak-normalised so no variant distorts, with the
     // last 3 ms faded so nothing clicks off.
-    fade_into_level(out, drip_level(radius), 0.003)
+    fade_into_level(out, drip_level(radius), 0.003, sample_rate)
 }
 
 /// A water drip landing on stone: a sharp tick of the stone's modes under a
 /// splash, louder the bigger the drop (`radius`, m: its momentum). The drop
 /// bursts into a crown whose droplets spatter round it over the next few
 /// tens of milliseconds; on a wet patch, now and then one traps a bubble.
-pub fn drip_on_stone(radius: f32, seed: u64) -> Vec<f32> {
+pub fn drip_on_stone(radius: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     // The level follows the drop's momentum (r^1.5) but slowly: 1 mm is not
     // handed a whisper and 3 mm is not handed a shout.
     let amplitude = 0.25 * ((radius / 0.002).powf(1.5)).powf(0.35);
     // The contact itself lasts ~4 ms (a water film cushions it), and the
     // splash over it ~20 ms: the drop has mass, so it is not a single tick.
-    let mut struck = Struck::new(&mut rng, Surface::Stone, amplitude);
+    let mut struck = Struck::new_at(&mut rng, Surface::Stone, amplitude, sample_rate);
     let contact = (0.004 * rate) as usize;
     let mut splash = 0.2 * amplitude;
     let splash_step = (-1.0 / (0.020 * rate)).exp();
-    let mut high = LowPass::new(1800.0);
+    let mut high = LowPass::new_at(1800.0, sample_rate);
     let mut out = Vec::new();
     while !struck.done() || splash > 1e-4 {
         let noise = rng.signed();
@@ -122,11 +122,13 @@ pub fn drip_on_stone(radius: f32, seed: u64) -> Vec<f32> {
             7000.0,
             amplitude * (0.05 + 0.10 * rng.unit()),
             &mut rng,
+            sample_rate,
         );
         add_at(&mut out, at, &tick, 1.0);
     }
     if rng.unit() < 0.35 {
-        let mut bubble = Bubble::new(0.0006 + 0.0010 * rng.unit(), 0.35 * amplitude);
+        let mut bubble =
+            Bubble::new_at(0.0006 + 0.0010 * rng.unit(), 0.35 * amplitude, sample_rate);
         let sound = ring(&mut bubble);
         add_at(
             &mut out,
@@ -139,15 +141,15 @@ pub fn drip_on_stone(radius: f32, seed: u64) -> Vec<f32> {
     // so the sixteen variants are not all equally loud on stone), the last 4 ms
     // faded so it never clicks off.
     let variation = 0.88 + 0.12 * Rng::new(seed ^ 0xA11CE).unit();
-    fade_into_level(out, drip_level(radius) * variation, 0.004)
+    fade_into_level(out, drip_level(radius) * variation, 0.004, sample_rate)
 }
 
 /// Scales `out` to `level`'s peak (or down to 0.9 if `level` would clip) and
 /// fades the last `fade_seconds` off to zero, so a one-shot never ends on a
 /// step the speaker reproduces as a click. Every drip goes through it.
-fn fade_into_level(mut out: Vec<f32>, level: f32, fade_seconds: f32) -> Vec<f32> {
+fn fade_into_level(mut out: Vec<f32>, level: f32, fade_seconds: f32, sample_rate: u32) -> Vec<f32> {
     let length = out.len();
-    let fade = ((fade_seconds * SAMPLE_RATE as f32) as usize).min(length);
+    let fade = ((fade_seconds * sample_rate as f32) as usize).min(length);
     for i in 0..fade {
         out[length - 1 - i] *= i as f32 / fade as f32;
     }
@@ -169,15 +171,15 @@ fn drip_level(radius: f32) -> f32 {
 /// A drop of lava landing: a dull thud, falling in pitch as the blob
 /// spreads, a sizzle as it meets what's below, its skin crackling as it
 /// cools, and gas bubbles working their way out and popping.
-pub fn lava_drip(seed: u64) -> Vec<f32> {
+pub fn lava_drip(seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let thud_hz = 120.0 + 80.0 * rng.unit();
     let thud_decay = (-1.0 / (0.015 * rate)).exp();
     let sizzle_decay = (-1.0 / (0.12 * rate)).exp();
     let mut thud = 0.6;
     let mut sizzle = 0.12;
-    let mut high = LowPass::new(3000.0);
+    let mut high = LowPass::new_at(3000.0, sample_rate);
     let mut phase = 0.0f32;
     let length = (0.8 * rate) as usize;
     let mut out: Vec<f32> = (0..length)
@@ -195,7 +197,13 @@ pub fn lava_drip(seed: u64) -> Vec<f32> {
     // The skin crackling: clicks thinning out as it cools.
     for _ in 0..20 + (rng.unit() * 20.0) as usize {
         let at = (0.6 * rng.unit().powi(2) * rate) as usize;
-        let tick = click(0.0006, 7000.0, 0.04 + 0.08 * rng.unit(), &mut rng);
+        let tick = click(
+            0.0006,
+            7000.0,
+            0.04 + 0.08 * rng.unit(),
+            &mut rng,
+            sample_rate,
+        );
         add_at(&mut out, at, &tick, 1.0);
     }
     // Gas bubbles popping through the blob: low, quick "blups".
@@ -228,7 +236,7 @@ pub fn lava_drip(seed: u64) -> Vec<f32> {
 /// a bigger blast booms lower, decays slower, runs longer — `min(3.0,
 /// 0.6 + 0.25*size)` seconds — and throws more debris. Deterministic from
 /// `seed`, peak-normalized to 0.9.
-pub fn bang(size_m: f32, seed: u64) -> Vec<f32> {
+pub fn bang(size_m: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
     let size = if size_m.is_finite() && size_m > 0.0 {
         size_m
     } else {
@@ -236,7 +244,7 @@ pub fn bang(size_m: f32, seed: u64) -> Vec<f32> {
     }
     .clamp(0.5, 20.0);
     let mut rng = Rng::new(seed);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let seconds = (0.6 + 0.25 * size).min(3.0);
     let length = (seconds * rate) as usize;
     let mut out = vec![0.0f32; length];
@@ -270,7 +278,7 @@ pub fn bang(size_m: f32, seed: u64) -> Vec<f32> {
         (900.0 / root, 0.7, span, 0.7, seed.wrapping_add(2)),
     ];
     for (centre, q, seconds, gain, layer_seed) in layers {
-        let burst = noise_burst(centre, q, seconds, gain, layer_seed);
+        let burst = noise_burst(centre, q, seconds, gain, layer_seed, sample_rate);
         for (i, sample) in burst.iter().enumerate() {
             if let Some(slot) = out.get_mut(i) {
                 *slot += sample;
@@ -291,6 +299,7 @@ pub fn bang(size_m: f32, seed: u64) -> Vec<f32> {
             tick_seconds,
             gain,
             seed.wrapping_add(0x9E37_79B9).wrapping_add(i as u64),
+            sample_rate,
         );
         let from = 0.2 * seconds;
         let room = (seconds - from - tick_seconds).max(0.0);
@@ -314,14 +323,15 @@ pub fn bang(size_m: f32, seed: u64) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
 
     /// The drip model still holds water: a drip rings and ends, a small drop
     /// is quieter than a big one, and lava's drip dies away.
     #[test]
     fn drips_ring_and_end() {
-        let water = drip_into_water(0.001, 7);
+        let water = drip_into_water(0.001, 7, SAMPLE_RATE);
         assert!(water.len() > 900 && water.len() < SAMPLE_RATE as usize);
-        let stone = drip_on_stone(0.002, 7);
+        let stone = drip_on_stone(0.002, 7, SAMPLE_RATE);
         assert!(
             !stone.is_empty() && stone.len() < SAMPLE_RATE as usize,
             "{}",
@@ -330,8 +340,8 @@ mod tests {
         let peak = |s: &[f32]| s.iter().fold(0f32, |p, x| p.max(x.abs()));
         assert!(peak(&stone) > 0.05);
         // A smaller drop is quieter.
-        assert!(peak(&drip_on_stone(0.001, 7)) < peak(&stone));
-        let lava = lava_drip(3);
+        assert!(peak(&drip_on_stone(0.001, 7, SAMPLE_RATE)) < peak(&stone));
+        let lava = lava_drip(3, SAMPLE_RATE);
         assert!(peak(&lava) > 0.1 && peak(&lava[lava.len() - 100..]) < 0.01);
     }
 
@@ -340,7 +350,7 @@ mod tests {
         let peak = |s: &[f32]| s.iter().fold(0f32, |p, x| p.max(x.abs()));
         for seed in 0..16u64 {
             for radius in [0.0006f32, 0.0015, 0.003] {
-                let water = drip_into_water(radius, 0x5EED + seed);
+                let water = drip_into_water(radius, 0x5EED + seed, SAMPLE_RATE);
                 assert!(!water.is_empty());
                 assert!(water.iter().all(|x| x.is_finite()));
                 // The level is the drop's, and only the drop's: the same
@@ -357,7 +367,7 @@ mod tests {
                 let first = water.iter().position(|x| *x != 0.0).unwrap_or(usize::MAX);
                 assert!(first < 2, "the drip starts with {first} silent samples");
             }
-            let stone = drip_on_stone(0.002, 0xD121 + seed);
+            let stone = drip_on_stone(0.002, 0xD121 + seed, SAMPLE_RATE);
             // The stone family varies its level slightly per seed (so sixteen
             // variants are not all equally loud), between 88% and 100% of the
             // shared law — and never above it.
@@ -377,11 +387,11 @@ mod tests {
         // quieter because its seed happened to skip the bubble. The law is
         // deliberately compressed (0.55 at 0.6 mm to 0.90 at 1.6 mm), so this
         // pins the direction and the audible margin, not a raw ratio.
-        let quiet = peak(&drip_into_water(0.0006, 0x5EED));
-        let loud = peak(&drip_into_water(0.003, 0x5EED));
+        let quiet = peak(&drip_into_water(0.0006, 0x5EED, SAMPLE_RATE));
+        let loud = peak(&drip_into_water(0.003, 0x5EED, SAMPLE_RATE));
         assert!(loud > quiet * 1.5, "{quiet} vs {loud}");
-        let quiet = peak(&drip_on_stone(0.001, 0xD121));
-        let loud = peak(&drip_on_stone(0.003, 0xD121));
+        let quiet = peak(&drip_on_stone(0.001, 0xD121, SAMPLE_RATE));
+        let loud = peak(&drip_on_stone(0.003, 0xD121, SAMPLE_RATE));
         assert!(loud > quiet, "{quiet} vs {loud}");
     }
 
@@ -399,14 +409,14 @@ mod tests {
         // after it. At the drops a dripstone actually releases (2–3 mm) the
         // event runs 40–80 ms, and a good fifth of its energy is past 10 ms.
         for seed in 0..16u64 {
-            let water = drip_into_water(0.003, 0x5EED + seed);
+            let water = drip_into_water(0.003, 0x5EED + seed, SAMPLE_RATE);
             assert!(water.len() >= 40 * 48, "only {} ms", water.len() / 48);
             assert!(
                 share(&water, 10.0) < 0.9,
                 "only {:.1}% of the drip lasts past 10 ms",
                 (1.0 - share(&water, 10.0)) * 100.0
             );
-            let stone = drip_on_stone(0.0024, 0xD121 + seed);
+            let stone = drip_on_stone(0.0024, 0xD121 + seed, SAMPLE_RATE);
             assert!(stone.len() >= 40 * 48, "only {} ms", stone.len() / 48);
             assert!(
                 share(&stone, 10.0) < 0.8,
@@ -416,7 +426,7 @@ mod tests {
         }
         // A stone drip is audible on tiny speakers: not all of its energy up
         // above 4 kHz, where a phone plays nothing.
-        let stone = drip_on_stone(0.0024, 3);
+        let stone = drip_on_stone(0.0024, 3, SAMPLE_RATE);
         let n = 1024;
         let seg = &stone[..n.min(stone.len())];
         let goertzel = |hz: f32| {
@@ -436,23 +446,26 @@ mod tests {
     /// duration law, a bigger blast running longer (until the 3 s cap).
     #[test]
     fn bang_is_seeded_bounded_and_grows_with_the_blast() {
-        let small = bang(1.0, 7);
+        let small = bang(1.0, 7, SAMPLE_RATE);
         assert!(!small.is_empty());
         assert!(small.len() <= 3 * SAMPLE_RATE as usize, "{}", small.len());
         assert!(small.iter().all(|x| x.is_finite()));
         let peak = small.iter().fold(0f32, |p, x| p.max(x.abs()));
         assert!((peak - 0.9).abs() < 1e-3, "peak {peak}");
         // The same seed makes the same bang, exactly.
-        assert_eq!(small, bang(1.0, 7));
+        assert_eq!(small, bang(1.0, 7, SAMPLE_RATE));
         // A bigger explosion runs longer...
-        let big = bang(6.0, 7);
+        let big = bang(6.0, 7, SAMPLE_RATE);
         assert!(big.len() > small.len(), "{} vs {}", big.len(), small.len());
         assert!(big.len() <= 3 * SAMPLE_RATE as usize);
         // ...and an unusable size is heard as a 2 m one, while the buffer
         // never runs past 3 s however large the caller's number.
-        assert_eq!(bang(f32::NAN, 7), bang(2.0, 7));
-        assert_eq!(bang(0.0, 7), bang(2.0, 7));
-        assert_eq!(bang(-3.0, 7), bang(2.0, 7));
-        assert_eq!(bang(1e9, 7).len(), (3.0 * SAMPLE_RATE as f32) as usize);
+        assert_eq!(bang(f32::NAN, 7, SAMPLE_RATE), bang(2.0, 7, SAMPLE_RATE));
+        assert_eq!(bang(0.0, 7, SAMPLE_RATE), bang(2.0, 7, SAMPLE_RATE));
+        assert_eq!(bang(-3.0, 7, SAMPLE_RATE), bang(2.0, 7, SAMPLE_RATE));
+        assert_eq!(
+            bang(1e9, 7, SAMPLE_RATE).len(),
+            (3.0 * SAMPLE_RATE as f32) as usize
+        );
     }
 }

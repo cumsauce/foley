@@ -1,19 +1,19 @@
 //! Parameterized primitives, for the integration API to compose into sounds
 //! it invents (F2): a bubble's ring, a burst of shaped noise, a tone, a gust
-//! of wind. Each is rendered to a one-shot at [`SAMPLE_RATE`], bounded and
-//! peak-normalized, so anything an addon builds from them stays civil.
+//! of wind. Each is rendered to a one-shot at a caller-chosen rate, bounded
+//! and peak-normalized, so anything an addon builds from them stays civil.
 
-use crate::{BandPass, Bubble, Rng, SAMPLE_RATE};
+use crate::{BandPass, Bubble, Rng};
 
 /// A bubble's Minnaert ring (M0), radius in mm, gone in tens of
 /// milliseconds; its pitch wavers a little with the seed, as a real bubble's
 /// does as it wobbles.
-pub fn bubble(radius_mm: f32, seed: u64) -> Vec<f32> {
+pub fn bubble(radius_mm: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed);
     let radius = radius_mm / 1000.0 * (1.0 + 0.02 * rng.signed());
-    let mut ring = Bubble::new(radius, 1.0);
-    let mut out = Vec::with_capacity(SAMPLE_RATE as usize / 2);
-    for _ in 0..SAMPLE_RATE / 4 {
+    let mut ring = Bubble::new_at(radius, 1.0, sample_rate);
+    let mut out = Vec::with_capacity(sample_rate as usize / 2);
+    for _ in 0..sample_rate / 4 {
         let sample = ring.sample();
         out.push(sample);
         if sample.abs() < 1e-4 && out.len() > 240 {
@@ -27,11 +27,18 @@ pub fn bubble(radius_mm: f32, seed: u64) -> Vec<f32> {
 /// A burst of noise through a band `q` wide round `centre_hz`, over
 /// `seconds`, peaking at `gain`: the texture of splashes, hisses, crunches
 /// and whooshes.
-pub fn noise_burst(centre_hz: f32, q: f32, seconds: f32, gain: f32, seed: u64) -> Vec<f32> {
+pub fn noise_burst(
+    centre_hz: f32,
+    q: f32,
+    seconds: f32,
+    gain: f32,
+    seed: u64,
+    sample_rate: u32,
+) -> Vec<f32> {
     let mut rng = Rng::new(seed);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let length = (seconds * rate) as usize;
-    let mut band = BandPass::new(centre_hz * (1.0 + 0.02 * rng.signed()), q);
+    let mut band = BandPass::new_at(centre_hz * (1.0 + 0.02 * rng.signed()), q, sample_rate);
     let mut out = vec![0.0f32; length];
     // A swift attack, then an exponential fall, as an impulse's energy dies.
     let decay = (-6.0 / length.max(1) as f32).exp();
@@ -47,9 +54,16 @@ pub fn noise_burst(centre_hz: f32, q: f32, seconds: f32, gain: f32, seed: u64) -
 /// A tone at `centre_hz` gliding to `target_hz` over `seconds`, peaking at
 /// `gain`, with a light vibrato and a soft attack and release: whistles,
 /// chimes, chirps.
-pub fn tone(centre_hz: f32, target_hz: f32, seconds: f32, gain: f32, seed: u64) -> Vec<f32> {
+pub fn tone(
+    centre_hz: f32,
+    target_hz: f32,
+    seconds: f32,
+    gain: f32,
+    seed: u64,
+    sample_rate: u32,
+) -> Vec<f32> {
     let mut rng = Rng::new(seed);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let length = (seconds * rate) as usize;
     let vibrato_hz = 4.0 + 3.0 * rng.unit();
     let vibrato = 0.002 + 0.004 * rng.unit();
@@ -75,9 +89,9 @@ pub fn tone(centre_hz: f32, target_hz: f32, seconds: f32, gain: f32, seed: u64) 
 /// A gust at `speed` m/s over `seconds`, peaking at `gain`: band-passed
 /// noise whose pitch and level rise with the speed, surging a few times as
 /// real gusts do.
-pub fn gust(speed_m_s: f32, seconds: f32, gain: f32, seed: u64) -> Vec<f32> {
+pub fn gust(speed_m_s: f32, seconds: f32, gain: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let length = (seconds * rate) as usize;
     let mut out = vec![0.0f32; length];
     // Three staggered surges, each its own band round the speed's pitch.
@@ -88,7 +102,7 @@ pub fn gust(speed_m_s: f32, seconds: f32, gain: f32, seed: u64) -> Vec<f32> {
             .max((0.3 * rate) as usize)
             .min(length - at);
         let centre = (80.0 + 40.0 * speed_m_s) * (0.85 + 0.3 * rng.unit());
-        let mut band = BandPass::new(centre, 0.7);
+        let mut band = BandPass::new_at(centre, 0.7, sample_rate);
         let decay = (-2.0 / span as f32).exp();
         let mut envelope = 0.4 + 0.6 * rng.unit();
         for sample in &mut out[at..at + span] {
@@ -106,14 +120,15 @@ pub fn gust(speed_m_s: f32, seconds: f32, gain: f32, seed: u64) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
 
     #[test]
     fn every_primitive_renders_bounded_sound() {
         let made: Vec<(&str, Vec<f32>)> = vec![
-            ("bubble", bubble(1.0, 1)),
-            ("noise", noise_burst(2000.0, 1.2, 0.3, 0.8, 2)),
-            ("tone", tone(440.0, 880.0, 0.5, 0.6, 3)),
-            ("gust", gust(15.0, 3.0, 1.0, 4)),
+            ("bubble", bubble(1.0, 1, SAMPLE_RATE)),
+            ("noise", noise_burst(2000.0, 1.2, 0.3, 0.8, 2, SAMPLE_RATE)),
+            ("tone", tone(440.0, 880.0, 0.5, 0.6, 3, SAMPLE_RATE)),
+            ("gust", gust(15.0, 3.0, 1.0, 4, SAMPLE_RATE)),
         ];
         for (what, sound) in &made {
             assert!(!sound.is_empty(), "{what}");
@@ -134,12 +149,15 @@ mod tests {
         let crossings = |s: &[f32]| {
             s.windows(2).filter(|w| w[0] <= 0.0 && w[1] > 0.0).count() as f32 / s.len() as f32
         };
-        assert!(crossings(&bubble(0.3, 5)) > crossings(&bubble(4.0, 5)));
+        assert!(crossings(&bubble(0.3, 5, SAMPLE_RATE)) > crossings(&bubble(4.0, 5, SAMPLE_RATE)));
     }
 
     #[test]
     fn a_gust_blowing_harder_is_louder() {
         let peak = |s: &[f32]| s.iter().fold(0f32, |p, x| p.max(x.abs()));
-        assert!(peak(&gust(40.0, 3.0, 1.0, 6)) > 4.0 * peak(&gust(8.0, 3.0, 1.0, 6)));
+        assert!(
+            peak(&gust(40.0, 3.0, 1.0, 6, SAMPLE_RATE))
+                > 4.0 * peak(&gust(8.0, 3.0, 1.0, 6, SAMPLE_RATE))
+        );
     }
 }

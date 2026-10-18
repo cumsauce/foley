@@ -3,7 +3,7 @@
 
 use std::f32::consts::{PI, TAU};
 
-use super::score::{Seg, UH, Voice, c, perform};
+use super::score::{c, perform, Seg, Voice, UH};
 use crate::{BandPass, Bubble, LowPass, Rng, SAMPLE_RATE};
 
 const GRAVITY: f32 = 9.81;
@@ -699,27 +699,37 @@ pub(super) fn slime(rng: &mut Rng, call: Slime, size: f32) -> Vec<f32> {
 /// An iron golem, struck (its iron and stone ring, and its joints creak by
 /// stick–slip) or falling apart.
 pub(super) fn iron_golem(rng: &mut Rng, call: Call3, seed: u64) -> Vec<f32> {
-    use crate::{Contact, Material, contact, fracture};
+    use crate::{contact, fracture, Contact, Material};
     let mut out = Vec::new();
     match call {
         Call3::Death => {
-            add_at(&mut out, 0, &fracture(Material::Metal, seed));
+            add_at(
+                &mut out,
+                0,
+                &fracture(Material::Metal, seed, crate::SAMPLE_RATE),
+            );
             add_at(
                 &mut out,
                 (0.05 * SAMPLE_RATE as f32) as usize,
-                &fracture(Material::Stone, seed + 1),
+                &fracture(Material::Stone, seed + 1, crate::SAMPLE_RATE),
             );
         }
         _ => {
             add_at(
                 &mut out,
                 0,
-                &contact(Contact::Tap, Material::Metal, 2.0, seed),
+                &contact(Contact::Tap, Material::Metal, 2.0, seed, crate::SAMPLE_RATE),
             );
             add_at(
                 &mut out,
                 0,
-                &contact(Contact::Tap, Material::Stone, 2.0, seed + 1),
+                &contact(
+                    Contact::Tap,
+                    Material::Stone,
+                    2.0,
+                    seed + 1,
+                    crate::SAMPLE_RATE,
+                ),
             );
             // Stick–slip: the joint grinds in jerks, slower and slower.
             let mut at = 0.05;
@@ -738,14 +748,14 @@ pub(super) fn iron_golem(rng: &mut Rng, call: Call3, seed: u64) -> Vec<f32> {
 
 /// A snow golem: snow creaking (ambient), crunching (hurt), or collapsing.
 pub(super) fn snow_golem(call: Call3, seed: u64) -> Vec<f32> {
-    use crate::{Contact, Material, contact, fracture};
+    use crate::{contact, fracture, Contact, Material};
     match call {
-        Call3::Ambient => contact(Contact::Step, Material::Snow, 0.4, seed)
+        Call3::Ambient => contact(Contact::Step, Material::Snow, 0.4, seed, crate::SAMPLE_RATE)
             .iter()
             .map(|x| 0.5 * x)
             .collect(),
-        Call3::Hurt => contact(Contact::Land, Material::Snow, 2.0, seed),
-        Call3::Death => fracture(Material::Snow, seed),
+        Call3::Hurt => contact(Contact::Land, Material::Snow, 2.0, seed, crate::SAMPLE_RATE),
+        Call3::Death => fracture(Material::Snow, seed, crate::SAMPLE_RATE),
     }
 }
 

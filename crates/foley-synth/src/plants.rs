@@ -3,8 +3,8 @@
 
 use std::f32::consts::TAU;
 
-use crate::dsp::{Wobble, add_at, normalize};
-use crate::{BandPass, Contact, LowPass, Material, Rng, SAMPLE_RATE, contact};
+use crate::dsp::{add_at, normalize, Wobble};
+use crate::{contact, BandPass, Contact, LowPass, Material, Rng};
 
 /// What a body brushes through: for [`brush`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,9 +31,9 @@ impl Plant {
 /// of the stems sliding past each other, swelling and dying away, made of
 /// many small collisions, each a blade or leaf flicked and ringing for a
 /// millisecond or so (thin blades high, leaves lower).
-pub fn brush(plant: Plant, seed: u64) -> Vec<f32> {
+pub fn brush(plant: Plant, seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed ^ 0xB2_05);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     // (seconds, swish band and Q, tick band, ticks a second, tick decay a
     // sample, swish level)
     let (seconds, band, q, tick_band, ticks, decay, swish) = match plant {
@@ -43,9 +43,9 @@ pub fn brush(plant: Plant, seed: u64) -> Vec<f32> {
     };
     let seconds = seconds * (0.85 + 0.3 * rng.unit());
     let n = (seconds * rate) as usize;
-    let mut sweep = BandPass::new(band, q);
-    let mut tick = BandPass::new(tick_band, 1.5);
-    let mut flutter = Wobble::new(20.0, 3.0, 0.4, 1.6);
+    let mut sweep = BandPass::new_at(band, q, sample_rate);
+    let mut tick = BandPass::new_at(tick_band, 1.5, sample_rate);
+    let mut flutter = Wobble::new_at(20.0, 3.0, 0.4, 1.6, sample_rate);
     let mut envelope = 0.0f32;
     let mut until = 0.0f32;
     let mut out = Vec::with_capacity(n);
@@ -79,9 +79,9 @@ pub fn brush(plant: Plant, seed: u64) -> Vec<f32> {
 /// (flexural waves: group speed ∝ √f), so they reach the ear as a falling
 /// "pew", from some 6 kHz down to 150 Hz in under a second; often a few
 /// echoes of it off the shore follow.
-pub fn ice_singing(seed: u64) -> Vec<f32> {
+pub fn ice_singing(seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed ^ 0x1CE);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let mut out = vec![0.0f32; (2.5 * rate) as usize];
     let arrivals = 1 + (rng.unit() * 3.0) as usize;
     let mut at = 0.0f32;
@@ -93,7 +93,7 @@ pub fn ice_singing(seed: u64) -> Vec<f32> {
         let end = t0 * (top / 150.0f32).sqrt();
         let n = ((end - t0) * rate) as usize;
         let mut phase = 0.0f32;
-        let mut crack = BandPass::new(3000.0, 0.7);
+        let mut crack = BandPass::new_at(3000.0, 0.7, sample_rate);
         let sweep: Vec<f32> = (0..n)
             .map(|i| {
                 let t = t0 + i as f32 / rate;
@@ -124,9 +124,9 @@ pub fn ice_singing(seed: u64) -> Vec<f32> {
 /// A stone working loose somewhere in a cave and settling: it knocks, then
 /// bounces a few times, each bounce lower and sooner than the last (a
 /// coefficient of restitution of about a half), and comes to rest.
-pub fn settling_stone(seed: u64) -> Vec<f32> {
+pub fn settling_stone(seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed ^ 0x5E77);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let mut out = Vec::new();
     let mut speed = 2.5 + 2.5 * rng.unit();
     let mut at = 0.0f32;
@@ -137,6 +137,7 @@ pub fn settling_stone(seed: u64) -> Vec<f32> {
             Material::Stone,
             speed,
             seed.wrapping_add(bounce),
+            sample_rate,
         );
         add_at(&mut out, (at * rate) as usize, &knock, 1.0);
         // The time aloft between bounces goes as the speed off the ground.
@@ -152,16 +153,16 @@ pub fn settling_stone(seed: u64) -> Vec<f32> {
 /// A bird flushed from cover: its wings clap and whirr as it takes off, a
 /// dozen beats at 10 to 20 a second (a small bird beats faster), each a
 /// short burst of air through the feathers, fading as it flies off.
-pub fn flush(seed: u64) -> Vec<f32> {
+pub fn flush(seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed ^ 0xF1A9);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let beats_per_second = 10.0 + 10.0 * rng.unit();
     let beats = 8 + (rng.unit() * 8.0) as usize;
     let mut out = Vec::new();
     let mut at = 0.0f32;
     for k in 0..beats {
         let n = (0.03 * rate) as usize;
-        let mut feathers = BandPass::new(1200.0 + 800.0 * rng.unit(), 0.8);
+        let mut feathers = BandPass::new_at(1200.0 + 800.0 * rng.unit(), 0.8, sample_rate);
         let beat: Vec<f32> = (0..n)
             .map(|i| {
                 let t = i as f32 / rate;
@@ -180,9 +181,9 @@ pub fn flush(seed: u64) -> Vec<f32> {
 /// beat at about 230 Hz (a honeybee) or 190 Hz (a housefly), a buzz rich in
 /// harmonics, swelling and fading and bending in pitch (Doppler) as it
 /// darts nearer and away.
-pub fn buzz(size: u32, seed: u64) -> Vec<f32> {
+pub fn buzz(size: u32, seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed ^ 0xB22);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let (f0, darting) = if size == 0 {
         (230.0, 0.6)
     } else {
@@ -190,7 +191,10 @@ pub fn buzz(size: u32, seed: u64) -> Vec<f32> {
     };
     let f0 = f0 * (0.92 + 0.16 * rng.unit());
     let n = ((2.0 + 1.5 * rng.unit()) * rate) as usize;
-    let mut path = [LowPass::new(darting), LowPass::new(darting)];
+    let mut path = [
+        LowPass::new_at(darting, sample_rate),
+        LowPass::new_at(darting, sample_rate),
+    ];
     let mut phase = 0.0f32;
     let mut last = 1.0f32;
     let mut out = Vec::with_capacity(n);
@@ -208,7 +212,7 @@ pub fn buzz(size: u32, seed: u64) -> Vec<f32> {
         let fade = (t * 10.0).min(1.0) * ((1.0 - t) * 10.0).min(1.0);
         out.push(fade * wave / r);
     }
-    let mut soften = LowPass::new(3000.0);
+    let mut soften = LowPass::new_at(3000.0, sample_rate);
     let out: Vec<f32> = out.iter().map(|x| soften.process(*x)).collect();
     normalize(out, 0.25)
 }
@@ -216,6 +220,7 @@ pub fn buzz(size: u32, seed: u64) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
 
     fn zero_crossings(s: &[f32]) -> f32 {
         s.windows(2)
@@ -227,14 +232,14 @@ mod tests {
     #[test]
     fn every_sound_is_finite_bounded_and_short() {
         for sound in [
-            brush(Plant::Grass, 1),
-            brush(Plant::Leaves, 2),
-            brush(Plant::Dry, 3),
-            ice_singing(4),
-            settling_stone(5),
-            flush(6),
-            buzz(0, 7),
-            buzz(1, 8),
+            brush(Plant::Grass, 1, SAMPLE_RATE),
+            brush(Plant::Leaves, 2, SAMPLE_RATE),
+            brush(Plant::Dry, 3, SAMPLE_RATE),
+            ice_singing(4, SAMPLE_RATE),
+            settling_stone(5, SAMPLE_RATE),
+            flush(6, SAMPLE_RATE),
+            buzz(0, 7, SAMPLE_RATE),
+            buzz(1, 8, SAMPLE_RATE),
         ] {
             assert!(sound.iter().all(|x| x.is_finite() && x.abs() <= 0.4));
             assert!(sound.iter().any(|x| x.abs() > 0.05));
@@ -244,8 +249,11 @@ mod tests {
 
     #[test]
     fn grass_is_brighter_than_leaves_and_ice_falls_in_pitch() {
-        assert!(zero_crossings(&brush(Plant::Grass, 1)) > zero_crossings(&brush(Plant::Leaves, 1)));
-        let ice = ice_singing(7);
+        assert!(
+            zero_crossings(&brush(Plant::Grass, 1, SAMPLE_RATE))
+                > zero_crossings(&brush(Plant::Leaves, 1, SAMPLE_RATE))
+        );
+        let ice = ice_singing(7, SAMPLE_RATE);
         let tenth = (0.1 * SAMPLE_RATE as f32) as usize;
         let early = zero_crossings(&ice[tenth / 2..tenth]);
         let late = zero_crossings(&ice[4 * tenth..5 * tenth]);

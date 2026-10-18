@@ -162,14 +162,20 @@ pub fn hoot(centre_hz: f32, seconds: f32, rng: &mut Rng) -> Vec<f32> {
 /// over the decay. Gila woodpecker's faster roll vs. the spruce grouse's
 /// slower one.
 pub fn drum(rate_hz: f32, decay_s: f32, rng: &mut Rng) -> Vec<f32> {
-    use crate::{Contact, Material, contact};
+    use crate::{contact, Contact, Material};
     let total = (decay_s * SAMPLE_RATE as f32) as usize;
     let mut out = vec![0.0f32; total];
     let mut at = 0.0f32;
     let interval = 1.0 / rate_hz;
     let mut strike = 0u64;
     while at < decay_s {
-        let tap = contact(Contact::Tap, Material::Wood, 6.0, strike);
+        let tap = contact(
+            Contact::Tap,
+            Material::Wood,
+            6.0,
+            strike,
+            crate::SAMPLE_RATE,
+        );
         let env = (-4.0 * at / decay_s).exp();
         let sample = (at * SAMPLE_RATE as f32) as usize;
         add_at(&mut out, sample, &tap, env);

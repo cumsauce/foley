@@ -13,12 +13,12 @@ mod speech;
 mod tract;
 
 use creatures::{Bones, Call3, CreeperCall};
-use score::{AA, AE, EE, EH, K, OH, OO, Seg, UH, Voice, c, finish, k, perform};
+use score::{c, finish, k, perform, Seg, Voice, AA, AE, EE, EH, K, OH, OO, UH};
 
 use crate::Rng;
 
-pub use creature::{CreatureCall, CreatureSpec, creature_voice};
-pub use lf::{Pulse, lf_pulse};
+pub use creature::{creature_voice, CreatureCall, CreatureSpec};
+pub use lf::{lf_pulse, Pulse};
 
 /// The mobs Foley can voice. The order is the C ABI's.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -385,7 +385,10 @@ pub fn voice(mob: Mob, call: Call, seed: u64) -> Vec<f32> {
         Mob::SnowGolem => (creatures::snow_golem(three, seed), 0.45),
         Mob::Silverfish => (creatures::spider(&mut rng, three, 2.5), 0.4),
         Mob::Endermite => (creatures::spider(&mut rng, three, 3.0), 0.4),
-        Mob::Frog if three == Call3::Ambient => (crate::frog(5.0 + 3.0 * rng.unit(), seed), 0.5),
+        Mob::Frog if three == Call3::Ambient => (
+            crate::frog(5.0 + 3.0 * rng.unit(), seed, crate::SAMPLE_RATE),
+            0.5,
+        ),
         Mob::Guardian | Mob::ElderGuardian if call == Call::Flop => {
             (creatures::flop(&mut rng, mob == Mob::ElderGuardian), 0.55)
         }

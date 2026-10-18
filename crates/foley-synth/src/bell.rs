@@ -1,5 +1,4 @@
 use foley_dsp::Rng;
-use foley_dsp::SAMPLE_RATE;
 
 use std::f32::consts::TAU;
 
@@ -9,9 +8,10 @@ use std::f32::consts::TAU;
 /// real bell rings for a few seconds; a low Q thuds out fast. `seed` mixes
 /// a small starting-phase offset so each bell block has its own distinct
 /// ring.
-pub fn bell(q: f32, seed: u64) -> Vec<f32> {
+pub fn bell(q: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
     // Clamp to the spec range; out-of-range callers get a default.
     let q = q.clamp(0.5, 20.0);
+    let rate = sample_rate as f32;
     // Time constant: at q=8, tau=0.5 s, so the bell rings for ~2 s.
     // Higher q rings proportionally longer.
     let tau = 0.5 * (q / 8.0);
@@ -20,15 +20,15 @@ pub fn bell(q: f32, seed: u64) -> Vec<f32> {
     // The strike tone at 1.18× (the bell's "strike" mode), louder than the hum.
     // The hum at 1.49×, smaller. Real bells have many more modes, but these three
     // dominate the audible ring.
-    let length = (3.0 * SAMPLE_RATE as f32) as usize;
+    let length = (3.0 * rate) as usize;
     // A small phase offset per seed so two bells don't ring exactly in step.
     let mut rng = Rng::new(seed);
     let phase0 = rng.unit() * 2.0;
     let phase1 = rng.unit() * 2.0;
     let phase2 = rng.unit() * 2.0;
-    let decay_step = (-1.0 / (tau * SAMPLE_RATE as f32)).exp();
+    let decay_step = (-1.0 / (tau * rate)).exp();
     // An 8 ms attack so the bell "swells" rather than clicks on.
-    let attack = (0.008 * SAMPLE_RATE as f32) as usize;
+    let attack = (0.008 * rate) as usize;
     let mut out = Vec::with_capacity(length);
     let mut amp = 1.0f32;
     let mut phase_a = phase0;
@@ -44,9 +44,9 @@ pub fn bell(q: f32, seed: u64) -> Vec<f32> {
         let s = env * (phase_a.sin() + 0.4 * phase_b.sin() + 0.2 * phase_c.sin());
         out.push(s);
         amp *= decay_step;
-        phase_a += TAU * f0 / SAMPLE_RATE as f32;
-        phase_b += TAU * f0 * 1.18 / SAMPLE_RATE as f32;
-        phase_c += TAU * f0 * 1.49 / SAMPLE_RATE as f32;
+        phase_a += TAU * f0 / rate;
+        phase_b += TAU * f0 * 1.18 / rate;
+        phase_c += TAU * f0 * 1.49 / rate;
     }
     out
 }
@@ -54,6 +54,7 @@ pub fn bell(q: f32, seed: u64) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
 
     fn rms(s: &[f32]) -> f32 {
         (s.iter().map(|x| x * x).sum::<f32>() / s.len().max(1) as f32).sqrt()
@@ -78,7 +79,7 @@ mod tests {
 
     #[test]
     fn bell_is_a_higher_damped_tone_than_sculk() {
-        let out = bell(8.0, 1);
+        let out = bell(8.0, 1, SAMPLE_RATE);
         let p = pitch(&out);
         // Bell is at ~440 Hz. The 440 fundamental must dominate the zero-crossing count.
         assert!((350.0..=550.0).contains(&p), "bell pitch {p} Hz");
@@ -89,8 +90,8 @@ mod tests {
 
     #[test]
     fn higher_q_rings_longer() {
-        let low = bell(0.5, 2);
-        let high = bell(20.0, 2);
+        let low = bell(0.5, 2, SAMPLE_RATE);
+        let high = bell(20.0, 2, SAMPLE_RATE);
         let half = |v: &[f32]| rms(&v[v.len() / 2..]);
         assert!(
             half(&high) > 4.0 * half(&low),
@@ -102,6 +103,6 @@ mod tests {
 
     #[test]
     fn same_seed_is_deterministic() {
-        assert_eq!(bell(8.0, 42), bell(8.0, 42));
+        assert_eq!(bell(8.0, 42, SAMPLE_RATE), bell(8.0, 42, SAMPLE_RATE));
     }
 }

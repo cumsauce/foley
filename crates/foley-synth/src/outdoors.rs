@@ -3,8 +3,8 @@
 
 use std::f32::consts::TAU;
 
-use crate::dsp::{Wobble, add_at, normalize, normalize_in_place};
-use crate::{BandPass, Bubble, Contact, LowPass, Material, Rng, contact};
+use crate::dsp::{add_at, normalize, normalize_in_place, Wobble};
+use crate::{contact, BandPass, Bubble, Contact, LowPass, Material, Rng};
 use foley_dsp::plunge_radius;
 
 /// Length in samples of one wave at `rate`: about 7 s from rise to the end of
@@ -160,6 +160,7 @@ pub fn woodpecker(seed: u64, sample_rate: u32) -> Vec<f32> {
             Material::Wood,
             6.0,
             seed.wrapping_add(n as u64 % 4),
+            sample_rate,
         );
         add_at(&mut out, (at * rate) as usize, &knock, loud);
         if x > 0.7 {

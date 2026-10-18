@@ -1,6 +1,6 @@
 use std::f32::consts::{PI, TAU};
 
-use crate::{BandPass, Bird, Rng, SAMPLE_RATE, bird_call};
+use crate::{bird_call, BandPass, Bird, Rng};
 
 /// A field cricket's chirps a minute at `celsius`: Dolbear's law (1897),
 /// T°F = 50 + (N − 40)/4, which is N ≈ 7.2·T°C − 32. None below about 8 °C.
@@ -15,14 +15,15 @@ pub fn dolbear_chirps_per_minute(celsius: f32) -> f32 {
 /// Dolbear's rate.
 /// A few field crickets chirping together for 3 s at `celsius`, each at its
 /// own pitch, pace and distance: the chorus of a warm night.
-pub fn crickets(celsius: f32, seed: u64) -> Vec<f32> {
+pub fn crickets(celsius: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed ^ 0xC0C0);
     let count = 3 + (rng.unit() * 4.0) as usize;
-    let mut out = vec![0.0; (3.0 * SAMPLE_RATE as f32) as usize];
+    let mut out = vec![0.0; (3.0 * sample_rate as f32) as usize];
     for k in 0..count {
         let one = cricket(
             celsius + 2.0 * rng.signed(),
             seed.wrapping_add(k as u64 * 7919),
+            sample_rate,
         );
         let distance = 0.3 + 0.7 * rng.unit();
         for (o, s) in out.iter_mut().zip(&one) {
@@ -32,9 +33,9 @@ pub fn crickets(celsius: f32, seed: u64) -> Vec<f32> {
     out
 }
 
-fn cricket(celsius: f32, seed: u64) -> Vec<f32> {
+fn cricket(celsius: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let length = (3.0 * rate) as usize;
     let mut out = vec![0.0; length];
     let per_second = dolbear_chirps_per_minute(celsius) / 60.0;
@@ -75,9 +76,9 @@ pub fn birdsong(species: u32, seed: u64) -> Vec<f32> {
 /// 150 a second, driving the inflated vocal sac, which rings like a
 /// Helmholtz resonator, lower the bigger the frog (about 2.5 kHz for a 3 cm
 /// tree frog to 500 Hz for a 15 cm bullfrog), in notes of 0.1 to 0.5 s.
-pub fn frog(size_cm: f32, seed: u64) -> Vec<f32> {
+pub fn frog(size_cm: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let sac = 2500.0 * (3.0 / size_cm.clamp(2.0, 20.0)) * (1.0 + 0.05 * rng.signed());
     // Some frogs croak, slow pulses in a few notes; others trill, fast ones.
     let trill = size_cm < 8.0 && rng.unit() < 0.35;
@@ -92,8 +93,11 @@ pub fn frog(size_cm: f32, seed: u64) -> Vec<f32> {
         1 + (rng.unit() * 3.0) as usize
     };
     let mut out = Vec::new();
-    let mut resonance = [BandPass::new(sac, 8.0), BandPass::new(2.3 * sac, 6.0)];
-    let mut breath = BandPass::new(sac * 0.5, 1.0);
+    let mut resonance = [
+        BandPass::new_at(sac, 8.0, sample_rate),
+        BandPass::new_at(2.3 * sac, 6.0, sample_rate),
+    ];
+    let mut breath = BandPass::new_at(sac * 0.5, 1.0, sample_rate);
     for _ in 0..notes {
         let seconds = if trill {
             0.6 + 0.8 * rng.unit()
@@ -116,8 +120,8 @@ pub fn frog(size_cm: f32, seed: u64) -> Vec<f32> {
                 next = i + period as usize;
                 // The sac swells through the note, and rings a little higher.
                 let f = sac * (1.0 + 0.06 * t);
-                resonance[0].tune(f, 8.0);
-                resonance[1].tune(2.3 * f, 6.0);
+                resonance[0].tune_at(f, 8.0, sample_rate);
+                resonance[1].tune_at(2.3 * f, 6.0, sample_rate);
             }
             let envelope = (t * 8.0).min(1.0) * ((1.0 - t) * 6.0).min(1.0);
             let phase = i.wrapping_sub(pulse_at);
@@ -144,6 +148,7 @@ pub fn frog(size_cm: f32, seed: u64) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
 
     fn peak(s: &[f32]) -> f32 {
         s.iter().fold(0f32, |p, x| p.max(x.abs()))
@@ -169,10 +174,13 @@ mod tests {
             }
             count
         };
-        let (cool, warm) = (chirps(&cricket(14.0, 1)), chirps(&cricket(28.0, 1)));
+        let (cool, warm) = (
+            chirps(&cricket(14.0, 1, SAMPLE_RATE)),
+            chirps(&cricket(28.0, 1, SAMPLE_RATE)),
+        );
         assert!(warm > cool, "{cool} then {warm}");
-        assert!(crickets(4.0, 1).iter().all(|x| *x == 0.0));
-        assert!(peak(&crickets(25.0, 2)) > 0.1);
+        assert!(crickets(4.0, 1, SAMPLE_RATE).iter().all(|x| *x == 0.0));
+        assert!(peak(&crickets(25.0, 2, SAMPLE_RATE)) > 0.1);
     }
 
     #[test]
@@ -180,7 +188,7 @@ mod tests {
         let crossings = |s: &[f32]| {
             s.windows(2).filter(|w| w[0] <= 0.0 && w[1] > 0.0).count() as f32 / s.len() as f32
         };
-        let (small, big) = (frog(3.0, 1), frog(15.0, 1));
+        let (small, big) = (frog(3.0, 1, SAMPLE_RATE), frog(15.0, 1, SAMPLE_RATE));
         assert!(crossings(&big) < crossings(&small));
         assert!(peak(&small) > 0.05 && peak(&big) > 0.05);
         assert!(small.iter().chain(&big).all(|x| x.is_finite()));

@@ -1,8 +1,6 @@
 //! Aeolian tones (M18): Strouhal whistles from obstacles the air blows past.
 //! f ≈ 0.2·U/d, silent below U = 2 m/s (the vortex shedding is too weak to hear).
 
-use crate::SAMPLE_RATE;
-
 const MIN_SPEED: f32 = 2.0;
 
 /// An Aeolian tone: a Strouhal whistle at `f ≈ 0.2·U/d`, where `d` is the
@@ -18,8 +16,9 @@ pub fn aeolian(
     seconds: f32,
     gain: f32,
     seed: u64,
+    sample_rate: u32,
 ) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     // Below the threshold: return a silent short buffer so the dispatcher doesn't waste cycles.
     if wind_speed_m_s < MIN_SPEED {
         return vec![0.0; (0.05 * rate) as usize];
@@ -60,6 +59,7 @@ pub fn aeolian(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
 
     fn loudest_at(out: &[f32]) -> f32 {
         out.iter().fold(0f32, |m, x| m.max(x.abs()))
@@ -77,7 +77,7 @@ mod tests {
     #[test]
     fn silent_below_two_metres_per_second() {
         // At 1.5 m/s with a 40 mm iron bar, the impl must return a near-silent buffer.
-        let out = aeolian(0.040, 1.5, 0.5, 1.0, 1);
+        let out = aeolian(0.040, 1.5, 0.5, 1.0, 1, SAMPLE_RATE);
         assert!(out.len() < 4 * SAMPLE_RATE as usize);
         assert!(
             loudest_at(&out) < 0.05,
@@ -89,7 +89,7 @@ mod tests {
     #[test]
     fn whistle_pitch_is_strouhal() {
         // d = 25 mm, U = 10 m/s: Strouhal f ≈ 0.2·10/0.025 = 80 Hz.
-        let out = aeolian(0.025, 10.0, 0.8, 1.0, 2);
+        let out = aeolian(0.025, 10.0, 0.8, 1.0, 2, SAMPLE_RATE);
         let p = pitch(&out);
         assert!((p - 80.0).abs() < 8.0, "pitch {p} Hz, want ~80");
         assert!(loudest_at(&out) > 0.1);
@@ -98,22 +98,22 @@ mod tests {
     #[test]
     fn smaller_diameter_pitches_higher() {
         // d = 25 mm vs d = 100 mm at the same U = 8 m/s: the small one pitches higher.
-        let small = aeolian(0.025, 8.0, 0.8, 1.0, 3);
-        let large = aeolian(0.100, 8.0, 0.8, 1.0, 3);
+        let small = aeolian(0.025, 8.0, 0.8, 1.0, 3, SAMPLE_RATE);
+        let large = aeolian(0.100, 8.0, 0.8, 1.0, 3, SAMPLE_RATE);
         assert!(pitch(&small) > pitch(&large));
     }
 
     #[test]
     fn same_seed_is_deterministic() {
         assert_eq!(
-            aeolian(0.025, 10.0, 0.5, 1.0, 7),
-            aeolian(0.025, 10.0, 0.5, 1.0, 7)
+            aeolian(0.025, 10.0, 0.5, 1.0, 7, SAMPLE_RATE),
+            aeolian(0.025, 10.0, 0.5, 1.0, 7, SAMPLE_RATE)
         );
     }
 
     #[test]
     fn bounded_and_short_enough() {
-        let out = aeolian(0.040, 12.0, 0.5, 1.0, 9);
+        let out = aeolian(0.040, 12.0, 0.5, 1.0, 9, SAMPLE_RATE);
         assert!(out.iter().all(|x| x.is_finite() && x.abs() <= 1.0));
         assert!(out.len() <= (2.0 * SAMPLE_RATE as f32) as usize);
     }
