@@ -277,7 +277,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 						settings.redstone(), settings.boats(), settings.sculk(), settings.noteBlocks(), settings.caveAtmosphere(),
 						settings.rarerSpecies(), settings.underwater(), settings.aeolian(), true, true, true, true,
 						true, true, true, settings.village(), settings.settling(), settings.mobBrushes(),
-						settings.peacefulBreathing(), settings.ashDrift(), 1 << 2));
+						settings.peacefulBreathing(), settings.ashDrift(), settings.blocks(), settings.explosions(), 1 << 2));
 				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.SHEEP_AMBIENT, SoundSource.NEUTRAL, 1f,
 						1.5f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),
 						mc.player.getZ()));				FoleyClient.apply(settings);
@@ -301,7 +301,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
 					settings.biomeBeds(), settings.desertBeds(), settings.mushroomHum(), settings.caveColors(),
 					settings.deepDark(), settings.snowyHush(), settings.mangroveDrone(), settings.village(),
-					settings.settling(), settings.mobBrushes(), settings.peacefulBreathing(), settings.ashDrift(), settings.voices())));
+					settings.settling(), settings.mobBrushes(), settings.peacefulBreathing(), settings.ashDrift(), settings.blocks(), settings.explosions(), settings.voices())));
 			if (context.computeOnClient(mc -> FoleyClient.wants(
 					io.github.cumsauce.foley.config.FoleyConfig::birds))) {
 				FoleyClient.apply(settings);
@@ -325,7 +325,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 						settings.redstone(), settings.boats(), settings.sculk(), settings.noteBlocks(),
 						settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
 						true, true, true, true, true, true, true, settings.village(),
-						settings.settling(), settings.mobBrushes(), settings.peacefulBreathing(), settings.ashDrift(),						1L << io.github.cumsauce.foley.audio.Voices.ADDON_GROUP));
+						settings.settling(), settings.mobBrushes(), settings.peacefulBreathing(), settings.ashDrift(), settings.blocks(), settings.explosions(),						1L << io.github.cumsauce.foley.audio.Voices.ADDON_GROUP));
 				mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.DOLPHIN_AMBIENT, SoundSource.NEUTRAL,
 						1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX(), mc.player.getY(),						mc.player.getZ()));
 				FoleyClient.apply(settings);
@@ -342,7 +342,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(), settings.noteBlocks(),
 					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
 					true, true, true, true, true, true, true, settings.village(),
-					settings.settling(), settings.mobBrushes(), settings.peacefulBreathing(), settings.ashDrift(),
+					settings.settling(), settings.mobBrushes(), settings.peacefulBreathing(), settings.ashDrift(), settings.blocks(), settings.explosions(),
 					(1 << 5) | (1 << 10))));			singleplayer.getServer().runCommand("summon zombie ~3 ~ ~ {NoAI:1b,PersistenceRequired:1b}");
 			try {				context.waitFor(mc -> FoleyClient.breathing().breaths() > 0, 10 * 20);
 			} catch (RuntimeException | AssertionError e) {
@@ -369,7 +369,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 					settings.chests(), settings.redstone(), settings.boats(), settings.sculk(), settings.noteBlocks(),
 					settings.caveAtmosphere(), settings.rarerSpecies(), settings.underwater(), settings.aeolian(),
 					true, true, true, true, true, true, true, settings.village(),
-					settings.settling(), settings.mobBrushes(), settings.peacefulBreathing(), settings.ashDrift(),
+					settings.settling(), settings.mobBrushes(), settings.peacefulBreathing(), settings.ashDrift(), settings.blocks(), settings.explosions(),
 					chosen)));			int beforeAnimals = FoleyClient.replaced();
 			int beforeRedirect = io.github.cumsauce.foley.audio.Voices.redirected();			context.runOnClient(mc -> {
 				for (var event : java.util.List.of(SoundEvents.HORSE_AMBIENT, SoundEvents.GOAT_SCREAMING_AMBIENT,
@@ -406,7 +406,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, 0L)));
+					false, false, false, false, false, false, false, false, false, false, false, settings.blocks(), settings.explosions(), 0L)));
 			context.runOnClient(mc -> mc.getSoundManager().play(new SimpleSoundInstance(SoundEvents.CHEST_OPEN,
 					SoundSource.BLOCKS, 1f, 1f, SoundInstance.createUnseededRandom(), mc.player.getX() + 4,
 					mc.player.getY(), mc.player.getZ())));
@@ -582,7 +582,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, false, settings.blocks(), settings.explosions(),
 					0L)));
 			singleplayer.getServer().waitFor(server -> server.getTickCount() > 100, 200);
 			if (FoleyClient.aeolian().played() != beforeMutedAeolian) {
@@ -609,7 +609,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, settings.blocks(), settings.explosions(),
 					0L)));
 			try {
 				context.waitFor(mc -> FoleyClient.biome() != null
@@ -632,7 +632,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, false,
+					false, false, false, false, false, false, false, false, false, false, false, false, settings.blocks(), settings.explosions(),
 					0L)));
 			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
 			if (villages.played() != villageMuted) {
@@ -713,7 +713,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), false, false, false, false, false, false, false, false, false,
 					false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-					false, false, false, false, false, false, false, false, false, false, false, false, 0L)));
+					false, false, false, false, false, false, false, false, false, false, false, false, settings.blocks(), settings.explosions(), 0L)));
 			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 200);
 			if (FoleyClient.peacefulBreathing().breaths() != beforeMutedBreath22) {
 				throw new AssertionError("M22 played when its toggles were off (breaths delta="
