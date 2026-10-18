@@ -93,6 +93,14 @@ public final class NoteBlocks {
 	public static boolean replace(SoundInstance sound, @Nullable Minecraft minecraft) {
 		int instrument = instrument(sound.getIdentifier());
 		if (instrument < 0) return false;
+		// Bypass always lets the game's sound through, without consulting an override.
+		if (FoleyClient.bypassed()) return false;
+		// An override, if one matches, owns the strike entirely — like every other takeover family.
+		// It is consulted before the toggle: what a mod claims, it keeps.
+		DoorHandling.Action action = DoorHandling.dispatch(sound.getIdentifier(), sound.getX(), sound.getY(),
+				sound.getZ());
+		if (action == DoorHandling.Action.OVERRIDE_HANDLED) return true;
+		if (action == DoorHandling.Action.OVERRIDE_VANILLA) return false;
 		if (!FoleyClient.wants(FoleyConfig::noteBlocks)) return false;
 		int note = noteOf(sound, minecraft);
 		int variant = Math.floorMod(sound.hashCode(), VARIANTS);

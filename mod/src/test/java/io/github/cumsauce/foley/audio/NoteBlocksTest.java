@@ -10,10 +10,15 @@ import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 /** The note block table: the instrument order the native synth knows, the buffers named from it, and the strike. */
 class NoteBlocksTest {
+	@AfterEach
+	void cleanUp() {
+		DoorHandling.clearOverrides();
+	}
 	@Test
 	void theInstrumentOrderMatchesTheIds() {
 		assertEquals(16, NoteBlocks.INSTRUMENTS.size());
@@ -36,6 +41,27 @@ class NoteBlocksTest {
 	@Test
 	void unknownNoteSoundIsLeftToVanilla() {
 		assertFalse(NoteBlocks.replace(sound("block.note_block.unknown"), client()));
+	}
+
+	@Test
+	void anOverrideWinsOverTheBuiltInStrike() {
+		DoorHandling.register(id -> id.getPath().equals("block.note_block.harp"),
+				(event, x, y, z) -> true);
+		assertTrue(NoteBlocks.replace(sound("block.note_block.harp"), client()));
+	}
+
+	@Test
+	void aDecliningOverrideLeavesTheStrikeToVanilla() {
+		DoorHandling.register(id -> id.getPath().equals("block.note_block.harp"),
+				(event, x, y, z) -> false);
+		assertFalse(NoteBlocks.replace(sound("block.note_block.harp"), client()));
+	}
+
+	@Test
+	void anUnrelatedOverrideDoesNotOwnAStrike() {
+		DoorHandling.register(id -> id.getPath().equals("block.note_block.bell"),
+				(event, x, y, z) -> true);
+		assertTrue(NoteBlocks.replace(sound("block.note_block.harp"), client()));
 	}
 
 	@Test

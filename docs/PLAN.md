@@ -697,12 +697,9 @@ Density rather than new models:
 - **Tests:** with the toggle on the vanilla step is skipped and Foley's layer plays; off, vanilla plays; bypass neutral; an override wins.
 - **Exit:** walking sounds on every material come from Foley alone.
 
-## M25 plan: note blocks join the override registry
+## M25 results: note blocks join the override registry (2026-10-18)
 
-- `NoteBlocks.replace` is the one takeover branch that does not consult `DoorHandling.dispatch`/`override(...)`. Route strikes through it so a mod can own note-block events like any other family (handled → skip, declined → vanilla).
-- Keep the `noteBlocks` toggle and the existing pass-through for unknown instruments (26.3's trumpets and mob-head imitations stay vanilla).
-- **Tests:** an override matching `block.note_block.*` wins over the built-in strike; declined → vanilla; toggle off + no override → vanilla.
-- **Exit:** every takeover family has identical override semantics (closes the audit's only remaining asymmetry).
+- **Done:** `NoteBlocks.replace` now consults `DoorHandling.dispatch` after the bypass check and before the `noteBlocks` toggle — handled → skip, declined → vanilla, no match → the built-in strike and its toggle, identical to every other family. Unknown instruments still fall through to vanilla. Three tests (`anOverrideWinsOverTheBuiltInStrike`, `aDecliningOverrideLeavesTheStrikeToVanilla`, `anUnrelatedOverrideDoesNotOwnAStrike`) pin the wiring; `NoteBlocksTest` 9/9 green. The takeover table in `docs/INTEGRATING.md` gained its note-block row. The note family keeps its own `PLAYS` counter (an override-handled strike is the addon's, not Foley's).
 
 ## M26 plan: block break, place and digging
 
