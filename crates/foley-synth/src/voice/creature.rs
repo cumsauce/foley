@@ -6,7 +6,7 @@
 //! seed, the archetypes keeping to the brief: unsettling in measure, never
 //! outright horror.
 
-use super::score::{AA, EH, OH, SCHWA, Seg, UH, Voice, c, finish, k, perform};
+use super::score::{c, finish_at, k, perform_at, Seg, Voice, AA, EH, OH, SCHWA, UH};
 use crate::Rng;
 
 /// Another mod's creature's voice. `length` is its vocal tract's (m) and
@@ -42,7 +42,12 @@ fn vary(rng: &mut Rng, base: f32, frac: f32) -> f32 {
 }
 
 /// A creature of `spec` making `call`, made up from `seed`.
-pub fn creature_voice(rng: &mut Rng, spec: &CreatureSpec, call: CreatureCall) -> Vec<f32> {
+pub fn creature_voice(
+    rng: &mut Rng,
+    spec: &CreatureSpec,
+    call: CreatureCall,
+    sample_rate: u32,
+) -> Vec<f32> {
     let segments = match call {
         CreatureCall::Ambient => ambient(rng, spec),
         CreatureCall::Hurt => hurt(rng, spec),
@@ -61,7 +66,11 @@ pub fn creature_voice(rng: &mut Rng, spec: &CreatureSpec, call: CreatureCall) ->
         CreatureCall::Breath => 0.35,
         CreatureCall::Ambient => 0.5,
     };
-    finish(perform(rng, voice, &segments), peak)
+    finish_at(
+        perform_at(rng, voice, &segments, sample_rate),
+        peak,
+        sample_rate,
+    )
 }
 
 /// An ambient call: a phrase or two, falling, in the creature's own quality.
@@ -235,7 +244,7 @@ mod tests {
                 CreatureCall::Breath,
             ] {
                 let mut rng = Rng::new(7);
-                let sound = creature_voice(&mut rng, &spec, call);
+                let sound = creature_voice(&mut rng, &spec, call, SAMPLE_RATE);
                 assert!(
                     !sound.is_empty()
                         && sound.len() < 3 * SAMPLE_RATE as usize
@@ -261,6 +270,7 @@ mod tests {
                 breathy: 0.4,
             },
             CreatureCall::Ambient,
+            SAMPLE_RATE,
         );
         let small = creature_voice(
             &mut rng,
@@ -271,6 +281,7 @@ mod tests {
                 breathy: 0.4,
             },
             CreatureCall::Ambient,
+            SAMPLE_RATE,
         );
         assert!(
             crossings(&small) > crossings(&big),
@@ -285,6 +296,7 @@ mod tests {
                 breathy: 0.4,
             },
             CreatureCall::Growl,
+            SAMPLE_RATE,
         );
         let clean = creature_voice(
             &mut rng,
@@ -295,6 +307,7 @@ mod tests {
                 breathy: 0.4,
             },
             CreatureCall::Growl,
+            SAMPLE_RATE,
         );
         // Roughness modulates at 30–150 Hz: more crossings through zero.
         assert!(
@@ -312,8 +325,8 @@ mod tests {
             breathy: 0.5,
         };
         let mut rng = Rng::new(9);
-        let hurt = creature_voice(&mut rng, &spec, CreatureCall::Hurt);
-        let ambient = creature_voice(&mut rng, &spec, CreatureCall::Ambient);
+        let hurt = creature_voice(&mut rng, &spec, CreatureCall::Hurt, SAMPLE_RATE);
+        let ambient = creature_voice(&mut rng, &spec, CreatureCall::Ambient, SAMPLE_RATE);
         assert!(crossings(&hurt[..hurt.len() / 4]) > crossings(&ambient[..ambient.len() / 4]));
     }
 }

@@ -109,6 +109,12 @@ fn tables() -> &'static [Pulse] {
     })
 }
 
+/// Force-initialise the shared LUT tables before the audio thread first needs
+/// them. Safe to call from any thread; repeated calls are no-ops.
+pub fn warm_voice_tables() {
+    let _ = tables();
+}
+
 /// The flow derivative and flow at `phase` (0 to 1) of a period with `rd`,
 /// interpolated between the tables.
 pub(super) fn lookup(rd: f32, phase: f32) -> (f32, f32) {

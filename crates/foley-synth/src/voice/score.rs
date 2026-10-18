@@ -5,7 +5,7 @@ use std::f32::consts::TAU;
 
 use super::lf;
 use super::tract::Tract;
-use crate::{LowPass, Rng, SAMPLE_RATE};
+use crate::{LowPass, Rng};
 
 /// A value over a segment, by keyframes at fractions 0 to 1 of it.
 #[derive(Debug, Clone)]
@@ -256,8 +256,9 @@ fn gauss(rng: &mut Rng) -> f32 {
     rng.signed() + rng.signed() + rng.signed()
 }
 
-/// Performs `segments` with `voice`. The source is the LF model at each
-/// segment's Rd, its period set by the pitch with jitter, its pulses scaled
+/// Performs `segments` with `voice` at a caller-chosen sample rate. The source
+/// is the LF model at each segment's Rd, its period set by the pitch with
+/// jitter, its pulses scaled
 /// by shimmer; subharmonics weaken (and lengthen) all but every `sub_n`th
 /// pulse; sidebands modulate its amplitude; chaos adds bursts of jitter and
 /// shimmer and occasional pitch jumps; creak pulls the rate down to 20–70 Hz,
@@ -265,8 +266,13 @@ fn gauss(rng: &mut Rng) -> f32 {
 /// quieter. Breath noise follows the glottal flow. Turbulence is injected at
 /// a constriction. The tract moves towards each instant's mouth shape in a
 /// few milliseconds.
-pub(super) fn perform(rng: &mut Rng, voice: Voice, segments: &[Seg]) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+pub(super) fn perform_at(
+    rng: &mut Rng,
+    voice: Voice,
+    segments: &[Seg],
+    sample_rate: u32,
+) -> Vec<f32> {
+    let rate = sample_rate as f32;
     let mut tract = Tract::new(voice.length);
     let mut out = Vec::new();
     let mut phase = 0.0f32;
@@ -378,18 +384,18 @@ pub(super) fn perform(rng: &mut Rng, voice: Voice, segments: &[Seg]) -> Vec<f32>
 }
 
 /// Takes off the lowest rumble (below about 40 Hz) and scales to `peak`,
-/// with short fades so it never clicks.
-pub(super) fn finish(mut out: Vec<f32>, peak: f32) -> Vec<f32> {
-    let mut low = LowPass::new(40.0);
+/// with short fades so it never clicks, at a caller-chosen sample rate.
+pub(super) fn finish_at(mut out: Vec<f32>, peak: f32, sample_rate: u32) -> Vec<f32> {
+    let mut low = LowPass::new_at(40.0, sample_rate);
     for x in &mut out {
         *x -= low.process(*x);
     }
-    out.extend(std::iter::repeat_n(0.0, SAMPLE_RATE as usize / 50));
+    out.extend(std::iter::repeat_n(0.0, sample_rate as usize / 50));
     let loudest = out.iter().fold(0f32, |m, x| m.max(x.abs()));
     if loudest > 0.0 {
         out.iter_mut().for_each(|x| *x *= peak / loudest);
     }
-    let fade = (SAMPLE_RATE as usize / 500).min(out.len() / 2);
+    let fade = (sample_rate as usize / 500).min(out.len() / 2);
     let len = out.len();
     for i in 0..fade {
         let g = i as f32 / fade as f32;

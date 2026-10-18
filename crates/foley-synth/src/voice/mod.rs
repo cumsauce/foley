@@ -13,12 +13,12 @@ mod speech;
 mod tract;
 
 use creatures::{Bones, Call3, CreeperCall};
-use score::{c, finish, k, perform, Seg, Voice, AA, AE, EE, EH, K, OH, OO, UH};
+use score::{c, finish_at, k, perform_at, Seg, Voice, AA, AE, EE, EH, K, OH, OO, UH};
 
 use crate::Rng;
 
 pub use creature::{creature_voice, CreatureCall, CreatureSpec};
-pub use lf::{lf_pulse, Pulse};
+pub use lf::{lf_pulse, warm_voice_tables, Pulse};
 
 /// The mobs Foley can voice. The order is the C ABI's.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -308,7 +308,7 @@ pub(super) fn vary(rng: &mut Rng, x: f32, by: f32) -> f32 {
 /// slides up a fifth or so, holds with a slow waver, and falls away, the
 /// lips rounded and the jaw opening a little at its height; often a second,
 /// shorter one after it.
-pub fn howl(seed: u64) -> Vec<f32> {
+pub fn howl(seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed ^ 0x40A1);
     let mut voice = Mob::Wolf.voice();
     voice.f0 *= 0.85 + 0.25 * rng.unit();
@@ -336,12 +336,16 @@ pub fn howl(seed: u64) -> Vec<f32> {
         h.gap = vary(&mut rng, 0.6, 0.3);
         segments.push(h);
     }
-    finish(perform(&mut rng, voice, &segments), 0.4)
+    finish_at(
+        perform_at(&mut rng, voice, &segments, sample_rate),
+        0.4,
+        sample_rate,
+    )
 }
 
 /// A call of `mob`, made up from `seed`. Calls a mob doesn't have fall back
 /// to its ambient one.
-pub fn voice(mob: Mob, call: Call, seed: u64) -> Vec<f32> {
+pub fn voice(mob: Mob, call: Call, seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed);
     let (call, in_water) = call.dry();
     let three = match call {
@@ -350,19 +354,29 @@ pub fn voice(mob: Mob, call: Call, seed: u64) -> Vec<f32> {
         _ => Call3::Ambient,
     };
     let (sound, peak) = match mob {
-        Mob::Skeleton => (creatures::skeleton(&mut rng, three, Bones::Plain), 0.5),
-        Mob::Stray => (creatures::skeleton(&mut rng, three, Bones::Frosted), 0.5),
-        Mob::Bogged => (creatures::skeleton(&mut rng, three, Bones::Mossy), 0.5),
-        Mob::Spider => (creatures::spider(&mut rng, three, 1.0), 0.5),
-        Mob::CaveSpider => (creatures::spider(&mut rng, three, 1.5), 0.45),
-        Mob::Bat => (creatures::bat(&mut rng, three), 0.4),
+        Mob::Skeleton => (
+            creatures::skeleton(&mut rng, three, Bones::Plain, sample_rate),
+            0.5,
+        ),
+        Mob::Stray => (
+            creatures::skeleton(&mut rng, three, Bones::Frosted, sample_rate),
+            0.5,
+        ),
+        Mob::Bogged => (
+            creatures::skeleton(&mut rng, three, Bones::Mossy, sample_rate),
+            0.5,
+        ),
+        Mob::Spider => (creatures::spider(&mut rng, three, 1.0, sample_rate), 0.5),
+        Mob::CaveSpider => (creatures::spider(&mut rng, three, 1.5, sample_rate), 0.45),
+        Mob::Bat => (creatures::bat(&mut rng, three, sample_rate), 0.4),
         Mob::Bee => {
             let sound = match call {
-                Call::Hurt => creatures::bee_cry(&mut rng, false),
-                Call::Death => creatures::bee_cry(&mut rng, true),
+                Call::Hurt => creatures::bee_cry(&mut rng, false, sample_rate),
+                Call::Death => creatures::bee_cry(&mut rng, true, sample_rate),
                 // A loop: no fades or tail, so it joins up.
                 _ => {
-                    let mut buzz = creatures::bee_loop(&mut rng, call == Call::LoopAggressive);
+                    let mut buzz =
+                        creatures::bee_loop(&mut rng, call == Call::LoopAggressive, sample_rate);
                     let loudest = buzz.iter().fold(0f32, |m, x| m.max(x.abs()));
                     buzz.iter_mut().for_each(|x| *x *= 0.35 / loudest.max(1e-6));
                     return buzz;
@@ -379,47 +393,51 @@ pub fn voice(mob: Mob, call: Call, seed: u64) -> Vec<f32> {
                 _ => creatures::Slime::Squish,
             };
             let size = if mob == Mob::Slime { 1.0 } else { 0.4 };
-            (creatures::slime(&mut rng, slime, size), 0.5)
+            (creatures::slime(&mut rng, slime, size, sample_rate), 0.5)
         }
-        Mob::IronGolem => (creatures::iron_golem(&mut rng, three, seed), 0.6),
-        Mob::SnowGolem => (creatures::snow_golem(three, seed), 0.45),
-        Mob::Silverfish => (creatures::spider(&mut rng, three, 2.5), 0.4),
-        Mob::Endermite => (creatures::spider(&mut rng, three, 3.0), 0.4),
-        Mob::Frog if three == Call3::Ambient => (
-            crate::frog(5.0 + 3.0 * rng.unit(), seed, crate::SAMPLE_RATE),
-            0.5,
+        Mob::IronGolem => (
+            creatures::iron_golem(&mut rng, three, seed, sample_rate),
+            0.6,
         ),
-        Mob::Guardian | Mob::ElderGuardian if call == Call::Flop => {
-            (creatures::flop(&mut rng, mob == Mob::ElderGuardian), 0.55)
+        Mob::SnowGolem => (creatures::snow_golem(three, seed, sample_rate), 0.45),
+        Mob::Silverfish => (creatures::spider(&mut rng, three, 2.5, sample_rate), 0.4),
+        Mob::Endermite => (creatures::spider(&mut rng, three, 3.0, sample_rate), 0.4),
+        Mob::Frog if three == Call3::Ambient => {
+            (crate::frog(5.0 + 3.0 * rng.unit(), seed, sample_rate), 0.5)
         }
-        Mob::Phantom if call == Call::Swoop || call == Call::Flap => {
-            (creatures::phantom_air(&mut rng, call == Call::Swoop), 0.45)
-        }
+        Mob::Guardian | Mob::ElderGuardian if call == Call::Flop => (
+            creatures::flop(&mut rng, mob == Mob::ElderGuardian, sample_rate),
+            0.55,
+        ),
+        Mob::Phantom if call == Call::Swoop || call == Call::Flap => (
+            creatures::phantom_air(&mut rng, call == Call::Swoop, sample_rate),
+            0.45,
+        ),
         Mob::Creeper => {
             let call = match call {
                 Call::Hurt => CreeperCall::Hurt,
                 Call::Death => CreeperCall::Death,
                 _ => CreeperCall::Primed,
             };
-            (creatures::creeper(&mut rng, call), 0.55)
+            (creatures::creeper(&mut rng, call, sample_rate), 0.55)
         }
         _ => {
             let segments = script(&mut rng, mob, call);
             let mut voice = mob.voice();
             voice.f0 *= 1.0 + 0.06 * rng.signed();
-            let mut sound = perform(&mut rng, voice, &segments);
+            let mut sound = perform_at(&mut rng, voice, &segments, sample_rate);
             let submerged =
                 matches!(mob, Mob::Guardian | Mob::ElderGuardian) && call != Call::AmbientLand;
             if submerged {
                 // Guardians live in water: a few bubbles rise as they call.
                 // (Earshot muffles it if the listener is under water too.)
-                sound = creatures::bubbles(&mut rng, sound, 3);
+                sound = creatures::bubbles(&mut rng, sound, 3, sample_rate);
             }
             if mob == Mob::Drowned {
                 sound = if in_water {
-                    creatures::underwater(&mut rng, sound)
+                    creatures::underwater(&mut rng, sound, sample_rate)
                 } else {
-                    creatures::gurgle(&mut rng, sound)
+                    creatures::gurgle(&mut rng, sound, sample_rate)
                 };
             }
             let hostile = matches!(
@@ -453,7 +471,7 @@ pub fn voice(mob: Mob, call: Call, seed: u64) -> Vec<f32> {
             (sound, peak)
         }
     };
-    finish(sound, peak)
+    finish_at(sound, peak, sample_rate)
 }
 
 /// A sharp, rough cry, then sometimes a gasp.
@@ -1085,7 +1103,7 @@ mod tests {
     fn every_mob_has_every_call() {
         for mob in Mob::ALL {
             for call in Call::ALL {
-                let s = voice(mob, call, 3);
+                let s = voice(mob, call, 3, SAMPLE_RATE);
                 assert!(s.iter().all(|x| x.is_finite()), "{mob:?} {call:?}");
                 assert!(
                     s.len() > SAMPLE_RATE as usize / 20 && s.len() < 4 * SAMPLE_RATE as usize,
@@ -1100,19 +1118,21 @@ mod tests {
 
     #[test]
     fn a_cow_is_deeper_than_a_cat_and_a_zombie_groans_long() {
-        let cow = voice(Mob::Cow, Call::Ambient, 1);
-        let cat = voice(Mob::Cat, Call::Ambient, 1);
+        let cow = voice(Mob::Cow, Call::Ambient, 1, SAMPLE_RATE);
+        let cat = voice(Mob::Cat, Call::Ambient, 1, SAMPLE_RATE);
         assert!(crossings(&cow) < crossings(&cat));
-        assert!(voice(Mob::Zombie, Call::Ambient, 2).len() > SAMPLE_RATE as usize * 8 / 10);
+        assert!(
+            voice(Mob::Zombie, Call::Ambient, 2, SAMPLE_RATE).len() > SAMPLE_RATE as usize * 8 / 10
+        );
         // Heavy breathing is louder than steady breathing.
-        let light = voice(Mob::Zombie, Call::Breath, 3);
-        let heavy = voice(Mob::Zombie, Call::BreathHeavy, 3);
+        let light = voice(Mob::Zombie, Call::Breath, 3, SAMPLE_RATE);
+        let heavy = voice(Mob::Zombie, Call::BreathHeavy, 3, SAMPLE_RATE);
         assert!(rms(&heavy) > rms(&light));
     }
 
     #[test]
     fn a_bee_loops_seamlessly_and_a_witch_cackles_in_bursts() {
-        let buzz = voice(Mob::Bee, Call::Loop, 1);
+        let buzz = voice(Mob::Bee, Call::Loop, 1, SAMPLE_RATE);
         assert_eq!(buzz.len(), SAMPLE_RATE as usize);
         let step = (buzz[0] - buzz[buzz.len() - 1]).abs();
         let typical = buzz
@@ -1124,7 +1144,7 @@ mod tests {
             "loop seam {step} against steps up to {typical}"
         );
         // A cackle: separate bursts, so its envelope dips again and again.
-        let cackle = voice(Mob::Witch, Call::Celebrate, 2);
+        let cackle = voice(Mob::Witch, Call::Celebrate, 2, SAMPLE_RATE);
         let window = SAMPLE_RATE as usize / 100;
         let envelope: Vec<f32> = cackle.chunks(window).map(rms).collect();
         let top = envelope.iter().fold(0f32, |m, x| m.max(*x));
@@ -1137,18 +1157,18 @@ mod tests {
 
     #[test]
     fn a_donkey_brays_in_and_out() {
-        let bray = voice(Mob::Donkey, Call::Ambient, 1);
+        let bray = voice(Mob::Donkey, Call::Ambient, 1, SAMPLE_RATE);
         assert!(bray.len() > SAMPLE_RATE as usize, "{} samples", bray.len());
-        let horse = voice(Mob::Horse, Call::Ambient, 1);
+        let horse = voice(Mob::Horse, Call::Ambient, 1, SAMPLE_RATE);
         assert!(horse.len() > SAMPLE_RATE as usize / 2);
     }
 
     #[test]
     fn a_creepers_fuse_swells_and_bones_click() {
-        let fuse = voice(Mob::Creeper, Call::Primed, 1);
+        let fuse = voice(Mob::Creeper, Call::Primed, 1, SAMPLE_RATE);
         let half = fuse.len() / 2;
         assert!(rms(&fuse[half..]) > 1.5 * rms(&fuse[..half]));
-        let bones = voice(Mob::Skeleton, Call::Ambient, 1);
+        let bones = voice(Mob::Skeleton, Call::Ambient, 1, SAMPLE_RATE);
         assert!(bones.iter().fold(0f32, |p, x| p.max(x.abs())) > 5.0 * rms(&bones));
     }
 
