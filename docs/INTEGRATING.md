@@ -189,6 +189,7 @@ Every event below is skipped in the game's sound engine and replaced by Foley's 
 | Shulker boxes | `ActiveStructures` | `chests` | `block.shulker_box.*` |
 | Minecarts (inside / riding) | `ActiveStructures` | `minecarts` | `entity.minecart.*` |
 | Note block strikes | `NoteBlocks` | `noteBlocks` | `block.note_block.*` |
+| Block footsteps | `Footsteps`/`Layers` | `footsteps` | `block.*.step` (the game's `SoundType` step sounds) |
 
 
 **Policy.** An override always wins over Foley's built-in toggle for that event: if a registered override matches, its return value (handled → skip, declined → vanilla) is final and the `wants(...)` toggle is not consulted. With no matching override, Foley's built-in logic runs unchanged and honours its toggle. The global bypass short-circuits everything — while bypassed no override is consulted and the game's sound plays. Chests and shulker boxes share the `chests` toggle; minecarts use `minecarts`.

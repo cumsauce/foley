@@ -689,13 +689,11 @@ Density rather than new models:
 
 **Policy:** when Foley synthesizes a family of sounds and the family's toggle is on, Foley **replaces** the vanilla events for that family — the game's own sounds are skipped — exactly as rain, thunder, ambience, drips, doors, chests, shulkers, minecarts and note blocks already do. Global bypass always lets vanilla through, and every family goes through the generic override registry (beta.60) so other mods can take it in turn. A family Foley only *layers* today is not finished until it replaces.
 
-## M24 plan: footsteps
+## M24 results: footsteps (2026-10-18)
 
-- Skip the vanilla step/dig events in `Replacements` when `footsteps` is on; Foley's `Layers` synthesis is already the replacement. Today the two double up: Foley layers and vanilla still plays.
-- Events: the `SoundEvents.*_STEP` family (all walkable block materials) and the dig/land variants, keyed by the sound id prefix per material.
-- Follow the standard branch shape: bypass → vanilla; `override(...)` verdict; else `wants(FoleyConfig::footsteps)` decides skip+synthesize vs vanilla.
-- **Tests:** with the toggle on the vanilla step is skipped and Foley's layer plays; off, vanilla plays; bypass neutral; an override wins.
-- **Exit:** walking sounds on every material come from Foley alone.
+- **Done:** `Replacements` now skips `block.<material>.step` while `footsteps` is on, through the standard family shape (bypass → vanilla; override verdict; then the toggle) — Foley's `Layers` step is the replacement, and the double-up is gone. The id rule and verdict live in a new package-private `Footsteps` class rather than in `Replacements`, because `Replacements`' statics load `SoundEvents`, which cannot class-init in plain unit tests (same reason `DoorHandling` uses literal ids).
+- **Deliberately not skipped:** the same materials' `.fall` (landing) and `.hit` (dig tap) sounds. `Layers` gates those on the `strikes` setting, not `footsteps`, so skipping them here would silence landings whenever strikes is off; they join `.break`/`.place` in M26's `blocks` takeover. Entity steps stay vanilla (Decided #2).
+- **Tests:** `FootstepsReplacementTest` (9 tests) pins a 16-material step table, sibling sounds not matched, entity/foreign ids not matched, toggle off → vanilla, override owns/declines, bypass neutral. Full suite 118 green.
 
 ## M25 results: note blocks join the override registry (2026-10-18)
 

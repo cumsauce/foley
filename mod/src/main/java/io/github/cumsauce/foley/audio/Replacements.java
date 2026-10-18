@@ -28,7 +28,9 @@ import net.minecraft.world.level.material.Fluids;
  *   <li>dripstone drips, swapped for a generated drip where the drop lands: into water if it lands in water or a
  *       cauldron, on stone otherwise, or a drop of lava.</li>
  *   <li>M21 active structures: door, chest, shulker and minecart events (the
- *       per-tick sounds Foley makes instead are played by {@link ActiveStructures}).</li>
+ *       per-tick sounds Foley makes instead are played by {@link ActiveStructures});</li>
+ *   <li>M24 footsteps: the block materials' step events ({@code block.<material>.step}), while the
+ *       {@code footsteps} setting is on and Foley's {@link Layers} step plays instead.</li>
  * </ul>
  */
 public final class Replacements {
@@ -87,6 +89,8 @@ public final class Replacements {
 		Minecraft minecraft = Minecraft.getInstance();
 		// M23: note block strikes, taken for Foley's own instruments (the toggle is inside).
 		if (NoteBlocks.replace(sound, minecraft)) return true;
+		// M24: the game's block step events, taken for Foley's footsteps (the layer is played by Layers).
+		if (Footsteps.replaceStep(sound)) return true;
 		if (FoleyClient.placed() == null || minecraft.level == null || minecraft.player == null) return false;
 		boolean ambience = WATER.contains(id) || LAVA.contains(id) || FIRE.contains(id);
 		if (ambience) {
