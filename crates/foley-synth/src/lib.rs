@@ -19,9 +19,10 @@ mod thunder;
 mod voice;
 
 pub use foley_dsp::{
-    BandPass, Bubble, Cave, CaveScene, Fire, FireScene, Lava, LavaScene, LowPass, Rain, RainScene,
-    Rng, SAMPLE_RATE, Surface, Underwater, UnderwaterScene, Water, WaterScene, Wind, WindScene,
-    absorption_cutoff, absorption_db_per_m, helmholtz, minnaert_hz, plunge_radius, to_pcm,
+    BandPass, Bubble, Cave, CaveScene, DEFAULT_SAMPLE_RATE, Fire, FireScene, Lava, LavaScene,
+    LowPass, Rain, RainScene, Rng, SAMPLE_RATE, Surface, Underwater, UnderwaterScene, Water,
+    WaterScene, Wind, WindScene, absorption_cutoff, absorption_db_per_m, helmholtz, minnaert_hz,
+    plunge_radius, to_pcm,
 };
 
 pub use crate::aeolian::aeolian;
@@ -35,7 +36,7 @@ pub use crate::modal::{
 };
 pub use crate::note::{Family, base_hz, family, note, note_hz};
 pub use crate::oneshot::{bang, drip_into_water, drip_on_stone, lava_drip};
-pub use crate::outdoors::{cicadas, owl, surf, woodpecker};
+pub use crate::outdoors::{SURF_LEN, cicadas, owl, surf, surf_len, woodpecker};
 pub use crate::plants::{Plant, brush, buzz, flush, ice_singing, settling_stone};
 pub use crate::primitives::{bubble, gust, noise_burst, tone};
 pub use crate::sculk::sculk_ring;

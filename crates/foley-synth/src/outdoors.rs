@@ -4,46 +4,58 @@
 use std::f32::consts::TAU;
 
 use crate::dsp::{Wobble, add_at, normalize, normalize_in_place};
-use crate::{BandPass, Bubble, Contact, LowPass, Material, Rng, SAMPLE_RATE, contact};
+use crate::{BandPass, Bubble, Contact, LowPass, Material, Rng, contact};
 use foley_dsp::plunge_radius;
 
-/// Length in samples of one wave: about 7 s from rise to the end of the backwash.
-pub const SURF_LEN: usize = (7.0 * SAMPLE_RATE as f32) as usize;
+/// Length in samples of one wave at `rate`: about 7 s from rise to the end of
+/// the backwash.
+pub const fn surf_len(rate: u32) -> usize {
+    (7.0 * rate as f32) as usize
+}
 
-/// Samples in one shingle knock: 10 ms, on the stack so a shore never allocates.
-const KNOCK_LEN: usize = SAMPLE_RATE as usize / 100;
+/// [`surf_len`] at the default rate, kept for compat (foley-ffi).
+pub const SURF_LEN: usize = surf_len(foley_dsp::DEFAULT_SAMPLE_RATE);
 
 /// One wave breaking on a shore, `height` metres high (0.2 to 3), about
 /// 7 s from its rise to the end of its backwash — into a fresh buffer, for
 /// the callers that can afford to allocate. The audio thread calls
 /// [`surf_into`] instead.
-pub fn surf(height: f32, seed: u64) -> Vec<f32> {
-    let mut out = vec![0.0f32; SURF_LEN];
+pub fn surf(height: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
+    let mut out = vec![0.0f32; surf_len(sample_rate)];
     let mut bubbles = Vec::with_capacity(256);
-    surf_into(height, seed, &mut out, &mut bubbles);
+    surf_into(height, seed, &mut out, &mut bubbles, sample_rate);
     out
 }
 
-/// [`surf`], written into `out` (exactly [`SURF_LEN`] samples) so breaking a
-/// wave on the audio thread allocates nothing. As it steepens, a low roar
+/// [`surf`], written into `out` (exactly [`surf_len`](`sample_rate`) samples)
+/// so breaking a wave on the audio thread allocates nothing. As it steepens, a low roar
 /// grows; it plunges, and the air it traps is torn into bubbles of every
 /// size (Deane and Stokes' spectrum), heard as the crash; the foam it leaves
 /// hisses as its small bubbles burst while the water runs up the beach; then
 /// it drains back, drawing the shingle with it, on a stony shore. `bubbles`
 /// is scratch, cleared and reused, and must have capacity 256.
-pub fn surf_into(height: f32, seed: u64, out: &mut [f32], bubbles: &mut Vec<Bubble>) {
-    debug_assert_eq!(out.len(), SURF_LEN);
+pub fn surf_into(
+    height: f32,
+    seed: u64,
+    out: &mut [f32],
+    bubbles: &mut Vec<Bubble>,
+    sample_rate: u32,
+) {
+    debug_assert_eq!(out.len(), surf_len(sample_rate));
     let mut rng = Rng::new(seed ^ 0x5EA);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let height = height.clamp(0.2, 3.0);
     let length = out.len();
     let break_at = 1.2 + 0.6 * rng.unit();
     let shingle = rng.unit() < 0.5;
     bubbles.clear();
-    let mut rumble = [LowPass::new(250.0), LowPass::new(250.0)];
-    let mut crash = BandPass::new(900.0, 0.5);
-    let mut foam = BandPass::new(5000.0, 0.7);
-    let mut swell = Wobble::new(2.0, 3.0, 0.4, 1.6);
+    let mut rumble = [
+        LowPass::new_at(250.0, sample_rate),
+        LowPass::new_at(250.0, sample_rate),
+    ];
+    let mut crash = BandPass::new_at(900.0, 0.5, sample_rate);
+    let mut foam = BandPass::new_at(5000.0, 0.7, sample_rate);
+    let mut swell = Wobble::new_at(2.0, 3.0, 0.4, 1.6, sample_rate);
     let mut until_bubble = 0.0f32;
     let mut until_pop = 0.0f32;
     let mut pop = 0.0f32;
@@ -85,7 +97,11 @@ pub fn surf_into(height: f32, seed: u64, out: &mut [f32], bubbles: &mut Vec<Bubb
                 until_bubble += rng.exponential(entrained);
                 if bubbles.len() < 256 {
                     let radius = plunge_radius(&mut rng);
-                    bubbles.push(Bubble::new(radius, 0.01 * (0.5 + rng.unit())));
+                    bubbles.push(Bubble::new_at(
+                        radius,
+                        0.01 * (0.5 + rng.unit()),
+                        sample_rate,
+                    ));
                 }
             }
         }
@@ -105,15 +121,15 @@ pub fn surf_into(height: f32, seed: u64, out: &mut [f32], bubbles: &mut Vec<Bubb
         while at < 6.8 {
             let left = 1.0 - (at - start) / (6.8 - start);
             let f = 2500.0 + 3000.0 * rng.unit();
-            let mut knock = [0.0f32; KNOCK_LEN];
-            for (n, k) in knock.iter_mut().enumerate() {
-                let t = n as f32 * dt;
-                *k = (-t * 600.0).exp() * (TAU * f * t).sin();
-            }
+            // One shingle knock is 10 ms at this rate, written straight into
+            // `out`: a rate-generic length can't be a stack array, and a
+            // shore must never allocate.
+            let knock_len = sample_rate as usize / 100;
             let gain = 0.06 * left * rng.unit();
             let index = (at * rate) as usize;
-            for (o, k) in out.iter_mut().skip(index).zip(&knock) {
-                *o += gain * k;
+            for (o, n) in out.iter_mut().skip(index).zip(0..knock_len) {
+                let t = n as f32 * dt;
+                *o += gain * (-t * 600.0).exp() * (TAU * f * t).sin();
             }
             at += rng.exponential(250.0 * left + 5.0);
         }
@@ -129,9 +145,9 @@ pub fn surf_into(height: f32, seed: u64, out: &mut [f32], bubbles: &mut Vec<Bubb
 /// A woodpecker drumming on a dead branch: 10 to 30 strikes at about 20 a
 /// second, louder then softer, slowing a little at the end, each the beak
 /// striking wood at some 6 m/s and the branch ringing.
-pub fn woodpecker(seed: u64) -> Vec<f32> {
+pub fn woodpecker(seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed ^ 0xD0D0);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let strikes = 10 + (rng.unit() * 20.0) as usize;
     let mut hz = 16.0 + 10.0 * rng.unit();
     let mut out = vec![0.0f32; (0.3 * rate) as usize];
@@ -152,7 +168,7 @@ pub fn woodpecker(seed: u64) -> Vec<f32> {
         at += 1.0 / hz;
     }
     // A branch is a resonant body: a touch of its hollow ring.
-    let mut body = BandPass::new(600.0 + 400.0 * rng.unit(), 6.0);
+    let mut body = BandPass::new_at(600.0 + 400.0 * rng.unit(), 6.0, sample_rate);
     let hollow: Vec<f32> = out.iter().map(|x| body.process(*x)).collect();
     for (o, h) in out.iter_mut().zip(hollow) {
         *o += 0.8 * h;
@@ -163,9 +179,9 @@ pub fn woodpecker(seed: u64) -> Vec<f32> {
 /// An owl hooting at night: a great horned owl's "hoo, h'hoo-hoo, hoo,
 /// hoo", low and soft, each note a nearly pure tone from the syrinx with a
 /// little breath, rising into it and falling away.
-pub fn owl(seed: u64) -> Vec<f32> {
+pub fn owl(seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed ^ 0x0071);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     // A great horned owl hoots low: about 280 to 360 Hz.
     let f0 = 280.0 + 80.0 * rng.unit();
     // (start, length, pitch, loudness).
@@ -186,7 +202,7 @@ pub fn owl(seed: u64) -> Vec<f32> {
         ]
     };
     let mut out = vec![0.0f32; (2.6 * rate) as usize];
-    let mut breath = BandPass::new(f0 * 2.0, 2.0);
+    let mut breath = BandPass::new_at(f0 * 2.0, 2.0, sample_rate);
     for &(start, length, pitch, loud) in pattern {
         let n = (length * rate) as usize;
         let mut phase = 0.0f32;
@@ -210,9 +226,9 @@ pub fn owl(seed: u64) -> Vec<f32> {
 /// tymbals hundreds of times a second (faster when warmer), every click
 /// ringing the hollow abdomen near 5 kHz, in long swells; together, the
 /// drone of a hot afternoon. Below about 20 °C they're silent.
-pub fn cicadas(celsius: f32, seed: u64) -> Vec<f32> {
+pub fn cicadas(celsius: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
     let mut rng = Rng::new(seed ^ 0xC1CA);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let length = (6.0 * rate) as usize;
     let mut out = vec![0.0f32; length];
     if celsius < 20.0 {
@@ -222,7 +238,10 @@ pub fn cicadas(celsius: f32, seed: u64) -> Vec<f32> {
     for _ in 0..count {
         let clicks = (150.0 + 12.0 * (celsius - 20.0)) * (1.0 + 0.2 * rng.signed());
         let ring = 4500.0 + 1500.0 * rng.unit();
-        let mut body = [BandPass::new(ring, 6.0), BandPass::new(ring, 6.0)];
+        let mut body = [
+            BandPass::new_at(ring, 6.0, sample_rate),
+            BandPass::new_at(ring, 6.0, sample_rate),
+        ];
         let swell_hz = 0.15 + 0.3 * rng.unit();
         let offset = rng.unit() * TAU;
         let near = 0.3 + 0.7 * rng.unit();
@@ -253,6 +272,7 @@ pub fn cicadas(celsius: f32, seed: u64) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
 
     fn rms(s: &[f32]) -> f32 {
         (s.iter().map(|x| x * x).sum::<f32>() / s.len().max(1) as f32).sqrt()
@@ -261,13 +281,13 @@ mod tests {
     #[test]
     fn every_call_is_finite_bounded_and_audible() {
         for sound in [
-            surf(1.0, 1),
-            surf(3.0, 2),
-            surf(0.2, 3),
-            woodpecker(4),
-            owl(5),
-            owl(6),
-            cicadas(30.0, 7),
+            surf(1.0, 1, SAMPLE_RATE),
+            surf(3.0, 2, SAMPLE_RATE),
+            surf(0.2, 3, SAMPLE_RATE),
+            woodpecker(4, SAMPLE_RATE),
+            owl(5, SAMPLE_RATE),
+            owl(6, SAMPLE_RATE),
+            cicadas(30.0, 7, SAMPLE_RATE),
         ] {
             assert!(sound.iter().all(|x| x.is_finite() && x.abs() <= 0.5));
             assert!(rms(&sound) > 0.005, "{}", rms(&sound));
@@ -277,11 +297,11 @@ mod tests {
 
     #[test]
     fn a_wave_crashes_after_it_rises_and_cicadas_need_heat() {
-        let wave = surf(1.5, 9);
+        let wave = surf(1.5, 9, SAMPLE_RATE);
         let second =
             |s: usize| rms(&wave[s * SAMPLE_RATE as usize..(s + 1) * SAMPLE_RATE as usize]);
         // Its loudest second is the crash, not the start or the end.
         assert!(second(2) > second(0) && second(2) > second(6));
-        assert!(cicadas(15.0, 1).iter().all(|x| *x == 0.0));
+        assert!(cicadas(15.0, 1, SAMPLE_RATE).iter().all(|x| *x == 0.0));
     }
 }

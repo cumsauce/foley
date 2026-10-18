@@ -2,7 +2,7 @@
 //! a shingle/foam wash under `outdoors::surf` grains scheduled by
 //! storm x exposure. Tests first; implementation follows.
 
-use crate::{BandPass, Bubble, Rng, SAMPLE_RATE};
+use crate::{BandPass, Bubble, Rng};
 
 /// How many wave grains can sound at once — also the size of the free
 /// buffer pool, so a spawn on the audio thread never allocates
@@ -59,6 +59,8 @@ pub struct Surf {
     seed: u64,
     counter: u64,
     scene: SurfScene,
+    /// The rate this bed renders at.
+    rate: u32,
     /// Seconds until the next surge starts.
     until_surge: f32,
     grains: Vec<Grain>,
@@ -72,7 +74,7 @@ pub struct Surf {
 }
 
 impl Surf {
-    pub fn new(seed: u64) -> Self {
+    pub fn new(seed: u64, sample_rate: u32) -> Self {
         Self {
             seed,
             counter: 0,
@@ -82,19 +84,20 @@ impl Surf {
                 storm: 0.0,
                 exposure: 0.0,
             },
+            rate: sample_rate,
             // The first wave breaks the moment the bed starts.
             until_surge: 0.0,
             // Pre-sized: pushes on the audio thread must never reallocate.
             grains: Vec::with_capacity(MAX_GRAINS),
             pool: (0..MAX_GRAINS)
-                .map(|_| vec![0.0f32; crate::outdoors::SURF_LEN])
+                .map(|_| vec![0.0f32; crate::outdoors::surf_len(sample_rate)])
                 .collect(),
             bubbles: Vec::with_capacity(256),
             rng: Rng::new(seed ^ 0x5F17),
             wash: [
-                BandPass::new(900.0, 0.5),
-                BandPass::new(900.0, 0.5),
-                BandPass::new(900.0, 0.5),
+                BandPass::new_at(900.0, 0.5, sample_rate),
+                BandPass::new_at(900.0, 0.5, sample_rate),
+                BandPass::new_at(900.0, 0.5, sample_rate),
             ],
         }
     }
@@ -141,7 +144,7 @@ impl Surf {
         // The foam and shingle the wave leaves behind, well below the grains.
         let wash_level = WASH_LEVEL * (height / 3.0) * shore;
         let interval = self.interval_secs();
-        let dt = 1.0 / SAMPLE_RATE as f32;
+        let dt = 1.0 / self.rate as f32;
         for sample in out.iter_mut() {
             self.until_surge -= dt;
             if self.until_surge <= 0.0 {
@@ -199,11 +202,11 @@ impl Surf {
         // a finite 1e20 m bed synthesises exactly the 3.0 m wave, while
         // non-finite heights never reach here — they silence in `render`.
         let height = self.scene.height.clamp(0.2, 3.0);
-        crate::outdoors::surf_into(height, seed, &mut data, &mut self.bubbles);
+        crate::outdoors::surf_into(height, seed, &mut data, &mut self.bubbles, self.rate);
         // `surf_into`'s natural backwash drain already shapes the tail; this
         // 50 ms linear fade guarantees an exact-zero end so a retiring grain
         // never clicks.
-        let fade = (TAIL_FADE_SECS * SAMPLE_RATE as f32) as usize;
+        let fade = (TAIL_FADE_SECS * self.rate as f32) as usize;
         let n = data.len();
         for (i, s) in data.iter_mut().enumerate().skip(n.saturating_sub(fade)) {
             *s *= (n - 1 - i) as f32 / fade as f32;
@@ -220,6 +223,11 @@ impl Surf {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A bed at the default rate, for the in-file tests.
+    fn new_bed(seed: u64) -> Surf {
+        Surf::new(seed, crate::SAMPLE_RATE)
+    }
 
     fn scene(height: f32, storm: f32, exposure: f32) -> SurfScene {
         SurfScene {
@@ -238,7 +246,7 @@ mod tests {
 
     #[test]
     fn silent_with_no_shore() {
-        let mut s = Surf::new(1);
+        let mut s = new_bed(1);
         s.set_scene(scene(0.0, 1.0, 1.0));
         let out = render_secs(&mut s, 3.0);
         assert!(
@@ -249,7 +257,7 @@ mod tests {
 
     #[test]
     fn a_calm_shore_still_sounds() {
-        let mut s = Surf::new(2);
+        let mut s = new_bed(2);
         s.set_scene(scene(0.3, 0.0, 0.0));
         let out = render_secs(&mut s, 5.0);
         let rms = (out.iter().map(|x| x * x).sum::<f32>() / out.len() as f32).sqrt();
@@ -277,8 +285,8 @@ mod tests {
             }
             n
         }
-        let calm = peaks(Surf::new(3), 0.0);
-        let storm = peaks(Surf::new(3), 1.0);
+        let calm = peaks(new_bed(3), 0.0);
+        let storm = peaks(new_bed(3), 1.0);
         assert!(storm > calm, "storm surges {storm} must exceed calm {calm}");
     }
 
@@ -287,7 +295,7 @@ mod tests {
         // With no storm the next surge is 12 s away and the first grain has
         // ended by ~7 s, so 8..11 s holds only the continuous foam/shingle wash.
         fn between_waves_rms(shore: f32) -> f32 {
-            let mut s = Surf::new(7);
+            let mut s = new_bed(7);
             s.set_scene(SurfScene {
                 height: 1.0,
                 shore,
@@ -316,7 +324,7 @@ mod tests {
     #[test]
     fn waves_keep_coming_without_a_moving_listener() {
         // No scene change after the first: the cycle must not stall.
-        let mut s = Surf::new(4);
+        let mut s = new_bed(4);
         s.set_scene(scene(1.0, 1.0, 1.0));
         let out = render_secs(&mut s, 120.0);
         let rms = |v: &[f32]| (v.iter().map(|x| x * x).sum::<f32>() / v.len() as f32).sqrt();
@@ -344,7 +352,7 @@ mod tests {
 
     #[test]
     fn overlapping_waves_stay_bounded_and_seamless() {
-        let mut s = Surf::new(5);
+        let mut s = new_bed(5);
         s.set_scene(scene(2.2, 1.0, 1.0));
         let out = render_secs(&mut s, 90.0);
         assert!(
@@ -368,14 +376,14 @@ mod tests {
         // out must hear the crash clearly attenuated, but never silenced
         // (the bed only goes quiet when `height <= 0`).
         let r = |v: &[f32]| (v.iter().map(|x| x * x).sum::<f32>() / v.len() as f32).sqrt();
-        let mut at_water = Surf::new(8);
+        let mut at_water = new_bed(8);
         at_water.set_scene(SurfScene {
             height: 2.2,
             shore: 1.0,
             storm: 1.0,
             exposure: 1.0,
         });
-        let mut inland = Surf::new(8);
+        let mut inland = new_bed(8);
         inland.set_scene(SurfScene {
             height: 2.2,
             shore: 0.1,
@@ -402,7 +410,7 @@ mod tests {
         // still-audible value (`a_huge_scene_clamps_to_the_bed_maximum`
         // covers the finite counterpart).
         for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
-            let mut s = Surf::new(9);
+            let mut s = new_bed(9);
             s.set_scene(scene(bad, 1.0, 1.0));
             let out = render_secs(&mut s, 3.0);
             assert!(
@@ -424,7 +432,7 @@ mod tests {
         // go silent — retiring every live grain, not spraying NaN through
         // the wash or leaving a stale grain to resume.
         for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
-            let mut s = Surf::new(9);
+            let mut s = new_bed(9);
             s.set_scene(scene(2.2, 1.0, 1.0));
             let out = render_secs(&mut s, 3.0);
             assert!(
@@ -452,9 +460,9 @@ mod tests {
         // sanitises then clamps to the documented 3.0 m ceiling, so the bed
         // renders exactly what a 3.0 m bed renders for the same seed and
         // state — finite samples throughout, never the silence path.
-        let mut huge = Surf::new(9);
+        let mut huge = new_bed(9);
         huge.set_scene(scene(1e20, 1.0, 1.0));
-        let mut three = Surf::new(9);
+        let mut three = new_bed(9);
         three.set_scene(scene(3.0, 1.0, 1.0));
         let a = render_secs(&mut huge, 3.0);
         let b = render_secs(&mut three, 3.0);
@@ -476,9 +484,9 @@ mod tests {
         );
         // Mid-transition too: a live bed that jumps to 1e20 keeps sounding
         // sample-for-sample like one that jumps to 3.0.
-        let mut huge = Surf::new(12);
+        let mut huge = new_bed(12);
         huge.set_scene(scene(1.0, 1.0, 1.0));
-        let mut three = Surf::new(12);
+        let mut three = new_bed(12);
         three.set_scene(scene(1.0, 1.0, 1.0));
         let _ = render_secs(&mut huge, 3.0);
         let _ = render_secs(&mut three, 3.0);
@@ -494,7 +502,7 @@ mod tests {
 
     #[test]
     fn returning_to_shore_starts_without_stale_grains() {
-        let mut s = Surf::new(10);
+        let mut s = new_bed(10);
         s.set_scene(scene(2.2, 1.0, 1.0));
         let out = render_secs(&mut s, 3.0);
         assert!(
@@ -537,7 +545,7 @@ mod tests {
 
     #[test]
     fn calm_to_storm_spawns_within_the_storm_interval() {
-        let mut s = Surf::new(11);
+        let mut s = new_bed(11);
         s.set_scene(scene(2.2, 0.0, 0.0)); // calm: 12 s between surges
         let _ = render_secs(&mut s, 5.0); // partway through the calm countdown
         let before = s.counter;
@@ -562,9 +570,9 @@ mod tests {
 
     #[test]
     fn a_higher_wave_is_louder() {
-        let mut low = Surf::new(6);
+        let mut low = new_bed(6);
         low.set_scene(scene(0.3, 0.5, 0.5));
-        let mut high = Surf::new(6);
+        let mut high = new_bed(6);
         high.set_scene(scene(2.2, 0.5, 0.5));
         let r = |v: &[f32]| (v.iter().map(|x| x * x).sum::<f32>() / v.len() as f32).sqrt();
         let lo = render_secs(&mut low, 20.0);
