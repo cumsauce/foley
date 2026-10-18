@@ -1,4 +1,4 @@
-use crate::{LowPass, Rng, SAMPLE_RATE, absorption_cutoff};
+use crate::{LowPass, Rng, absorption_cutoff};
 use std::sync::mpsc::{Receiver, SyncSender, TryRecvError, TrySendError, sync_channel};
 
 const SPEED_OF_SOUND: f32 = 343.0;
@@ -124,10 +124,16 @@ pub fn channel(rng: &mut Rng, base: [f32; 3]) -> Vec<Segment> {
 /// thunder. Air absorption over each segment's distance (ISO 9613-1) takes
 /// the highs off far parts. A flash is several strokes, 30 to 100 ms apart,
 /// down the same main channel, weaker each time.
-pub fn strike(base: [f32; 3], seed: u64, celsius: f32, humidity: f32) -> Vec<f32> {
+pub fn strike(
+    base: [f32; 3],
+    seed: u64,
+    celsius: f32,
+    humidity: f32,
+    sample_rate: u32,
+) -> Vec<f32> {
     let mut rng = Rng::new(seed);
     let segments = channel(&mut rng, base);
-    let rate = SAMPLE_RATE as f32;
+    let rate = sample_rate as f32;
     let mut strokes = vec![(0.0f32, 1.0f32)];
     let mut offset = 0.0;
     for _ in 0..(rng.unit() * 4.0) as usize {
@@ -157,7 +163,7 @@ pub fn strike(base: [f32; 3], seed: u64, celsius: f32, humidity: f32) -> Vec<f32
             let r0 = (ENERGY_PER_METRE * energy / (std::f32::consts::PI * ATMOSPHERE)).sqrt();
             let period = r0 / (0.63 * SPEED_OF_SOUND) * (r / (10.0 * r0)).max(1.0).powf(0.25);
             let amplitude = 10.0 * (r0 / 1.25) * segment.length / r;
-            let pulse = n_wave(period, smear, amplitude, cutoff);
+            let pulse = n_wave(period, smear, amplitude, cutoff, sample_rate);
             let start =
                 ((delay + (r - segment.length * cos / 2.0) / SPEED_OF_SOUND) * rate) as usize;
             end = end.max(start + pulse.len());
@@ -176,8 +182,14 @@ pub fn strike(base: [f32; 3], seed: u64, celsius: f32, humidity: f32) -> Vec<f32
 /// An N-wave of `period` seconds and peak `amplitude`, smeared over `smear`
 /// seconds (averaged over a sliding window that long), then low-passed by
 /// the air at `cutoff`.
-fn n_wave(period: f32, smear: f32, amplitude: f32, cutoff: Option<f32>) -> Vec<f32> {
-    let rate = SAMPLE_RATE as f32;
+fn n_wave(
+    period: f32,
+    smear: f32,
+    amplitude: f32,
+    cutoff: Option<f32>,
+    sample_rate: u32,
+) -> Vec<f32> {
+    let rate = sample_rate as f32;
     // The N-wave's running integral: t - t²/T on [0, T], then 0 (it has no
     // net area). Averaging over a window is a difference of it.
     let integral = |t: f32| {
@@ -209,7 +221,10 @@ fn n_wave(period: f32, smear: f32, amplitude: f32, cutoff: Option<f32>) -> Vec<f
         })
         .collect();
     if let Some(cutoff) = cutoff {
-        let mut filters = [LowPass::new(cutoff), LowPass::new(cutoff)];
+        let mut filters = [
+            LowPass::new_at(cutoff, sample_rate),
+            LowPass::new_at(cutoff, sample_rate),
+        ];
         for sample in &mut pulse {
             let first = filters[0].process(*sample);
             *sample = filters[1].process(first);
@@ -227,10 +242,18 @@ fn n_wave(period: f32, smear: f32, amplitude: f32, cutoff: Option<f32>) -> Vec<f
 #[derive(Debug)]
 pub struct Thunder {
     scene: ThunderScene,
+    /// The bed's seed, as the other beds take one at construction. Strikes
+    /// carry their own seed too, mixed with this one.
+    seed: u64,
+    /// Samples per second every sound this bed makes is rendered at.
+    rate: u32,
     /// Work for the thread that makes the thunder: strikes, and finished
-    /// thunder to free. Bounded, so sending never allocates.
-    jobs: SyncSender<Job>,
+    /// thunder to free. Bounded, so sending never allocates. `None` once
+    /// the bed has been shut down.
+    jobs: Option<SyncSender<Job>>,
     ready: Receiver<Vec<f32>>,
+    /// The thread that makes the thunder, joined by [`Thunder::shutdown`].
+    thread: Option<std::thread::JoinHandle<()>>,
     /// Flashes whose thunder is still being made.
     making: usize,
     playing: Vec<(Vec<f32>, usize)>,
@@ -253,19 +276,19 @@ enum Job {
 
 impl Default for Thunder {
     fn default() -> Self {
-        Thunder::new()
+        Thunder::new(0, foley_dsp::DEFAULT_SAMPLE_RATE)
     }
 }
 
 impl Thunder {
     /// Starts the bed and its thread, which lasts as long as it does.
-    pub fn new() -> Thunder {
+    pub fn new(seed: u64, sample_rate: u32) -> Thunder {
         // Bounded, so sending and receiving never allocate: at most
         // `MAX_STRIKES` are ever in flight each way.
         let (jobs, inbox) = sync_channel::<Job>(2 * MAX_STRIKES);
         let (made, ready) = sync_channel(MAX_STRIKES);
         // If it can't start, strikes are dropped: no thunder, no harm.
-        let _ = std::thread::Builder::new()
+        let thread = std::thread::Builder::new()
             .name("foley-thunder".into())
             .spawn(move || {
                 // The audio thread only ever uses try_send/try_recv on these
@@ -305,7 +328,7 @@ impl Thunder {
                                 // thunder carries on.
                                 pending = Some(
                                     std::panic::catch_unwind(|| {
-                                        strike(base, seed, celsius, humidity)
+                                        strike(base, seed, celsius, humidity, sample_rate)
                                     })
                                     .unwrap_or_default(),
                                 );
@@ -319,14 +342,31 @@ impl Thunder {
                         std::thread::sleep(std::time::Duration::from_millis(1));
                     }
                 }
-            });
+            })
+            .ok();
         Thunder {
             scene: ThunderScene::DEFAULT,
-            jobs,
+            seed,
+            rate: sample_rate,
+            jobs: Some(jobs),
             ready,
+            thread,
             making: 0,
             playing: Vec::with_capacity(MAX_STRIKES),
-            muffle: [LowPass::new(20_000.0), LowPass::new(20_000.0)],
+            muffle: [
+                LowPass::new_at(20_000.0, sample_rate),
+                LowPass::new_at(20_000.0, sample_rate),
+            ],
+        }
+    }
+
+    /// Stops the bed: drops the job sender, so the worker sees the channel
+    /// close and ends, then waits for its thread. Idempotent — a second
+    /// call is a no-op.
+    pub fn shutdown(&mut self) {
+        drop(self.jobs.take());
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
         }
     }
 
@@ -335,7 +375,7 @@ impl Thunder {
         let shut = 1.0 - scene.exposure.clamp(0.0, 1.0);
         let cutoff = 20_000.0 * (200.0f32 / 20_000.0).powf(shut);
         for filter in &mut self.muffle {
-            filter.tune(cutoff);
+            filter.tune_at(cutoff, self.rate);
         }
     }
 
@@ -348,11 +388,14 @@ impl Thunder {
         }
         let job = Job::Strike {
             base,
-            seed,
+            seed: self.seed ^ seed,
             celsius: self.scene.celsius,
             humidity: self.scene.humidity,
         };
-        if self.jobs.try_send(job).is_ok() {
+        let Some(jobs) = self.jobs.as_ref() else {
+            return;
+        };
+        if jobs.try_send(job).is_ok() {
             self.making += 1;
         }
     }
@@ -393,7 +436,9 @@ impl Thunder {
             } else {
                 let (sound, _) = self.playing.swap_remove(k);
                 // If it's somehow full, the sound is freed here instead.
-                let _ = self.jobs.try_send(Job::Free(sound));
+                if let Some(jobs) = self.jobs.as_ref() {
+                    let _ = jobs.try_send(Job::Free(sound));
+                }
             }
         }
         // Always through the muffle (open to 20 kHz outside): bypassed in the
@@ -408,9 +453,16 @@ impl Thunder {
     }
 }
 
+impl Drop for Thunder {
+    fn drop(&mut self) {
+        self.shutdown();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
 
     fn peak(s: &[f32]) -> f32 {
         s.iter().fold(0f32, |p, x| p.max(x.abs()))
@@ -440,13 +492,13 @@ mod tests {
     #[test]
     fn near_thunder_cracks_then_rumbles_and_far_thunder_is_late_and_dull() {
         let rate = SAMPLE_RATE as f32;
-        let near = strike([300.0, 0.0, 0.0], 1, 15.0, 90.0);
+        let near = strike([300.0, 0.0, 0.0], 1, 15.0, 90.0, SAMPLE_RATE);
         // Nothing before sound could arrive: 300 m is 0.87 s.
         let first = near.iter().position(|s| s.abs() > 1e-4).expect("heard") as f32 / rate;
         assert!((0.8..0.9).contains(&first), "first heard at {first} s");
         // A crack near the start, then seconds of rumble from up the channel.
         let crack = peak(&near[..(1.5 * rate) as usize]);
-        let far = strike([4000.0, 0.0, 0.0], 1, 15.0, 90.0);
+        let far = strike([4000.0, 0.0, 0.0], 1, 15.0, 90.0, SAMPLE_RATE);
         assert!((0.5..4.0).contains(&crack), "crack {crack}");
         let rumble = peak(&near[(3.0 * rate) as usize..(6.0 * rate) as usize]);
         assert!(rumble > 0.01 && rumble < crack, "rumble {rumble}");
@@ -476,8 +528,8 @@ mod tests {
 
     #[test]
     fn indoors_only_the_lows_come_through() {
-        let mut open = Thunder::new();
-        let mut shut = Thunder::new();
+        let mut open = Thunder::new(0, SAMPLE_RATE);
+        let mut shut = Thunder::new(0, SAMPLE_RATE);
         shut.set_scene(ThunderScene {
             exposure: 0.0,
             ..ThunderScene::DEFAULT
