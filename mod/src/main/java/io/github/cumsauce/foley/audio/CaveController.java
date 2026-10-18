@@ -36,6 +36,8 @@ public final class CaveController {
 
 	private final NativeBridge bridge;
 	private @Nullable BedSound<CaveScene> sound;
+	/** Where the bed plays from now, gliding to the ear as {@link PlacedBeds.Slot#follow} does. */
+	private Vec3 playsFrom = Vec3.ZERO;
 	private CaveScene scene = CaveScene.SILENT;
 	/** Whether the cave bed currently wants to be heard — hysteresis state (see {@link #heard}). */
 	private boolean heard;
@@ -65,8 +67,11 @@ public final class CaveController {
 			return;
 		}
 		if (ticks++ % SAMPLE_EVERY != 0) {
-			// Between samples, keep the bed following the new scene.
-			if (sound != null) sound.setScene(scene);
+			// Between samples, keep the bed following the new scene and the ear.
+			if (sound != null) {
+				sound.setScene(scene);
+				follow(minecraft);
+			}
 			return;
 		}
 		scene = sample(minecraft);
@@ -77,12 +82,25 @@ public final class CaveController {
 			return;
 		}
 		if (sound == null || !minecraft.getSoundManager().isActive(sound)) {
+			playsFrom = minecraft.player.getEyePosition();
 			sound = new BedSound<>("cave", SoundSource.AMBIENT, bridge, NativeBridge.BED_CAVE, scene)
-					.place(minecraft.player.getEyePosition(), false);
+					.place(playsFrom, false);
 			minecraft.getSoundManager().play(sound);
 		} else {
 			sound.setScene(scene);
+			follow(minecraft);
 		}
+	}
+
+	/**
+	 * Moves the bed a step towards the ear, as {@link PlacedBeds.Slot#follow} does (about a third of a second).
+	 * Its content follows the listener's cave, so its place must too: placed once at creation, it stayed behind
+	 * as the player walked and Earshot occluded it away.
+	 */
+	private void follow(Minecraft minecraft) {
+		if (sound == null) return;
+		playsFrom = playsFrom.lerp(minecraft.player.getEyePosition(), 0.15);
+		sound.place(playsFrom, false);
 	}
 
 	/**
@@ -106,8 +124,9 @@ public final class CaveController {
 		return heard(wasHeard, scene.depth() * DEPTH_FULL, scene.openness());
 	}
 
+	/** Fades the bed out (about 3 s, as {@link PlacedBeds} fades) and lets the game retire it: a tail, not a cut. */
 	private void stop(Minecraft minecraft) {
-		if (sound != null) minecraft.getSoundManager().stop(sound);
+		if (sound != null) sound.fadeOut();
 		sound = null;
 	}
 

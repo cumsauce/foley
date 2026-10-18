@@ -1,7 +1,9 @@
 package io.github.cumsauce.foley.audio;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.cumsauce.foley.natives.NativeBridge;
 import java.lang.foreign.MemorySegment;
@@ -57,5 +59,40 @@ class BedSoundTest {
 		assertEquals(1, bridge.destroyed.get(), "closing the retired stream double-destroyed the bed");
 		second.close();
 		assertEquals(2, bridge.destroyed.get(), "closing the live stream must destroy its bed exactly once");
+	}
+
+	/**
+	 * A bed starts silent and fades up over seconds, so a bed (re)starting — a scene's bed beginning, a slot
+	 * flapping, a biome's four quarters re-entering — is a fade, not a pop. Fails before the fade: the weight
+	 * used to start at 1.
+	 */
+	@Test
+	void a_bed_fades_up_rather_than_starting_at_full_weight() {
+		CountingBridge bridge = new CountingBridge();
+		BedSound<UnderwaterScene> sound = new BedSound<>("underwater", SoundSource.AMBIENT, bridge,
+				NativeBridge.BED_UNDERWATER, UnderwaterScene.DRY);
+		assertEquals(0f, sound.heardWeight(), 1e-6, "a new bed must start silent");
+		for (int i = 0; i < 20; i++) sound.tick();
+		assertTrue(sound.heardWeight() > 0.5f, "twenty ticks in, the bed must be well on its way up");
+		assertTrue(sound.heardWeight() < 1f, "and still gliding there, not stepped to full weight");
+	}
+
+	/**
+	 * Fading out lets the game retire the bed only once its weight has glided away: the tail rings out over
+	 * about 3 s instead of SoundManager.stop cutting the stream dead. (fadeOut is new; before it there was no
+	 * graceful path at all.)
+	 */
+	@Test
+	void fading_out_retires_the_bed_after_the_fade_not_at_once() {
+		CountingBridge bridge = new CountingBridge();
+		BedSound<UnderwaterScene> sound = new BedSound<>("underwater", SoundSource.AMBIENT, bridge,
+				NativeBridge.BED_UNDERWATER, UnderwaterScene.DRY);
+		for (int i = 0; i < 20; i++) sound.tick();
+		sound.fadeOut();
+		assertFalse(sound.isStopped(), "a fade must not retire the bed at once");
+		for (int i = 0; i < 40; i++) sound.tick();
+		assertFalse(sound.isStopped(), "nor halfway through it");
+		for (int i = 0; i < 40; i++) sound.tick();
+		assertTrue(sound.isStopped(), "after the fade the game must retire the bed");
 	}
 }

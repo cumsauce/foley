@@ -73,9 +73,13 @@ public final class SurroundBeds<S extends Scene> {
 		}
 	}
 
+	/**
+	 * Fades its beds out (about 3 s, as {@link PlacedBeds} fades) and lets the game retire them, rather than
+	 * cutting four streams dead at once; a bed starting again before the fade ends crossfades with it.
+	 */
 	public void stop(Minecraft minecraft) {
 		for (int q = 0; q < AROUND; q++) {
-			if (beds[q] != null) minecraft.getSoundManager().stop(beds[q]);
+			if (beds[q] != null) beds[q].fadeOut();
 			beds[q] = null;
 		}
 	}

@@ -1,12 +1,13 @@
 //! Biome-specific beds (M19): desert hiss, mushroom hum, lush/dripstone cave
 //! colors, deep dark, snow hush, mangrove drone. One streaming bed, with the
 //! per-biome work sharing the same envelope code. Java keeps one bed and
-//! changes its scene; `kind` is snapped by the FFI's glide, so the state is
-//! rebuilt once per biome change.
+//! changes its scene; `kind` is snapped by the FFI's glide, and the state it
+//! replaces fades out under the new one over [`CROSSFADE`] rather than being
+//! cut at the switch.
 
 use std::f32::consts::TAU;
 
-use foley_dsp::{BandPass, LowPass, Rng};
+use foley_dsp::{BandPass, LowPass, Rng, SAMPLE_RATE};
 
 /// The seven biome bed kinds, in the order `FOLEY_BED_BIOME` takes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -58,14 +59,26 @@ pub struct BiomeScene {
 }
 
 /// One per-biome bed. Java keeps one bed and changes its scene; `kind` is
-/// snapped by the FFI's glide, so the state is rebuilt once per biome change.
+/// snapped by the FFI's glide, so a biome change swaps the state — the old one
+/// fading out under the new over [`CROSSFADE`] samples.
 #[derive(Debug)]
 pub struct Biome {
     seed: u64,
     sample_rate: u32,
     scene: BiomeScene,
     state: BiomeState,
+    /// The state a kind change replaced, still sounding through the crossfade.
+    outgoing: Option<BiomeState>,
+    /// Samples left in that crossfade.
+    xfade_left: usize,
+    /// Where the outgoing state renders while the new one fills `out`.
+    scratch: Vec<f32>,
 }
+
+/// How long a kind change takes to cross, in samples: long enough that the
+/// outgoing biome's tail is not cut mid-ring, short enough that the switch
+/// still reads as one biome giving way to the next (an eighth of a second).
+const CROSSFADE: usize = (SAMPLE_RATE / 8) as usize;
 
 #[derive(Debug)]
 enum BiomeState {
@@ -76,6 +89,21 @@ enum BiomeState {
     DeepDark(DeepDarkState),
     Snow(SnowState),
     Mangrove(MangroveState),
+}
+
+impl BiomeState {
+    /// Renders whichever biome this is; writes `out` whole.
+    fn render(&mut self, out: &mut [f32], scene: BiomeScene, gain: f32, sample_rate: u32) {
+        match self {
+            BiomeState::Desert(s) => s.render(out, scene, gain, sample_rate),
+            BiomeState::Mushroom(s) => s.render(out, scene, gain, sample_rate),
+            BiomeState::Lush(s) => s.render(out, scene, gain, sample_rate),
+            BiomeState::Dripstone(s) => s.render(out, scene, gain, sample_rate),
+            BiomeState::DeepDark(s) => s.render(out, scene, gain, sample_rate),
+            BiomeState::Snow(s) => s.render(out, scene, gain, sample_rate),
+            BiomeState::Mangrove(s) => s.render(out, scene, gain, sample_rate),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -159,6 +187,9 @@ impl Biome {
                 gain: 0.0,
             },
             state: BiomeState::Desert(DesertState::new(seed, sample_rate)),
+            outgoing: None,
+            xfade_left: 0,
+            scratch: Vec::new(),
         };
         s.set_scene(BiomeScene {
             kind: BiomeKind::Desert,
@@ -171,7 +202,7 @@ impl Biome {
 
     pub fn set_scene(&mut self, scene: BiomeScene) {
         if scene.kind != self.scene.kind {
-            self.state = match scene.kind {
+            let fresh = match scene.kind {
                 BiomeKind::Desert => {
                     BiomeState::Desert(DesertState::new(self.seed ^ 0xDE5, self.sample_rate))
                 }
@@ -194,6 +225,15 @@ impl Biome {
                     BiomeState::Mangrove(MangroveState::new(self.seed ^ 0x4A0, self.sample_rate))
                 }
             };
+            let old = std::mem::replace(&mut self.state, fresh);
+            // The state being replaced keeps sounding under the new one: a switch that rebuilt outright
+            // cut every oscillator mid-tail, a hard step at the border heard as a stutter in the bed. Only
+            // a state that was actually sounding has a tail to keep — a fresh bed's placeholder (never
+            // heard, gain 0) gives way at once, so a bed starting does not crossfade from a phantom.
+            if self.scene.gain > 0.0 {
+                self.outgoing = Some(old);
+                self.xfade_left = CROSSFADE;
+            }
         }
         self.scene = scene;
     }
@@ -206,14 +246,37 @@ impl Biome {
             }
             return;
         }
-        match &mut self.state {
-            BiomeState::Desert(s) => s.render(out, self.scene, gain, self.sample_rate),
-            BiomeState::Mushroom(s) => s.render(out, self.scene, gain, self.sample_rate),
-            BiomeState::Lush(s) => s.render(out, self.scene, gain, self.sample_rate),
-            BiomeState::Dripstone(s) => s.render(out, self.scene, gain, self.sample_rate),
-            BiomeState::DeepDark(s) => s.render(out, self.scene, gain, self.sample_rate),
-            BiomeState::Snow(s) => s.render(out, self.scene, gain, self.sample_rate),
-            BiomeState::Mangrove(s) => s.render(out, self.scene, gain, self.sample_rate),
+        self.state.render(out, self.scene, gain, self.sample_rate);
+        if self.xfade_left == 0 {
+            return;
+        }
+        let Biome {
+            outgoing,
+            scratch,
+            scene,
+            xfade_left,
+            sample_rate,
+            ..
+        } = self;
+        let Some(old) = outgoing.as_mut() else {
+            *xfade_left = 0;
+            return;
+        };
+        let n = out.len().min(*xfade_left);
+        if scratch.len() < n {
+            scratch.resize(n, 0.0);
+        }
+        let under = &mut scratch[..n];
+        old.render(under, *scene, gain, *sample_rate);
+        for (i, sample) in out[..n].iter_mut().enumerate() {
+            // The new kind fades up over the old one's fade down: whole old at
+            // the switch, whole new at the end of the crossfade.
+            let progress = (CROSSFADE - *xfade_left + i + 1) as f32 / CROSSFADE as f32;
+            *sample = *sample * progress + under[i] * (1.0 - progress);
+        }
+        *xfade_left -= n;
+        if *xfade_left == 0 {
+            *outgoing = None;
         }
     }
 }
@@ -546,5 +609,85 @@ mod tests {
             assert_eq!(k as u32, i);
         }
         assert!(BiomeKind::from_index(7).is_none());
+    }
+
+    /// A kind change must not cut the outgoing biome's tail. The bed
+    /// crossfades: at the switch the new kind starts from nothing and the old
+    /// keeps sounding through the fade, so the splice steps no more than the
+    /// stream steps on its own, and the new kind's first samples are *not* the
+    /// fresh bed's (which is what a rebuild from scratch produces).
+    #[test]
+    fn a_kind_change_crossfades_rather_than_cutting() {
+        const WARM: usize = 480;
+        const AFTER: usize = 2 * WARM + 960;
+        let desert = BiomeScene {
+            kind: BiomeKind::Desert,
+            intensity: 1.0,
+            sub: 0.0,
+            gain: 1.0,
+        };
+        let mushroom = BiomeScene {
+            kind: BiomeKind::Mushroom,
+            intensity: 1.0,
+            sub: 0.0,
+            gain: 1.0,
+        };
+        // Two beds in lockstep: one switches, one keeps deserting.
+        let mut switched = Biome::new(3, SAMPLE_RATE);
+        let mut unswitched = Biome::new(3, SAMPLE_RATE);
+        switched.set_scene(desert);
+        unswitched.set_scene(desert);
+        let mut warm_a = vec![0.0f32; WARM];
+        let mut warm_b = vec![0.0f32; WARM];
+        switched.render(&mut warm_a);
+        unswitched.render(&mut warm_b);
+        assert_eq!(warm_a, warm_b, "lockstep beds must agree before the switch");
+
+        switched.set_scene(mushroom);
+        let mut after_a = vec![0.0f32; AFTER];
+        let mut after_b = vec![0.0f32; AFTER];
+        switched.render(&mut after_a);
+        unswitched.render(&mut after_b);
+
+        // A third bed that is mushroom from scratch: what a state rebuild at
+        // the switch hands out — the new kind restarted at its first sample.
+        let mut fresh = Biome::new(3, SAMPLE_RATE);
+        fresh.set_scene(mushroom);
+        let mut fresh_out = vec![0.0f32; AFTER];
+        fresh.render(&mut fresh_out);
+
+        // 1) The new kind must not restart from scratch at the switch.
+        assert_ne!(
+            after_a, fresh_out,
+            "a kind change restarted the new biome from nothing: the tail was cut"
+        );
+
+        // 2) The splice steps no more than the stream does on its own.
+        let step = (after_a[0] - warm_a[WARM - 1]).abs();
+        let natural = warm_a
+            .windows(2)
+            .map(|w| (w[1] - w[0]).abs())
+            .fold(0.0, f32::max);
+        println!("splice step {step:.5}; the stream's own largest step {natural:.5}");
+        assert!(
+            step <= natural + 1e-4,
+            "the switch stepped the output by {step}, over the stream's own {natural}"
+        );
+
+        // 3) The outgoing biome still sounds straight after the switch: for
+        //    the first 10 ms the switched bed stays near the bed that never
+        //    switched (the crossfade has barely begun).
+        let window = after_a[..480.min(AFTER)].to_vec();
+        let drift = window
+            .iter()
+            .zip(&after_b)
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0f32, f32::max);
+        let peak = after_b.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
+        println!("first-10-ms drift from the unswitched bed {drift:.5}; desert peak {peak:.5}");
+        assert!(
+            drift <= 0.25 * peak + 1e-4,
+            "the outgoing biome vanished at the switch: drift {drift} against a peak of {peak}"
+        );
     }
 }

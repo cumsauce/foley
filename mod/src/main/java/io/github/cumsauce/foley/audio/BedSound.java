@@ -68,7 +68,9 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 		this.scene = scene;
 		this.relative = true;
 		this.attenuation = SoundInstance.Attenuation.NONE;
-		this.volume = FoleyClient.gain();
+		// Starts silent and fades up in tick(): a bed (re)starting at full volume popped in every time a
+		// scene's bed began or a slot's part flapped.
+		this.volume = 0f;
 	}
 
 	/** The native calls a bed makes, so tests can count them without loading the library. */
@@ -136,7 +138,13 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 	private @Nullable Vec3 offset;
 	/** How loud, against Foley's volume: the weight it's heading for, and where it's got to. */
 	private float weight = 1;
-	private float heardWeight = 1;
+	/** Where it has got to: starts at nothing and fades up, as {@link #fadeOut} fades it down again. */
+	private float heardWeight;
+	/** Ticks a fade-out takes: 3 s, as {@link PlacedBeds} fades a bed away. */
+	private static final int FADE_TICKS = 60;
+	/** Whether a fade-out has been asked for, and how far along it is. */
+	private boolean fadingOut;
+	private int fadeTicks;
 
 	/**
 	 * Plays it {@code offset} from the player's ear (in world axes, so it stays put as they turn), at {@code weight}
@@ -147,10 +155,11 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 	public BedSound<S> follow(Vec3 offset, float weight) {
 		this.offset = offset;
 		this.weight = weight;
-		this.heardWeight = weight;
+		// Fades up from nothing in tick(), as fadeOut fades it down: no pop when a quarter bed starts.
+		this.heardWeight = 0;
 		relative = true;
 		attenuation = SoundInstance.Attenuation.NONE;
-		this.volume = FoleyClient.gain() * weight;
+		this.volume = 0f;
 		turn();
 		return this;
 	}
@@ -235,8 +244,22 @@ public final class BedSound<S extends Scene> extends AbstractSoundInstance imple
 	@Override
 	public void tick() {
 		heardWeight += (weight - heardWeight) * 0.05f;
+		// A fade-out ends in the game retiring the bed once its weight has glided away (3 s), rather than
+		// cutting the stream dead as SoundManager.stop would.
+		if (fadingOut && ++fadeTicks > FADE_TICKS) stopped = true;
 		volume = FoleyClient.gain() * heardWeight * (FoleyClient.bypassed() ? 0f : 1f);
 		if (offset != null) turn();
+	}
+
+	/** Fades it out over {@link #FADE_TICKS} ticks, then lets the game retire it: a tail, not a cut. */
+	void fadeOut() {
+		weigh(0);
+		fadingOut = true;
+	}
+
+	/** Where its weight has got to. For tests. */
+	float heardWeight() {
+		return heardWeight;
 	}
 
 	@Override
