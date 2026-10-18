@@ -7,7 +7,6 @@
 use crate::BandPass;
 use crate::LowPass;
 use crate::Rng;
-use crate::SAMPLE_RATE;
 use std::f32::consts::LN_10;
 use std::f32::consts::PI;
 use std::f32::consts::TAU;
@@ -177,7 +176,13 @@ pub fn note_hz(instrument: u32, note: f32) -> Option<f32> {
 
 /// One note block hit, rendered at its own pitch. `character` (0 to 1)
 /// varies the timbre so successive hits differ; the seed mixes the same.
-pub fn note(instrument: u32, note: f32, character: f32, seed: u64) -> Option<Vec<f32>> {
+pub fn note(
+    instrument: u32,
+    note: f32,
+    character: f32,
+    seed: u64,
+    sample_rate: u32,
+) -> Option<Vec<f32>> {
     let family = family(instrument)?;
     let hz = note_hz(instrument, note)?;
     // A non-finite `character` would poison damping, brightness and the
@@ -209,7 +214,7 @@ pub fn note(instrument: u32, note: f32, character: f32, seed: u64) -> Option<Vec
             // string rings longer.
             let damping = (damping * (1.3 - 0.6 * character)).clamp(0.0, 1.0);
             let brightness = (brightness + 0.2 * (character - 0.5)).clamp(0.0, 1.0);
-            pluck(hz, damping, brightness, seed)
+            pluck(hz, damping, brightness, seed, sample_rate)
         }
         Family::Modal => {
             // The five struck instruments, in the mapped index order: bell,
@@ -224,7 +229,7 @@ pub fn note(instrument: u32, note: f32, character: f32, seed: u64) -> Option<Vec
             let v = INSTRUMENTS[instrument as usize].3;
             let inharmonicity = (v.inharmonicity + 0.1 * (character - 0.5)).clamp(0.0, 1.0);
             let damping = (v.damping * (0.8 + 0.4 * character)).clamp(0.0, 1.0);
-            modal(hz, inharmonicity, damping, seed)
+            modal(hz, inharmonicity, damping, seed, sample_rate)
         }
         Family::Membrane => {
             // The three drums, in the mapped index order: basedrum, snare,
@@ -242,7 +247,7 @@ pub fn note(instrument: u32, note: f32, character: f32, seed: u64) -> Option<Vec
             let v = INSTRUMENTS[instrument as usize].3;
             let noise_mix = (v.noise_mix + 0.25 * (character - 0.5)).clamp(0.0, 1.0);
             let drop = (v.drop * (0.7 + 0.6 * character)).clamp(0.0, 0.95);
-            membrane(hz, drop, noise_mix, character, seed)
+            membrane(hz, drop, noise_mix, character, seed, sample_rate)
         }
         Family::Breath => {
             // The two blown instruments, in the mapped index order: flute,
@@ -259,7 +264,7 @@ pub fn note(instrument: u32, note: f32, character: f32, seed: u64) -> Option<Vec
                 _ => (0.50, 0.50),
             };
             let bright = (bright + 0.25 * (character - 0.5)).clamp(0.0, 1.0);
-            breath(hz, airflow, bright, seed)
+            breath(hz, airflow, bright, seed, sample_rate)
         }
         Family::Electronic => {
             // The two electronic instruments, in the mapped index order:
@@ -274,7 +279,7 @@ pub fn note(instrument: u32, note: f32, character: f32, seed: u64) -> Option<Vec
                 _ => (0.5, 0.50),
             };
             let bright = (bright + 0.4 * (character - 0.5)).clamp(0.0, 1.0);
-            electronic(hz, kind, bright, seed)
+            electronic(hz, kind, bright, seed, sample_rate)
         }
     };
     crate::dsp::normalize_in_place(&mut out, 0.9);
@@ -290,12 +295,12 @@ pub fn note(instrument: u32, note: f32, character: f32, seed: u64) -> Option<Vec
 /// `brightness` (0 to 1) cuts the pluck and the loop dull or bright, and
 /// moves the pluck position with it: a bright banjo is struck near the
 /// bridge, a dull bass over its middle.
-fn pluck(hz: f32, damping: f32, brightness: f32, seed: u64) -> Vec<f32> {
+fn pluck(hz: f32, damping: f32, brightness: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
     let hz = hz.max(20.0);
-    let n = ((SAMPLE_RATE as f32 / hz).round() as usize).max(2);
+    let n = ((sample_rate as f32 / hz).round() as usize).max(2);
     let mut rng = Rng::new(seed);
     // The pluck: noise lowpassed at a cutoff set by brightness.
-    let mut lp = LowPass::new(250.0 + 7500.0 * brightness);
+    let mut lp = LowPass::new_at(250.0 + 7500.0 * brightness, sample_rate);
     let mut burst = Vec::with_capacity(n);
     for _ in 0..n {
         burst.push(lp.process(rng.signed()));
@@ -315,8 +320,8 @@ fn pluck(hz: f32, damping: f32, brightness: f32, seed: u64) -> Vec<f32> {
     let damping = damping.clamp(0.0, 1.0);
     let t60 = 0.3 + 2.7 * (1.0 - damping);
     let gain = 10.0f32.powf(-3.0 / (t60 * hz));
-    let max_len = (3.0 * SAMPLE_RATE as f32) as usize;
-    let mut out = Vec::with_capacity(max_len.min((t60 * SAMPLE_RATE as f32) as usize + n));
+    let max_len = (3.0 * sample_rate as f32) as usize;
+    let mut out = Vec::with_capacity(max_len.min((t60 * sample_rate as f32) as usize + n));
     let mut idx = 0usize;
     let mut prev = 0.0f32;
     let mut peak = 0.0f32;
@@ -349,7 +354,7 @@ fn pluck(hz: f32, damping: f32, brightness: f32, seed: u64) -> Vec<f32> {
 /// within a few hundred milliseconds, 0.9 rings on for seconds — and each
 /// higher mode dies faster than the one below it. `seed` offsets the modes'
 /// starting phases so two strikes of the same note differ.
-fn modal(hz: f32, inharmonicity: f32, damping: f32, seed: u64) -> Vec<f32> {
+fn modal(hz: f32, inharmonicity: f32, damping: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
     let hz = hz.max(20.0);
     let inharmonicity = inharmonicity.clamp(0.0, 1.0);
     let damping = damping.clamp(0.0, 1.0);
@@ -365,20 +370,20 @@ fn modal(hz: f32, inharmonicity: f32, damping: f32, seed: u64) -> Vec<f32> {
     // One decay per mode: -60 dB at t60 for the fundamental, a sixth of
     // that time for each mode above — higher partials die faster.
     let decay: Vec<f32> = (0..modes)
-        .map(|i| (-3.0 * LN_10 / (t60 * 0.6f32.powi(i as i32) * SAMPLE_RATE as f32)).exp())
+        .map(|i| (-3.0 * LN_10 / (t60 * 0.6f32.powi(i as i32) * sample_rate as f32)).exp())
         .collect();
     // One frequency step per mode, spread off the harmonic series.
     let step: Vec<f32> = bar
         .iter()
         .zip(&spread)
-        .map(|(b, s)| TAU * hz * (b + inharmonicity * s) / SAMPLE_RATE as f32)
+        .map(|(b, s)| TAU * hz * (b + inharmonicity * s) / sample_rate as f32)
         .collect();
     let mut rng = Rng::new(seed);
     let mut phase: Vec<f32> = (0..modes).map(|_| rng.unit() * TAU).collect();
     let mut level = amps;
-    let length = (3.0 * SAMPLE_RATE as f32) as usize;
+    let length = (3.0 * sample_rate as f32) as usize;
     // An 8 ms attack so the strike "swells" rather than clicks on.
-    let attack = (0.008 * SAMPLE_RATE as f32) as usize;
+    let attack = (0.008 * sample_rate as f32) as usize;
     let mut out = Vec::with_capacity(length);
     for i in 0..length {
         let env = if i < attack {
@@ -409,8 +414,15 @@ fn modal(hz: f32, inharmonicity: f32, damping: f32, seed: u64) -> Vec<f32> {
 /// stretches the ring — the character axis: low is dull and short, high
 /// bright and long — and `seed` mixes the rattle and the click so two hits
 /// of the same note differ.
-fn membrane(hz: f32, drop: f32, noise_mix: f32, bright: f32, seed: u64) -> Vec<f32> {
-    let hz = hz.clamp(20.0, 0.45 * SAMPLE_RATE as f32);
+fn membrane(
+    hz: f32,
+    drop: f32,
+    noise_mix: f32,
+    bright: f32,
+    seed: u64,
+    sample_rate: u32,
+) -> Vec<f32> {
+    let hz = hz.clamp(20.0, 0.45 * sample_rate as f32);
     let drop = drop.clamp(0.0, 0.95);
     let noise_mix = noise_mix.clamp(0.0, 1.0);
     let bright = bright.clamp(0.0, 1.0);
@@ -420,16 +432,16 @@ fn membrane(hz: f32, drop: f32, noise_mix: f32, bright: f32, seed: u64) -> Vec<f
     // off.
     let t60 = (0.12 + 0.55 * drop) * (0.7 + 0.6 * bright);
     let length =
-        ((t60 * 1.1 * SAMPLE_RATE as f32) as usize + 2).min((3.0 * SAMPLE_RATE as f32) as usize);
-    let g = 10.0f32.powf(-3.0 / (t60 * SAMPLE_RATE as f32));
+        ((t60 * 1.1 * sample_rate as f32) as usize + 2).min((3.0 * sample_rate as f32) as usize);
+    let g = 10.0f32.powf(-3.0 / (t60 * sample_rate as f32));
     // The rattle's band rides the note and the character: a low character
     // hisses low over a dull kick, a high one rattles up near the top — for
     // the hat, whose noise is all there is, this is the whole timbre.
     let band = ((4.0 * hz).clamp(1200.0, 11_000.0) * (0.4 + 1.2 * bright)).clamp(400.0, 14_000.0);
-    let mut bp = BandPass::new(band, 1.0);
+    let mut bp = BandPass::new_at(band, 1.0, sample_rate);
     let mut rng = Rng::new(seed);
     // The stick click: about 3 ms of raw noise at the onset.
-    let click_len = ((0.003 * SAMPLE_RATE as f32) as usize).max(1);
+    let click_len = ((0.003 * sample_rate as f32) as usize).max(1);
     let tone_amp = 1.0 - noise_mix;
     let mut env = 1.0f32;
     let mut phase = 0.0f32;
@@ -438,7 +450,7 @@ fn membrane(hz: f32, drop: f32, noise_mix: f32, bright: f32, seed: u64) -> Vec<f
         // The pitch falls with the skin's tension: `drop` is how far down
         // from `hz` the head settles by the time it dies away.
         let freq = hz * (1.0 - drop * (1.0 - env));
-        phase += TAU * freq / SAMPLE_RATE as f32;
+        phase += TAU * freq / sample_rate as f32;
         let mut s = tone_amp * env * phase.sin();
         // Bandpassed noise under the tone, dying faster than it.
         let nenv = env * env.sqrt();
@@ -462,8 +474,8 @@ fn membrane(hz: f32, drop: f32, noise_mix: f32, bright: f32, seed: u64) -> Vec<f
 /// air over the tone, and stretches the hold before the release: the
 /// character axis, low is dull and short, high bright and long. `seed`
 /// mixes the breath so two blows of the same note differ.
-fn breath(hz: f32, airflow: f32, bright: f32, seed: u64) -> Vec<f32> {
-    let hz = hz.clamp(20.0, 0.4 * SAMPLE_RATE as f32);
+fn breath(hz: f32, airflow: f32, bright: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
+    let hz = hz.clamp(20.0, 0.4 * sample_rate as f32);
     let airflow = airflow.clamp(0.0, 1.0);
     let bright = bright.clamp(0.0, 1.0);
     // How long the note is held before the release, and how long the
@@ -472,26 +484,30 @@ fn breath(hz: f32, airflow: f32, bright: f32, seed: u64) -> Vec<f32> {
     // under the 3 s every note obeys.
     let hold = 0.30 + 1.40 * bright;
     let release = 0.15 + 0.35 * bright;
-    let length = ((hold + release) * SAMPLE_RATE as f32) as usize;
+    let length = ((hold + release) * sample_rate as f32) as usize;
     // The glottal duty: a hard-driven buzz is a narrow pulse, rich in
     // harmonics; a lightly blown flute sits near a sine.
     let duty = 0.45 - 0.38 * airflow;
     // The tube: a formant at the note and another at its third harmonic,
     // wide enough for the buzz's upper partials to sound through.
-    let mut f1 = BandPass::new(hz, 1.2);
-    let mut f2 = BandPass::new((3.0 * hz).min(0.45 * SAMPLE_RATE as f32), 1.0);
+    let mut f1 = BandPass::new_at(hz, 1.2, sample_rate);
+    let mut f2 = BandPass::new_at((3.0 * hz).min(0.45 * sample_rate as f32), 1.0, sample_rate);
     // The breath in the tube: noise lowpassed at a cutoff set by
     // brightness — and the hiss of air over the tone, higher in band and
     // louder the brighter the blow.
-    let mut lp = LowPass::new(500.0 + 4500.0 * bright);
-    let mut hiss_bp = BandPass::new((1000.0 + 5000.0 * bright).clamp(800.0, 12_000.0), 0.7);
+    let mut lp = LowPass::new_at(500.0 + 4500.0 * bright, sample_rate);
+    let mut hiss_bp = BandPass::new_at(
+        (1000.0 + 5000.0 * bright).clamp(800.0, 12_000.0),
+        0.7,
+        sample_rate,
+    );
     let hiss_amp = 0.5 * bright * bright;
     let mut rng = Rng::new(seed);
     // A swell on so the note does not click on, a cosine release so it
     // does not click off.
-    let attack = ((0.010 * SAMPLE_RATE as f32) as usize).max(1);
-    let rel = ((release * SAMPLE_RATE as f32) as usize).max(2);
-    let step = hz / SAMPLE_RATE as f32;
+    let attack = ((0.010 * sample_rate as f32) as usize).max(1);
+    let rel = ((release * sample_rate as f32) as usize).max(2);
+    let step = hz / sample_rate as f32;
     let mut phase = 0.0f32;
     let mut out = Vec::with_capacity(length);
     for i in 0..length {
@@ -537,8 +553,8 @@ struct ResonantLp {
 }
 
 impl ResonantLp {
-    fn process(&mut self, x: f32, fc: f32, q: f32) -> f32 {
-        let g = (PI * fc / SAMPLE_RATE as f32).tan();
+    fn process(&mut self, x: f32, fc: f32, q: f32, sample_rate: u32) -> f32 {
+        let g = (PI * fc / sample_rate as f32).tan();
         let k = 1.0 / q.max(0.5);
         let a1 = 1.0 / (1.0 + g * (g + k));
         let a2 = g * a1;
@@ -561,7 +577,7 @@ impl ResonantLp {
 /// the bit, operators a few cents apart for the pling), a resonant
 /// lowpass closes down with the envelope, the output saturates softly and
 /// asymmetrically, and a quiet hiss sits under everything.
-fn electronic(hz: f32, kind: f32, bright: f32, seed: u64) -> Vec<f32> {
+fn electronic(hz: f32, kind: f32, bright: f32, seed: u64, sample_rate: u32) -> Vec<f32> {
     let bright = bright.clamp(0.0, 1.0);
     // The strike: -60 dB after `t60`, and the run ends where the envelope
     // reaches about -66 dB so the tail fades instead of clicking off —
@@ -572,10 +588,10 @@ fn electronic(hz: f32, kind: f32, bright: f32, seed: u64) -> Vec<f32> {
         0.25 + 1.20 * bright
     };
     let length =
-        ((t60 * 1.1 * SAMPLE_RATE as f32) as usize + 2).min((3.0 * SAMPLE_RATE as f32) as usize);
-    let g = 10.0f32.powf(-3.0 / (t60 * SAMPLE_RATE as f32));
+        ((t60 * 1.1 * sample_rate as f32) as usize + 2).min((3.0 * sample_rate as f32) as usize);
+    let g = 10.0f32.powf(-3.0 / (t60 * sample_rate as f32));
     // An attack so the hit swells on rather than clicking.
-    let attack = ((0.003 * SAMPLE_RATE as f32) as usize).max(1);
+    let attack = ((0.003 * sample_rate as f32) as usize).max(1);
     // The analog filter: a resonant lowpass whose cutoff starts high at
     // the strike and closes with the envelope — the analog "pluck". The
     // character lifts the whole sweep: a duller hit stays dark, a brighter
@@ -590,10 +606,10 @@ fn electronic(hz: f32, kind: f32, bright: f32, seed: u64) -> Vec<f32> {
     // the offset the bow leaves behind.
     let drive = 1.2;
     let skew = 1.0;
-    let dc_r = 1.0 - TAU * 20.0 / SAMPLE_RATE as f32;
+    let dc_r = 1.0 - TAU * 20.0 / sample_rate as f32;
     // A very quiet hiss under the voice — analog gear is never pristine.
     // It decays with the note, so the tail still fades out.
-    let mut hiss_lp = LowPass::new(5500.0);
+    let mut hiss_lp = LowPass::new_at(5500.0, sample_rate);
     let hiss_amp = 0.008;
     let mut rng = Rng::new(seed);
     let mut out = Vec::with_capacity(length);
@@ -605,10 +621,10 @@ fn electronic(hz: f32, kind: f32, bright: f32, seed: u64) -> Vec<f32> {
         // 50 % (pulse-width modulation) and its pitch drifts a few cents
         // on a seeded random walk, targets redrawn every 100 ms and
         // glided between.
-        let hz = hz.clamp(20.0, 0.45 * SAMPLE_RATE as f32);
+        let hz = hz.clamp(20.0, 0.45 * sample_rate as f32);
         let lfo = 1.5 + 2.5 * rng.unit();
         let pwm_phase = rng.unit() * TAU;
-        let walk = ((0.1 * SAMPLE_RATE as f32) as usize).max(2);
+        let walk = ((0.1 * sample_rate as f32) as usize).max(2);
         let mut drift_from = rng.signed() * 8.0;
         let mut drift_to = rng.signed() * 8.0;
         let mut phase = rng.unit() * TAU;
@@ -628,7 +644,7 @@ fn electronic(hz: f32, kind: f32, bright: f32, seed: u64) -> Vec<f32> {
             let freq = hz * (1.0 - 0.05 * (1.0 - env)) * 2.0f32.powf(cents / 1200.0);
             // The pulse: high for a duty the LFO swings slowly around
             // half — pulse-width modulation, the oscillator's shimmer.
-            let duty = 0.5 + 0.09 * (TAU * lfo * i as f32 / SAMPLE_RATE as f32 + pwm_phase).sin();
+            let duty = 0.5 + 0.09 * (TAU * lfo * i as f32 / sample_rate as f32 + pwm_phase).sin();
             let pulse = if phase / TAU < duty { 1.0 } else { -1.0 };
             let swell = if i < attack {
                 i as f32 / attack as f32
@@ -636,14 +652,14 @@ fn electronic(hz: f32, kind: f32, bright: f32, seed: u64) -> Vec<f32> {
                 1.0
             };
             let fc = fc_min + (fc_max - fc_min) * env;
-            let mut s = filter.process(swell * env * pulse, fc, resonance);
+            let mut s = filter.process(swell * env * pulse, fc, resonance, sample_rate);
             s = (drive * s + skew * s * s).tanh();
             s += hiss_amp * env * hiss_lp.process(rng.signed());
             let y = s - dc_x + dc_r * dc_y;
             dc_x = s;
             dc_y = y;
             out.push(y);
-            phase += TAU * freq / SAMPLE_RATE as f32;
+            phase += TAU * freq / sample_rate as f32;
             if phase >= TAU {
                 phase -= TAU;
             }
@@ -659,19 +675,19 @@ fn electronic(hz: f32, kind: f32, bright: f32, seed: u64) -> Vec<f32> {
         // against each other — carrier up half, modulator down half — so
         // the FM beat is never mathematically locked, as an analog pair's
         // would not be.
-        let hz = hz.clamp(20.0, 0.4 * SAMPLE_RATE as f32 / 3.5);
+        let hz = hz.clamp(20.0, 0.4 * sample_rate as f32 / 3.5);
         let index0 = 1.2 + 1.6 * bright;
         // The index falls to nothing over a few hundred milliseconds —
         // faster the duller the strike — so the sidebands die away before
         // the carrier does.
-        let ig = 10.0f32.powf(-3.0 / ((0.15 + 0.30 * bright) * SAMPLE_RATE as f32));
+        let ig = 10.0f32.powf(-3.0 / ((0.15 + 0.30 * bright) * sample_rate as f32));
         let cents = 2.0 + 4.0 * rng.unit();
         let carrier = hz * 2.0f32.powf(cents / 2400.0);
         let mod_hz = 3.5 * hz * 2.0f32.powf(-cents / 2400.0);
         let mut cphase = rng.unit() * TAU;
         let mut mphase = rng.unit() * TAU;
-        let step_c = TAU * carrier / SAMPLE_RATE as f32;
-        let step_m = TAU * mod_hz / SAMPLE_RATE as f32;
+        let step_c = TAU * carrier / sample_rate as f32;
+        let step_m = TAU * mod_hz / sample_rate as f32;
         let mut env = 1.0f32;
         let mut index = index0;
         for i in 0..length {
@@ -685,6 +701,7 @@ fn electronic(hz: f32, kind: f32, bright: f32, seed: u64) -> Vec<f32> {
                 swell * env * (cphase + index * mphase.sin()).sin(),
                 fc,
                 resonance,
+                sample_rate,
             );
             s = (drive * s + skew * s * s).tanh();
             s += hiss_amp * env * hiss_lp.process(rng.signed());
@@ -710,6 +727,7 @@ fn electronic(hz: f32, kind: f32, bright: f32, seed: u64) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SAMPLE_RATE;
 
     #[test]
     fn the_seventeen_instruments_map_to_the_expected_families() {
@@ -731,12 +749,12 @@ mod tests {
 
     #[test]
     fn an_unknown_instrument_renders_nothing() {
-        assert!(note(16, 12.0, 0.5, 1).is_none());
+        assert!(note(16, 12.0, 0.5, 1, SAMPLE_RATE).is_none());
     }
 
     #[test]
     fn a_plucked_note_renders_audible_finite_audio() {
-        let out = note(0, 12.0, 0.5, 7);
+        let out = note(0, 12.0, 0.5, 7, SAMPLE_RATE);
         assert!(out.is_some(), "plucked note rendered nothing");
         let out = out.unwrap();
         assert!(!out.is_empty(), "plucked note is empty");
@@ -839,7 +857,7 @@ mod tests {
 
     #[test]
     fn a_bar_rings_at_the_note_it_was_struck_at() {
-        let out = modal(440.0, 0.2, 0.5, 1);
+        let out = modal(440.0, 0.2, 0.5, 1, SAMPLE_RATE);
         assert!(
             (fundamental(&out) - 440.0).abs() < 40.0,
             "bar at {}",
@@ -850,21 +868,21 @@ mod tests {
     #[test]
     fn an_inharmonic_bar_has_partials_off_the_harmonic_series() {
         // The 2nd partial of a metal bar is not 2x the fundamental.
-        let wood = modal(440.0, 0.0, 0.5, 2);
-        let metal = modal(440.0, 0.6, 0.5, 2);
+        let wood = modal(440.0, 0.0, 0.5, 2, SAMPLE_RATE);
+        let metal = modal(440.0, 0.6, 0.5, 2, SAMPLE_RATE);
         assert!(partial_ratio(&metal, &wood) > 1.1);
     }
 
     #[test]
     fn higher_damping_rings_longer() {
-        let short = modal(440.0, 0.3, 0.1, 3);
-        let long = modal(440.0, 0.3, 0.9, 3);
+        let short = modal(440.0, 0.3, 0.1, 3, SAMPLE_RATE);
+        let long = modal(440.0, 0.3, 0.9, 3, SAMPLE_RATE);
         assert!(tail_rms(&long) > 2.0 * tail_rms(&short));
     }
 
     #[test]
     fn a_struck_bar_renders_audible_finite_audio() {
-        let out = note(6, 12.0, 0.5, 7);
+        let out = note(6, 12.0, 0.5, 7, SAMPLE_RATE);
         assert!(out.is_some(), "struck note rendered nothing");
         let out = out.unwrap();
         assert!(!out.is_empty(), "struck note is empty");
@@ -894,8 +912,8 @@ mod tests {
         // The Modal arm's character swing follows the Pluck family's
         // convention: a low character strikes dull and dies sooner, a
         // high one rings on.
-        let dull = note(6, 12.0, 0.1, 9).unwrap();
-        let bright = note(6, 12.0, 0.9, 9).unwrap();
+        let dull = note(6, 12.0, 0.1, 9, SAMPLE_RATE).unwrap();
+        let bright = note(6, 12.0, 0.9, 9, SAMPLE_RATE).unwrap();
         assert!(
             tail_rms(&dull) < 0.5 * tail_rms(&bright),
             "low character tail {} not clearly under high character tail {}",
@@ -953,7 +971,7 @@ mod tests {
 
     #[test]
     fn a_drum_starts_at_its_note_and_falls() {
-        let out = membrane(200.0, 0.6, 0.2, 0.5, 1);
+        let out = membrane(200.0, 0.6, 0.2, 0.5, 1, SAMPLE_RATE);
         assert!(
             fundamental_at(&out, 0.0) > fundamental_at(&out, 0.3),
             "the pitch must drop"
@@ -962,16 +980,16 @@ mod tests {
 
     #[test]
     fn a_snare_is_noisier_than_a_basedrum() {
-        let drum = membrane(150.0, 0.6, 0.0, 0.5, 2);
-        let snare = membrane(150.0, 0.4, 1.0, 0.5, 2);
+        let drum = membrane(150.0, 0.6, 0.0, 0.5, 2, SAMPLE_RATE);
+        let snare = membrane(150.0, 0.4, 1.0, 0.5, 2, SAMPLE_RATE);
         assert!(roughness(&snare) > roughness(&drum));
     }
 
     #[test]
     fn a_hat_is_short_and_bright() {
-        let hat = membrane(9000.0, 0.0, 1.0, 0.5, 3);
+        let hat = membrane(9000.0, 0.0, 1.0, 0.5, 3, SAMPLE_RATE);
         assert!(hat.len() < crate::SAMPLE_RATE as usize / 2);
-        assert!(centroid(&hat) > centroid(&membrane(150.0, 0.6, 0.0, 0.5, 3)));
+        assert!(centroid(&hat) > centroid(&membrane(150.0, 0.6, 0.0, 0.5, 3, SAMPLE_RATE)));
     }
 
     #[test]
@@ -980,8 +998,8 @@ mod tests {
         // a low character rattles less and its head dies sooner, a high one
         // rattles brighter and rings longer (`drop` drives both the pitch
         // fall and the ring length).
-        let dull = note(1, 12.0, 0.1, 5).unwrap();
-        let bright = note(1, 12.0, 0.9, 5).unwrap();
+        let dull = note(1, 12.0, 0.1, 5, SAMPLE_RATE).unwrap();
+        let bright = note(1, 12.0, 0.9, 5, SAMPLE_RATE).unwrap();
         assert!(
             bright.len() > dull.len(),
             "high character note ({}) not longer than low character note ({})",
@@ -1003,8 +1021,8 @@ mod tests {
         // The hat's `noise_mix` saturates at 1.0, so its character rides
         // the rattle's band and the ring length instead — same convention:
         // low is dull and short, high bright and long.
-        let dull = note(3, 12.0, 0.1, 5).unwrap();
-        let bright = note(3, 12.0, 0.9, 5).unwrap();
+        let dull = note(3, 12.0, 0.1, 5, SAMPLE_RATE).unwrap();
+        let bright = note(3, 12.0, 0.9, 5, SAMPLE_RATE).unwrap();
         assert!(
             bright.len() > dull.len() + SAMPLE_RATE as usize / 100,
             "high character hat ({}) not clearly longer than low character hat ({})",
@@ -1025,7 +1043,7 @@ mod tests {
 
     #[test]
     fn a_membrane_note_renders_audible_finite_audio() {
-        let out = note(1, 12.0, 0.5, 7);
+        let out = note(1, 12.0, 0.5, 7, SAMPLE_RATE);
         assert!(out.is_some(), "membrane note rendered nothing");
         let out = out.unwrap();
         assert!(!out.is_empty(), "membrane note is empty");
@@ -1091,7 +1109,7 @@ mod tests {
 
     #[test]
     fn a_flute_sounds_the_note_it_is_asked_for() {
-        let out = breath(587.0, 0.3, 0.5, 1);
+        let out = breath(587.0, 0.3, 0.5, 1, SAMPLE_RATE);
         assert!(
             (fundamental(&out) - 587.0).abs() < 40.0,
             "flute at {}",
@@ -1102,18 +1120,18 @@ mod tests {
     #[test]
     fn a_didgeridoo_is_richer_than_a_flute() {
         assert!(
-            harmonic_count(&breath(150.0, 1.0, 0.5, 2))
-                > harmonic_count(&breath(587.0, 0.2, 0.5, 2)),
+            harmonic_count(&breath(150.0, 1.0, 0.5, 2, SAMPLE_RATE))
+                > harmonic_count(&breath(587.0, 0.2, 0.5, 2, SAMPLE_RATE)),
             "didgeridoo {} not richer than flute {}",
-            harmonic_count(&breath(150.0, 1.0, 0.5, 2)),
-            harmonic_count(&breath(587.0, 0.2, 0.5, 2))
+            harmonic_count(&breath(150.0, 1.0, 0.5, 2, SAMPLE_RATE)),
+            harmonic_count(&breath(587.0, 0.2, 0.5, 2, SAMPLE_RATE))
         );
     }
 
     #[test]
     fn the_breath_noise_rides_under_the_tone() {
-        let quiet = breath(440.0, 0.0, 0.5, 3);
-        let windy = breath(440.0, 1.0, 0.5, 3);
+        let quiet = breath(440.0, 0.0, 0.5, 3, SAMPLE_RATE);
+        let windy = breath(440.0, 1.0, 0.5, 3, SAMPLE_RATE);
         assert!(
             high_band_energy(&windy) > high_band_energy(&quiet),
             "windy high band {} not above quiet {}",
@@ -1124,7 +1142,7 @@ mod tests {
 
     #[test]
     fn a_breath_note_renders_audible_finite_audio() {
-        let out = note(5, 12.0, 0.5, 7);
+        let out = note(5, 12.0, 0.5, 7, SAMPLE_RATE);
         assert!(out.is_some(), "breath note rendered nothing");
         let out = out.unwrap();
         assert!(!out.is_empty(), "breath note is empty");
@@ -1154,8 +1172,8 @@ mod tests {
         // The Breath arm's character swing follows the family convention:
         // a low character holds a shorter, duller note, a high one holds
         // longer and brighter.
-        let dull = note(5, 12.0, 0.1, 4).unwrap();
-        let bright = note(5, 12.0, 0.9, 4).unwrap();
+        let dull = note(5, 12.0, 0.1, 4, SAMPLE_RATE).unwrap();
+        let bright = note(5, 12.0, 0.9, 4, SAMPLE_RATE).unwrap();
         assert!(
             bright.len() > dull.len() + SAMPLE_RATE as usize / 10,
             "high character flute ({}) not clearly longer than low character ({})",
@@ -1173,8 +1191,8 @@ mod tests {
             dull_centroid
         );
         // The didgeridoo follows the same axis on length: low short, high long.
-        let dull = note(12, 12.0, 0.1, 6).unwrap();
-        let bright = note(12, 12.0, 0.9, 6).unwrap();
+        let dull = note(12, 12.0, 0.1, 6, SAMPLE_RATE).unwrap();
+        let bright = note(12, 12.0, 0.9, 6, SAMPLE_RATE).unwrap();
         assert!(
             bright.len() > dull.len(),
             "high character didgeridoo ({}) not longer than low character ({})",
@@ -1207,7 +1225,7 @@ mod tests {
 
     #[test]
     fn a_bit_is_a_square_wave_at_the_note() {
-        let out = electronic(440.0, 0.0, 0.5, 1); // bit
+        let out = electronic(440.0, 0.0, 0.5, 1, SAMPLE_RATE); // bit
         assert!(
             (fundamental(&out) - 440.0).abs() < 30.0,
             "bit at {}",
@@ -1217,7 +1235,7 @@ mod tests {
 
     #[test]
     fn a_pling_is_an_fm_pair_that_decays() {
-        let out = electronic(440.0, 1.0, 0.5, 2); // pling
+        let out = electronic(440.0, 1.0, 0.5, 2, SAMPLE_RATE); // pling
         assert!(out.len() < 3 * crate::SAMPLE_RATE as usize);
         assert!(
             tail_rms(&out) < 0.2 * head_rms(&out),
@@ -1227,8 +1245,8 @@ mod tests {
 
     #[test]
     fn the_two_electronics_differ() {
-        let bit = electronic(440.0, 0.0, 0.5, 3);
-        let pling = electronic(440.0, 1.0, 0.5, 3);
+        let bit = electronic(440.0, 0.0, 0.5, 3, SAMPLE_RATE);
+        let pling = electronic(440.0, 1.0, 0.5, 3, SAMPLE_RATE);
         assert_ne!(
             bit.len(),
             pling.len(),
@@ -1266,7 +1284,7 @@ mod tests {
         // integrates with the square of the decaying envelope: measured
         // across bow strengths and seeds it lands at 5.6–6.2 %, an order
         // above the sub-1 % leakage a static square leaves.
-        let bit = electronic(440.0, 0.0, 0.5, 11);
+        let bit = electronic(440.0, 0.0, 0.5, 11, SAMPLE_RATE);
         let f0 = mag_at(&bit, 440.0);
         let h2 = mag_at(&bit, 880.0);
         assert!(
@@ -1277,7 +1295,7 @@ mod tests {
 
     #[test]
     fn an_electronic_note_renders_audible_finite_audio() {
-        let out = note(13, 12.0, 0.5, 7);
+        let out = note(13, 12.0, 0.5, 7, SAMPLE_RATE);
         assert!(out.is_some(), "electronic note rendered nothing");
         let out = out.unwrap();
         assert!(!out.is_empty(), "electronic note is empty");
@@ -1303,7 +1321,7 @@ mod tests {
         // The pling half of the family renders too: no arm of `note`
         // returns None for a valid instrument any more.
         assert!(
-            note(15, 12.0, 0.5, 7).is_some(),
+            note(15, 12.0, 0.5, 7, SAMPLE_RATE).is_some(),
             "pling note rendered nothing"
         );
     }
@@ -1313,8 +1331,8 @@ mod tests {
         // The Electronic arm's character swing follows the family
         // convention: a low character is duller and dies sooner, a high
         // one brighter and rings longer.
-        let dull = note(13, 12.0, 0.1, 4).unwrap();
-        let bright = note(13, 12.0, 0.9, 4).unwrap();
+        let dull = note(13, 12.0, 0.1, 4, SAMPLE_RATE).unwrap();
+        let bright = note(13, 12.0, 0.9, 4, SAMPLE_RATE).unwrap();
         assert!(
             bright.len() > dull.len() + SAMPLE_RATE as usize / 100,
             "high character bit ({}) not clearly longer than low character ({})",
