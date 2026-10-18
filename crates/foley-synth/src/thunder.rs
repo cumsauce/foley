@@ -1,5 +1,5 @@
-use crate::{absorption_cutoff, LowPass, Rng};
-use std::sync::mpsc::{sync_channel, Receiver, SyncSender, TryRecvError, TrySendError};
+use crate::{LowPass, Rng, absorption_cutoff};
+use std::sync::mpsc::{Receiver, SyncSender, TryRecvError, TrySendError, sync_channel};
 
 const SPEED_OF_SOUND: f32 = 343.0;
 const ATMOSPHERE: f32 = 101_325.0;

@@ -22,6 +22,12 @@ use crate::{BandPass, LowPass, Rng};
 ///
 /// `harmonic` weights the second harmonic the trachea lets through (the
 /// whistle's standard brightness); `(attack, release)` are seconds.
+///
+/// The trailing `sample_rate` is the workspace-wide rate-generic pattern, which
+/// puts this one argument over clippy's seven. Each argument names a distinct
+/// physical quantity of the whistle, so they stay out rather than being bundled
+/// into a struct that would only shuffle the same values.
+#[allow(clippy::too_many_arguments)]
 pub fn fm(
     contour: &[(f32, f32)],
     fm_depth_hz: f32,
@@ -182,7 +188,7 @@ pub fn hoot(centre_hz: f32, seconds: f32, rng: &mut Rng, sample_rate: u32) -> Ve
 /// over the decay. Gila woodpecker's faster roll vs. the spruce grouse's
 /// slower one.
 pub fn drum(rate_hz: f32, decay_s: f32, rng: &mut Rng, sample_rate: u32) -> Vec<f32> {
-    use crate::{contact, Contact, Material};
+    use crate::{Contact, Material, contact};
     let total = (decay_s * sample_rate as f32) as usize;
     let mut out = vec![0.0f32; total];
     let mut at = 0.0f32;

@@ -433,9 +433,13 @@ pub unsafe extern "C" fn foley_bed_create(kind: i32, seed: u64, out: *mut *mut F
             FOLEY_BED_WATER => Synth::Water(Water::new(seed, foley_synth::DEFAULT_SAMPLE_RATE)),
             FOLEY_BED_FIRE => Synth::Fire(Fire::new(seed, foley_synth::DEFAULT_SAMPLE_RATE)),
             FOLEY_BED_LAVA => Synth::Lava(Lava::new(seed, foley_synth::DEFAULT_SAMPLE_RATE)),
-            FOLEY_BED_THUNDER => Synth::Thunder(Thunder::new(seed, foley_synth::DEFAULT_SAMPLE_RATE)),
+            FOLEY_BED_THUNDER => {
+                Synth::Thunder(Thunder::new(seed, foley_synth::DEFAULT_SAMPLE_RATE))
+            }
             FOLEY_BED_CAVE => Synth::Cave(Cave::new(seed, foley_synth::DEFAULT_SAMPLE_RATE)),
-            FOLEY_BED_UNDERWATER => Synth::Underwater(Underwater::new(seed, foley_synth::DEFAULT_SAMPLE_RATE)),
+            FOLEY_BED_UNDERWATER => {
+                Synth::Underwater(Underwater::new(seed, foley_synth::DEFAULT_SAMPLE_RATE))
+            }
             FOLEY_BED_BIOME => Synth::Biome(Biome::new(seed, foley_synth::DEFAULT_SAMPLE_RATE)),
             FOLEY_BED_SURF => Synth::Surf(Surf::new(seed, foley_synth::DEFAULT_SAMPLE_RATE)),
             _ => return Err(FfiError::invalid("unknown bed kind")),
@@ -1045,26 +1049,52 @@ pub unsafe extern "C" fn foley_render_one_shot(
                 .ok_or_else(|| FfiError::invalid("size out of range"))
         };
         let sound = match kind {
-            FOLEY_SHOT_DRIP_INTO_WATER => drip_into_water(drop_size()?, seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_SHOT_DRIP_ON_STONE => drip_on_stone(drop_size()?, seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_SHOT_LAVA_DRIP => lava_drip(seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_SHOT_CRICKETS if (-30.0..=50.0).contains(&size) => crickets(size, seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_SHOT_BIRDSONG if (0.0..=Birds::ALL.len() as f32 - 1.0).contains(&size) => {
-                birdsong2(Birds::of(size as u32), seed, foley_synth::DEFAULT_SAMPLE_RATE)
+            FOLEY_SHOT_DRIP_INTO_WATER => {
+                drip_into_water(drop_size()?, seed, foley_synth::DEFAULT_SAMPLE_RATE)
             }
-            FOLEY_SHOT_FROG if (2.0..=20.0).contains(&size) => frog(size, seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_SHOT_SURF if (0.2..=3.0).contains(&size) => surf(size, seed, foley_synth::DEFAULT_SAMPLE_RATE),
+            FOLEY_SHOT_DRIP_ON_STONE => {
+                drip_on_stone(drop_size()?, seed, foley_synth::DEFAULT_SAMPLE_RATE)
+            }
+            FOLEY_SHOT_LAVA_DRIP => lava_drip(seed, foley_synth::DEFAULT_SAMPLE_RATE),
+            FOLEY_SHOT_CRICKETS if (-30.0..=50.0).contains(&size) => {
+                crickets(size, seed, foley_synth::DEFAULT_SAMPLE_RATE)
+            }
+            FOLEY_SHOT_BIRDSONG if (0.0..=Birds::ALL.len() as f32 - 1.0).contains(&size) => {
+                birdsong2(
+                    Birds::of(size as u32),
+                    seed,
+                    foley_synth::DEFAULT_SAMPLE_RATE,
+                )
+            }
+            FOLEY_SHOT_FROG if (2.0..=20.0).contains(&size) => {
+                frog(size, seed, foley_synth::DEFAULT_SAMPLE_RATE)
+            }
+            FOLEY_SHOT_SURF if (0.2..=3.0).contains(&size) => {
+                surf(size, seed, foley_synth::DEFAULT_SAMPLE_RATE)
+            }
             FOLEY_SHOT_WOODPECKER => woodpecker(seed, foley_synth::DEFAULT_SAMPLE_RATE),
             FOLEY_SHOT_OWL => owl(seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_SHOT_CICADAS if (-30.0..=50.0).contains(&size) => cicadas(size, seed, foley_synth::DEFAULT_SAMPLE_RATE),
+            FOLEY_SHOT_CICADAS if (-30.0..=50.0).contains(&size) => {
+                cicadas(size, seed, foley_synth::DEFAULT_SAMPLE_RATE)
+            }
             FOLEY_SHOT_HOWL => howl(seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_SHOT_BRUSH if (0.0..=2.0).contains(&size) => brush(Plant::of(size as u32), seed, foley_synth::DEFAULT_SAMPLE_RATE),
+            FOLEY_SHOT_BRUSH if (0.0..=2.0).contains(&size) => brush(
+                Plant::of(size as u32),
+                seed,
+                foley_synth::DEFAULT_SAMPLE_RATE,
+            ),
             FOLEY_SHOT_ICE_SINGING => ice_singing(seed, foley_synth::DEFAULT_SAMPLE_RATE),
             FOLEY_SHOT_SETTLING_STONE => settling_stone(seed, foley_synth::DEFAULT_SAMPLE_RATE),
             FOLEY_SHOT_FLUSH => flush(seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_SHOT_BUZZ if (0.0..=1.0).contains(&size) => buzz(size as u32, seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_SHOT_SCULK_RING if (0.5..=20.0).contains(&size) => sculk_ring(size, seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_SHOT_BELL if (0.5..=20.0).contains(&size) => bell(size, seed, foley_synth::DEFAULT_SAMPLE_RATE),
+            FOLEY_SHOT_BUZZ if (0.0..=1.0).contains(&size) => {
+                buzz(size as u32, seed, foley_synth::DEFAULT_SAMPLE_RATE)
+            }
+            FOLEY_SHOT_SCULK_RING if (0.5..=20.0).contains(&size) => {
+                sculk_ring(size, seed, foley_synth::DEFAULT_SAMPLE_RATE)
+            }
+            FOLEY_SHOT_BELL if (0.5..=20.0).contains(&size) => {
+                bell(size, seed, foley_synth::DEFAULT_SAMPLE_RATE)
+            }
             FOLEY_SHOT_BOOM => {
                 // The blast's radius in metres: anything unusable (NaN,
                 // zero or negative) is heard as a 2 m one, and anything
@@ -1130,10 +1160,34 @@ pub unsafe extern "C" fn foley_render_contact(
         }
         let sound = match kind {
             FOLEY_CONTACT_BREAK => fracture(material, seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_CONTACT_TAP => contact(Contact::Tap, material, speed, seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_CONTACT_PLACE => contact(Contact::Place, material, speed, seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_CONTACT_LAND => contact(Contact::Land, material, speed, seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_CONTACT_STEP => contact(Contact::Step, material, speed, seed, foley_synth::DEFAULT_SAMPLE_RATE),
+            FOLEY_CONTACT_TAP => contact(
+                Contact::Tap,
+                material,
+                speed,
+                seed,
+                foley_synth::DEFAULT_SAMPLE_RATE,
+            ),
+            FOLEY_CONTACT_PLACE => contact(
+                Contact::Place,
+                material,
+                speed,
+                seed,
+                foley_synth::DEFAULT_SAMPLE_RATE,
+            ),
+            FOLEY_CONTACT_LAND => contact(
+                Contact::Land,
+                material,
+                speed,
+                seed,
+                foley_synth::DEFAULT_SAMPLE_RATE,
+            ),
+            FOLEY_CONTACT_STEP => contact(
+                Contact::Step,
+                material,
+                speed,
+                seed,
+                foley_synth::DEFAULT_SAMPLE_RATE,
+            ),
             _ => return Err(FfiError::invalid("unknown contact")),
         };
         if let Some(dest) = out.get_mut(..sound.len()) {
@@ -1208,10 +1262,34 @@ pub unsafe extern "C" fn foley_render_contact_custom(
         }
         let sound = match kind {
             FOLEY_CONTACT_BREAK => fracture_with(&material, seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_CONTACT_TAP => contact_with(Contact::Tap, &material, speed, seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_CONTACT_PLACE => contact_with(Contact::Place, &material, speed, seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_CONTACT_LAND => contact_with(Contact::Land, &material, speed, seed, foley_synth::DEFAULT_SAMPLE_RATE),
-            FOLEY_CONTACT_STEP => contact_with(Contact::Step, &material, speed, seed, foley_synth::DEFAULT_SAMPLE_RATE),
+            FOLEY_CONTACT_TAP => contact_with(
+                Contact::Tap,
+                &material,
+                speed,
+                seed,
+                foley_synth::DEFAULT_SAMPLE_RATE,
+            ),
+            FOLEY_CONTACT_PLACE => contact_with(
+                Contact::Place,
+                &material,
+                speed,
+                seed,
+                foley_synth::DEFAULT_SAMPLE_RATE,
+            ),
+            FOLEY_CONTACT_LAND => contact_with(
+                Contact::Land,
+                &material,
+                speed,
+                seed,
+                foley_synth::DEFAULT_SAMPLE_RATE,
+            ),
+            FOLEY_CONTACT_STEP => contact_with(
+                Contact::Step,
+                &material,
+                speed,
+                seed,
+                foley_synth::DEFAULT_SAMPLE_RATE,
+            ),
             _ => return Err(FfiError::invalid("unknown contact")),
         };
         if let Some(dest) = out.get_mut(..sound.len()) {
@@ -1267,7 +1345,11 @@ pub unsafe extern "C" fn foley_render_primitive(
         };
         let gain = |i: usize| -> Result<f32, FfiError> { range("gain", given(i)?, 0.0, 1.0) };
         let sound = match kind {
-            FOLEY_PRIMITIVE_BUBBLE => bubble(range("radius_mm", given(0)?, 0.05, 20.0)?, seed, foley_synth::DEFAULT_SAMPLE_RATE),
+            FOLEY_PRIMITIVE_BUBBLE => bubble(
+                range("radius_mm", given(0)?, 0.05, 20.0)?,
+                seed,
+                foley_synth::DEFAULT_SAMPLE_RATE,
+            ),
             FOLEY_PRIMITIVE_NOISE => noise_burst(
                 range("centre", given(0)?, 20.0, 20_000.0)?,
                 range("q", given(1)?, 0.5, 20.0)?,
