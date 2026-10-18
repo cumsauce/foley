@@ -74,6 +74,9 @@ pub struct Wind {
     /// How many speeds the ring holds at that rate: the gust lead in
     /// blocks, clamped to [`MAX_LEAD`].
     lead: usize,
+    /// Warm-up samples at this rate: [`WARM_UP`] scaled from 48 kHz, so a
+    /// fresh bed settles for the same time in seconds at any rate.
+    warm_up: usize,
     next: usize,
     filled: usize,
     ear: f32,
@@ -113,6 +116,8 @@ impl Wind {
             speed: 0.0,
             sample_rate,
             lead: ((GUST_LEAD * sample_rate as f32 / BLOCK as f32) as usize).clamp(1, MAX_LEAD),
+            warm_up: (WARM_UP as u64 * sample_rate as u64 / crate::DEFAULT_SAMPLE_RATE as u64)
+                .max(1) as usize,
             history: [0.0; MAX_LEAD],
             next: 0,
             filled: 0,
@@ -147,7 +152,15 @@ impl Wind {
         if self.filled == 0 {
             self.scene = scene;
             self.speed = scene.speed.max(0.0);
-            self.render(&mut [0.0; WARM_UP]);
+            // In chunks, so the buffer stays on the stack at any rate; the
+            // render state carries across calls, so the result is one run.
+            let mut buf = [0.0f32; WARM_UP];
+            let mut left = self.warm_up;
+            while left > 0 {
+                let n = left.min(WARM_UP);
+                self.render(&mut buf[..n]);
+                left -= n;
+            }
             return;
         }
         self.scene = scene;
@@ -434,5 +447,14 @@ mod tests {
         let sd = (tail.iter().map(|s| (s - mean).powi(2)).sum::<f32>() / tail.len() as f32).sqrt();
         assert!((mean - 10.0).abs() < 2.0, "mean {mean}");
         assert!(sd > 0.8 && sd < 4.5, "gusts {sd}");
+    }
+
+    #[test]
+    fn warm_up_scales_with_sample_rate() {
+        // The settling time in seconds must not shrink at higher rates:
+        // 8192 samples is ~170 ms at 48 kHz and stays ~170 ms at 192 kHz.
+        assert_eq!(Wind::new(1, 48_000).warm_up, 8192);
+        assert_eq!(Wind::new(1, 192_000).warm_up, 32_768);
+        assert_eq!(Wind::new(1, 44_100).warm_up, 7526);
     }
 }

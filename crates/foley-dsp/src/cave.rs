@@ -115,6 +115,9 @@ pub struct Cave {
     stones_fired: u32,
     /// The rate this bed renders at.
     sample_rate: u32,
+    /// Warm-up samples at this rate: [`WARM_UP`] scaled from 48 kHz, so a
+    /// fresh bed settles for the same time in seconds at any rate.
+    warm_up: usize,
 }
 
 impl Cave {
@@ -146,6 +149,8 @@ impl Cave {
             #[cfg(test)]
             stones_fired: 0,
             sample_rate,
+            warm_up: (WARM_UP as u64 * sample_rate as u64 / crate::DEFAULT_SAMPLE_RATE as u64)
+                .max(1) as usize,
         }
     }
 
@@ -154,7 +159,15 @@ impl Cave {
             self.scene = scene;
             self.openness_heard = scene.openness;
             // Warm the filters up to the new scene so the first sample doesn't click.
-            self.render(&mut [0.0; WARM_UP]);
+            // In chunks, so the buffer stays on the stack at any rate; the
+            // render state carries across calls, so the result is one run.
+            let mut buf = [0.0f32; WARM_UP];
+            let mut left = self.warm_up;
+            while left > 0 {
+                let n = left.min(WARM_UP);
+                self.render(&mut buf[..n]);
+                left -= n;
+            }
             return;
         }
         self.scene = scene;
@@ -279,6 +292,15 @@ impl Cave {
 mod tests {
     use super::*;
     use crate::SAMPLE_RATE;
+
+    #[test]
+    fn warm_up_scales_with_sample_rate() {
+        // 4096 samples is ~85 ms at 48 kHz; scaled, it stays ~85 ms at
+        // 192 kHz (16384) and at 44.1 kHz (3763).
+        assert_eq!(Cave::new(1, 48_000).warm_up, 4096);
+        assert_eq!(Cave::new(1, 192_000).warm_up, 16_384);
+        assert_eq!(Cave::new(1, 44_100).warm_up, 3763);
+    }
     #[allow(unused_imports)]
     use std::{vec, vec::Vec};
 
