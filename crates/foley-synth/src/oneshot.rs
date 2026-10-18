@@ -1,5 +1,5 @@
 use crate::dsp::add_at;
-use crate::{Bubble, LowPass, Rng, SAMPLE_RATE, Surface};
+use crate::{Bubble, LowPass, Rng, SAMPLE_RATE, Surface, noise_burst};
 use foley_dsp::Struck;
 
 /// A short click: `seconds` of noise through a low-pass at `cutoff`,
@@ -148,6 +148,96 @@ pub fn lava_drip(seed: u64) -> Vec<f32> {
     out
 }
 
+/// An explosion's bang (M27): the sub boom of the blast's pressure wave
+/// falling in pitch, two layers of blast noise — the low body and the
+/// broadband crack — and debris scattering through the tail. `size_m` is the
+/// explosion's radius in metres (0.5 to 20; anything else falls back to 2):
+/// a bigger blast booms lower, decays slower, runs longer — `min(3.0,
+/// 0.6 + 0.25*size)` seconds — and throws more debris. Deterministic from
+/// `seed`, peak-normalized to 0.9.
+pub fn bang(size_m: f32, seed: u64) -> Vec<f32> {
+    let size = if size_m.is_finite() && size_m > 0.0 {
+        size_m
+    } else {
+        2.0
+    }
+    .clamp(0.5, 20.0);
+    let mut rng = Rng::new(seed);
+    let rate = SAMPLE_RATE as f32;
+    let seconds = (0.6 + 0.25 * size).min(3.0);
+    let length = (seconds * rate) as usize;
+    let mut out = vec![0.0f32; length];
+
+    // The sub boom: the pressure wave's low thump, its frequency falling
+    // exponentially from 110/√size to 35/√size Hz over the first 15% of the
+    // blast and then holding, amplitude decaying with tau = 0.12 + 0.05*size.
+    let start_hz = 110.0 / size.sqrt();
+    let end_hz = 35.0 / size.sqrt();
+    let glide = 0.15 * seconds;
+    let tau = 0.12 + 0.05 * size;
+    let mut phase = 0.0f32;
+    for (i, sample) in out.iter_mut().enumerate() {
+        let t = i as f32 / rate;
+        let hz = if t < glide {
+            start_hz * (end_hz / start_hz).powf(t / glide)
+        } else {
+            end_hz
+        };
+        phase += std::f32::consts::TAU * hz / rate;
+        *sample += (-t / tau).exp() * phase.sin();
+    }
+
+    // The blast body: the low shove of the displaced air, then the
+    // broadband crack of the shock front itself, both from the blast's
+    // first moments.
+    let span = 0.25 + 0.05 * size;
+    let root = size.sqrt();
+    let layers = [
+        (140.0 / root, 0.8, span, 1.0, seed.wrapping_add(1)),
+        (900.0 / root, 0.7, span, 0.7, seed.wrapping_add(2)),
+    ];
+    for (centre, q, seconds, gain, layer_seed) in layers {
+        let burst = noise_burst(centre, q, seconds, gain, layer_seed);
+        for (i, sample) in burst.iter().enumerate() {
+            if let Some(slot) = out.get_mut(i) {
+                *slot += sample;
+            }
+        }
+    }
+
+    // Debris in the tail: short, bright ticks of fragments landing, at
+    // seeded times between the 20%-point and the end of the buffer.
+    for i in 0..(4.0 + 2.0 * size) as usize {
+        let tick_seconds = 0.01 + 0.02 * rng.unit();
+        let centre = 2000.0 + 4000.0 * rng.unit();
+        let q = 2.0 + 4.0 * rng.unit();
+        let gain = 0.1 + 0.15 * rng.unit();
+        let tick = noise_burst(
+            centre,
+            q,
+            tick_seconds,
+            gain,
+            seed.wrapping_add(0x9E37_79B9).wrapping_add(i as u64),
+        );
+        let from = 0.2 * seconds;
+        let room = (seconds - from - tick_seconds).max(0.0);
+        let at = ((from + room * rng.unit()) * rate) as usize;
+        for (j, sample) in tick.iter().enumerate() {
+            if let Some(slot) = out.get_mut(at + j) {
+                *slot += sample;
+            }
+        }
+    }
+
+    // End soft, so the buffer never clicks off, then peak at 0.9.
+    let fade = ((0.01 * rate) as usize).min(length);
+    for i in 0..fade {
+        out[length - 1 - i] *= i as f32 / fade as f32;
+    }
+    crate::dsp::normalize_in_place(&mut out, 0.9);
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -168,5 +258,29 @@ mod tests {
         assert!(peak(&drip_on_stone(0.001, 7)) < peak(&stone));
         let lava = lava_drip(3);
         assert!(peak(&lava) > 0.1 && peak(&lava[lava.len() - 100..]) < 0.01);
+    }
+
+    /// The bang contract: bounded, finite, peak-normalized, seeded — and the
+    /// duration law, a bigger blast running longer (until the 3 s cap).
+    #[test]
+    fn bang_is_seeded_bounded_and_grows_with_the_blast() {
+        let small = bang(1.0, 7);
+        assert!(!small.is_empty());
+        assert!(small.len() <= 3 * SAMPLE_RATE as usize, "{}", small.len());
+        assert!(small.iter().all(|x| x.is_finite()));
+        let peak = small.iter().fold(0f32, |p, x| p.max(x.abs()));
+        assert!((peak - 0.9).abs() < 1e-3, "peak {peak}");
+        // The same seed makes the same bang, exactly.
+        assert_eq!(small, bang(1.0, 7));
+        // A bigger explosion runs longer...
+        let big = bang(6.0, 7);
+        assert!(big.len() > small.len(), "{} vs {}", big.len(), small.len());
+        assert!(big.len() <= 3 * SAMPLE_RATE as usize);
+        // ...and an unusable size is heard as a 2 m one, while the buffer
+        // never runs past 3 s however large the caller's number.
+        assert_eq!(bang(f32::NAN, 7), bang(2.0, 7));
+        assert_eq!(bang(0.0, 7), bang(2.0, 7));
+        assert_eq!(bang(-3.0, 7), bang(2.0, 7));
+        assert_eq!(bang(1e9, 7).len(), (3.0 * SAMPLE_RATE as f32) as usize);
     }
 }

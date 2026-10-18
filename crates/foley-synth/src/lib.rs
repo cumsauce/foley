@@ -34,7 +34,7 @@ pub use crate::modal::{
     Contact, Material, MaterialProps, contact, contact_with, fracture, fracture_with, hertz_time,
 };
 pub use crate::note::{Family, base_hz, family, note, note_hz};
-pub use crate::oneshot::{drip_into_water, drip_on_stone, lava_drip};
+pub use crate::oneshot::{bang, drip_into_water, drip_on_stone, lava_drip};
 pub use crate::outdoors::{cicadas, owl, surf, woodpecker};
 pub use crate::plants::{Plant, brush, buzz, flush, ice_singing, settling_stone};
 pub use crate::primitives::{bubble, gust, noise_burst, tone};

@@ -17,10 +17,10 @@ use foley_synth::{
     Biome, BiomeScene, Birds, Call, Cave, CaveScene, Contact, CreatureCall, CreatureSpec, Fire,
     FireScene, Lava, LavaScene, Material, MaterialProps, Mob, Plant, Rain, RainScene, SAMPLE_RATE,
     Surf, SurfScene, Surface, Thunder, ThunderScene, Underwater, UnderwaterScene, Water,
-    WaterScene, Wind, WindScene, aeolian, bell, birdsong2, brush, bubble, buzz, cicadas, contact,
-    contact_with, creature_voice, crickets, drip_into_water, drip_on_stone, flush, fracture,
-    fracture_with, frog, gust, howl, ice_singing, lava_drip, noise_burst, owl, sculk_ring,
-    settling_stone, surf, to_pcm, tone, voice, woodpecker,
+    WaterScene, Wind, WindScene, aeolian, bang, bell, birdsong2, brush, bubble, buzz, cicadas,
+    contact, contact_with, creature_voice, crickets, drip_into_water, drip_on_stone, flush,
+    fracture, fracture_with, frog, gust, howl, ice_singing, lava_drip, noise_burst, owl,
+    sculk_ring, settling_stone, surf, to_pcm, tone, voice, woodpecker,
 };
 
 use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
@@ -66,7 +66,10 @@ use crate::guard::{FfiError, guard, out_arg, slice_arg, slice_mut_arg};
 ///     stream (not voices) while the head is under.
 /// 23: surf as a placed bed (M17): `FOLEY_BED_SURF`, one continuous shore bed.
 /// 24: note block instruments (M23): `FOLEY_PRIMITIVE_NOTE`.
-pub const FOLEY_ABI_VERSION: u32 = 24;
+/// 25: explosion bangs (M27): `FOLEY_SHOT_BOOM`, a seeded blast — sub boom,
+///     blast body and debris — whose radius in metres sets its pitch,
+///     length and tail.
+pub const FOLEY_ABI_VERSION: u32 = 25;
 
 /// Surfaces rain lands on, in the order its scene takes their shares:
 /// water, stone, leaves, wood, soft (grass, dirt, sand, wool, snow), glass,
@@ -140,6 +143,10 @@ pub const FOLEY_SHOT_SCULK_RING: i32 = 16;
 /// A village bell's ring: `size` is the bowl's Q (0.5 to 20); higher Q rings
 /// longer. The bell rings at ~440 Hz with two inharmonic overtones (M20).
 pub const FOLEY_SHOT_BELL: i32 = 17;
+/// An explosion's bang (M27): `size` is the blast's radius in metres (0.5
+/// to 20; NaN or less falls back to 2) — a bigger blast booms lower and
+/// longer, and throws more debris. At most 3 s.
+pub const FOLEY_SHOT_BOOM: i32 = 18;
 
 /// Primitives for `foley_render_primitive`, and the floats each takes, in
 /// order:
@@ -1058,6 +1065,17 @@ pub unsafe extern "C" fn foley_render_one_shot(
             FOLEY_SHOT_BUZZ if (0.0..=1.0).contains(&size) => buzz(size as u32, seed),
             FOLEY_SHOT_SCULK_RING if (0.5..=20.0).contains(&size) => sculk_ring(size, seed),
             FOLEY_SHOT_BELL if (0.5..=20.0).contains(&size) => bell(size, seed),
+            FOLEY_SHOT_BOOM => {
+                // The blast's radius in metres: anything unusable (NaN,
+                // zero or negative) is heard as a 2 m one, and anything
+                // extreme is held to the 0.5–20 m the bang covers.
+                let radius = if size.is_finite() && size > 0.0 {
+                    size.clamp(0.5, 20.0)
+                } else {
+                    2.0
+                };
+                bang(radius, seed)
+            }
             FOLEY_SHOT_CRICKETS
             | FOLEY_SHOT_BIRDSONG
             | FOLEY_SHOT_FROG
@@ -2265,6 +2283,7 @@ mod tests {
             (FOLEY_SHOT_BUZZ, 1.0),
             (FOLEY_SHOT_SCULK_RING, 6.0),
             (FOLEY_SHOT_BELL, 8.0),
+            (FOLEY_SHOT_BOOM, 3.0),
         ] {
             let mut needed = 0;
             // SAFETY: a null buffer with capacity 0 is not written.
@@ -2300,6 +2319,40 @@ mod tests {
                 FOLEY_ERR_INVALID_ARGUMENT
             );
         }
+    }
+
+    /// M27: the bang takes its blast's radius (NaN, zero or less falls back
+    /// to a 2 m one), runs no longer than 3 s at 48 kHz, and a bigger blast
+    /// runs longer — the duration law.
+    #[test]
+    fn the_boom_takes_its_radius_and_never_runs_past_three_seconds() {
+        let render = |size: f32| {
+            let mut needed = 0;
+            // SAFETY: a null buffer with capacity 0 is not written.
+            unsafe {
+                assert_eq!(
+                    foley_render_one_shot(
+                        FOLEY_SHOT_BOOM,
+                        size,
+                        7,
+                        std::ptr::null_mut(),
+                        0,
+                        &mut needed
+                    ),
+                    FOLEY_OK
+                );
+            }
+            needed
+        };
+        let small = render(1.0);
+        let big = render(8.0);
+        assert!(big > small, "{big} vs {small} samples");
+        assert!(big <= 3 * SAMPLE_RATE as usize, "{big} samples");
+        // An unusable radius is heard as a 2 m blast...
+        assert_eq!(render(f32::NAN), render(2.0));
+        assert_eq!(render(-1.0), render(2.0));
+        // ...and the same seed renders the same length every time.
+        assert_eq!(small, render(1.0));
     }
 
     /// M13: every species in the M13 catalogue renders via `FOLEY_SHOT_BIRDSONG`,

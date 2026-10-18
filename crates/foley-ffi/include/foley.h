@@ -49,8 +49,11 @@
  *     stream (not voices) while the head is under.
  * 23: surf as a placed bed (M17): `FOLEY_BED_SURF`, one continuous shore bed.
  * 24: note block instruments (M23): `FOLEY_PRIMITIVE_NOTE`.
+ * 25: explosion bangs (M27): `FOLEY_SHOT_BOOM`, a seeded blast — sub boom,
+ *     blast body and debris — whose radius in metres sets its pitch,
+ *     length and tail.
  */
-#define FOLEY_ABI_VERSION 24
+#define FOLEY_ABI_VERSION 25
 
 /**
  * Surfaces rain lands on, in the order its scene takes their shares:
@@ -173,6 +176,13 @@
  * longer. The bell rings at ~440 Hz with two inharmonic overtones (M20).
  */
 #define FOLEY_SHOT_BELL 17
+
+/**
+ * An explosion's bang (M27): `size` is the blast's radius in metres (0.5
+ * to 20; NaN or less falls back to 2) — a bigger blast booms lower and
+ * longer, and throws more debris. At most 3 s.
+ */
+#define FOLEY_SHOT_BOOM 18
 
 /**
  * Primitives for `foley_render_primitive`, and the floats each takes, in

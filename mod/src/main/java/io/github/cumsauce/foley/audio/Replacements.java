@@ -93,6 +93,8 @@ public final class Replacements {
 		if (Footsteps.replaceStep(sound)) return true;
 		// M26: block break, place and digging on the narrow-start materials, taken for Foley's contact primitives.
 		if (Blocks.replace(sound)) return true;
+		// M27: the game's explosion bang, taken for Foley's boom.
+		if (Explosions.replace(sound)) return true;
 		if (FoleyClient.placed() == null || minecraft.level == null || minecraft.player == null) return false;
 		boolean ambience = WATER.contains(id) || LAVA.contains(id) || FIRE.contains(id);
 		if (ambience) {

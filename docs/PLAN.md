@@ -706,11 +706,12 @@ Density rather than new models:
 - **Narrow start:** stone, wood, gravel, sand, glass only. Other materials (deepslate, netherrack, dirt, grass, …), entity sounds and foreign namespaces fall through to vanilla — those materials stay *layered* under `strikes` until they're promoted.
 - **Tests:** `BlocksReplacementTest` (9 tests) pins the 5×4 material/contact table, siblings (`.step`, `.ambient`), other materials, entity/foreign ids, toggle off, override owns/declines, bypass neutral. Full suite 127 green.
 
-## M27 plan: explosions
+## M27 results: explosions (2026-10-18)
 
-- Skip vanilla explosion events (creeper, TNT, end crystal, firework) when the new `explosions` toggle is on; synthesize a physical bang (low boom + debris) with distance scaling.
-- **Not started:** the bang needs a dedicated primitive; Foley has no explosion synthesis today and none of the existing shots (`SHOT_*`) or contacts is a bang. This is a Rust-side piece (a new `FOLEY_SHOT_*`/primitive + ABI bump) plus the Java wiring, and it is a separate, larger task than M24–M26. The `explosions` toggle is already plumbed through `FoleyConfig` (default off until the synthesis lands, so no vanilla explosions are silenced).
-- **Tests (when built):** taken/declined per event, distance scaling sanity, toggle, bypass, override.
+- **Done:** `Replacements` skips the game's explosion bang while `explosions` is on, through the standard family shape (bypass → vanilla; override verdict; then the toggle). The id rule and verdict live in a new package-private `Explosions` class, the same unit-test seam as M24's `Footsteps` and M26's `Blocks`. On the skip path Foley plays its own bang: `NativeBridge.SHOT_BOOM` (`FOLEY_SHOT_BOOM` on the Rust side, ABI 24 → 25), a 48 kHz mono one-shot seeded from the event's position, played as a `BufferSound` at the blast's coordinates. `BufferSound` is LINEAR-attenuated, so the game's sound engine scales the bang with distance like every other placed sound. The bang only renders while the game is placed — the same plain-tests guard `Footsteps.replaceStep` uses — so the id rule and verdict stay unit-testable.
+- **Toggle:** `explosions` was already plumbed through `FoleyConfig` and default on; with the bang landed it now actually replaces instead of sitting unused.
+- **Narrow start:** `entity.generic.explode` only — the one vanilla event creepers, TNT and end crystals all fire. Deliberately not matched yet: `entity.firework_rocket.large_blast` and the other firework variants. Every bang renders at a fixed 2 m radius for now; per-explosion size variation (the blast's actual radius through `size`) can widen later.
+- **Tests:** `ExplosionsReplacementTest` (7 tests) pins the id rule (matched id; entity siblings and a foreign namespace not), toggle off, override owns/declines, bypass neutral. Full suite 134 green.
 
 ## M28 plan: redstone, boats, sculk as replacements
 
