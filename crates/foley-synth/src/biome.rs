@@ -189,7 +189,11 @@ impl Biome {
             state: BiomeState::Desert(DesertState::new(seed, sample_rate)),
             outgoing: None,
             xfade_left: 0,
-            scratch: Vec::new(),
+            // Reserved here, never in render: the crossfade buffer's first resize is a kind
+            // change, which happens on the audio thread, and the audio thread never allocates
+            // (foley-ffi's `the_audio_thread_never_allocates` holds it to that). Any render's
+            // crossfade slice is at most `CROSSFADE` samples, so this capacity always fits.
+            scratch: Vec::with_capacity(CROSSFADE),
         };
         s.set_scene(BiomeScene {
             kind: BiomeKind::Desert,
