@@ -14,8 +14,9 @@ import org.jspecify.annotations.Nullable;
  * M14: keeps Foley's underwater bed playing when the player's head is under
  * water. A single {@link BedSound} holds the scene — its level glides from 0 to 1
  * over about a second on submerging, and back on emerging, so a sudden dive
- * eases in and surfacing eases out without a click. The bed is silent above sea
- * level (the controller sets level = 0). The fade on emerging is built into
+ * eases in and surfacing eases out without a click. The bed is silent while the
+ * ear is out of the water (the controller returns level 0), and its level is how
+ * deep the ear sits under the water surface. The fade on emerging is built into
  * the bed's level glide.
  *
  * <p>Head-in-water is determined by the fluid at the ear position: only water
@@ -25,7 +26,7 @@ import org.jspecify.annotations.Nullable;
  * and is only raised while Foley's underwater ambience is wanted by the config.
  */
 public final class UnderwaterController {
-	/** The depth (in blocks below sea level) at which the bed's level reaches 1. */
+	/** The depth (in blocks under the water surface) at which the bed's level reaches 1. */
 	private static final float MAX_DEPTH = 30f;
 	/** Ticks the submerged flag holds after the ear leaves water, so wave troughs don't flap the low-pass: the flag lets go on the {@link #DRY_LINGER}th dry tick. */
 	static final int DRY_LINGER = 20;
@@ -131,11 +132,11 @@ public final class UnderwaterController {
 	}
 
 	/**
-	 * Samples the world: the listener's depth below sea level (clamped to
-	 * {@value #MAX_DEPTH}), scaled to a 0..=1 level. The head must be in water for any of
-	 * it — that wetness also latches the native submerged flag. Sea level is 62 in
-	 * the Overworld (the vanilla default) — read from the dimension so the Nether
-	 * and other dimensions stay silent.
+	 * Samples the world: the listener's depth under the water surface above their ear (clamped to
+	 * {@value #MAX_DEPTH}), scaled to a 0..=1 level. The head must be in water for any of it — that
+	 * wetness also latches the native submerged flag. The surface is the first dry block above the
+	 * ear's own, not the world's sea level: a superflat's sea sits under its bedrock and a mountain
+	 * lake's far below its own surface, so sea level read "dry" for swimmers in both.
 	 */
 	private UnderwaterScene sample(Minecraft minecraft) {
 		ClientLevel level = minecraft.level;
@@ -144,12 +145,35 @@ public final class UnderwaterController {
 		// Head-in-water: the fluid at the ear is water. (We don't gate on
 		// being able to breathe: surfacing into a wave still muffles for a
 		// frame.)
-		var fluid = level.getFluidState(BlockPos.containing(eye));
+		var at = BlockPos.containing(eye);
+		var fluid = level.getFluidState(at);
 		wet = fluid.getType().isSame(Fluids.WATER);
 		if (!wet) return UnderwaterScene.DRY;
-		float sea = level.getSeaLevel();
-		float depth = Math.max(0f, sea - (float) eye.y);
-		float amount = Math.min(1f, depth / MAX_DEPTH);
-		return new UnderwaterScene(amount);
+		return new UnderwaterScene(depthLevel(surfaceAbove(level, at), eye.y));
+	}
+
+	/**
+	 * The Y of the water surface above the ear's block: the first block that is not water, scanning
+	 * up from just over the ear. Capped a hair past {@link #MAX_DEPTH} — deeper than that can only
+	 * mean a full level, and the cap keeps the scan short.
+	 */
+	private static int surfaceAbove(ClientLevel level, BlockPos at) {
+		int x = at.getX(), z = at.getZ();
+		int y = at.getY() + 1;
+		for (int steps = 0; steps <= (int) MAX_DEPTH + 2; steps++, y++) {
+			if (!level.getFluidState(new BlockPos(x, y, z)).getType().isSame(Fluids.WATER)) return y;
+		}
+		return y;
+	}
+
+	/**
+	 * How deep the ear sits under the water surface: 0 at or above it, 1 at {@link #MAX_DEPTH} blocks
+	 * under. Measured from the surface, never from the world's sea level: a superflat's sea is under
+	 * its bedrock and a mountain lake's is below its own surface, so sea level would read "dry" for
+	 * swimmers in both — the bed played nowhere but the vanilla ocean.
+	 */
+	static float depthLevel(double surfaceY, double eyeY) {
+		float depth = (float) Math.max(0d, surfaceY - eyeY);
+		return Math.min(1f, depth / MAX_DEPTH);
 	}
 }
