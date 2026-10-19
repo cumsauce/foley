@@ -3,8 +3,8 @@
 
 use std::f32::consts::TAU;
 
-use crate::dsp::{add_at, normalize, normalize_in_place, Wobble};
-use crate::{contact, BandPass, Bubble, Contact, LowPass, Material, Rng};
+use crate::dsp::{Wobble, add_at, normalize, normalize_in_place};
+use crate::{BandPass, Bubble, Contact, LowPass, Material, Rng, contact};
 use foley_dsp::plunge_radius;
 
 /// Length in samples of one wave at `rate`: about 7 s from rise to the end of

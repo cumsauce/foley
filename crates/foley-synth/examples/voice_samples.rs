@@ -1,7 +1,7 @@
 //! Writes every mob's calls to WAV files, for listening outside the game:
 //! `cargo run --release -p foley-synth --example voice_samples -- <dir>`.
 
-use foley_synth::{to_pcm, voice, Call, Mob, SAMPLE_RATE};
+use foley_synth::{Call, Mob, SAMPLE_RATE, to_pcm, voice};
 
 fn main() -> std::io::Result<()> {
     let dir = std::env::args().nth(1).unwrap_or_else(|| "samples".into());

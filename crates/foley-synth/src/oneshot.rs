@@ -1,5 +1,5 @@
 use crate::dsp::add_at;
-use crate::{noise_burst, Bubble, LowPass, Rng, Surface};
+use crate::{Bubble, LowPass, Rng, Surface, noise_burst};
 use foley_dsp::Struck;
 
 /// A short click: `seconds` of noise through a low-pass at `cutoff`,

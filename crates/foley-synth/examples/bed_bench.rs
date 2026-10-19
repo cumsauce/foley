@@ -4,8 +4,8 @@
 use std::time::Instant;
 
 use foley_synth::{
-    contact, fracture, strike, Contact, Fire, FireScene, Lava, LavaScene, Material, Rain,
-    RainScene, Surface, Water, WaterScene, Wind, WindScene, SAMPLE_RATE,
+    Contact, Fire, FireScene, Lava, LavaScene, Material, Rain, RainScene, SAMPLE_RATE, Surface,
+    Water, WaterScene, Wind, WindScene, contact, fracture, strike,
 };
 
 /// Renders a bed's next samples.

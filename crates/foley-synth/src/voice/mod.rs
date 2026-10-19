@@ -13,12 +13,12 @@ mod speech;
 mod tract;
 
 use creatures::{Bones, Call3, CreeperCall};
-use score::{c, finish_at, k, perform_at, Seg, Voice, AA, AE, EE, EH, K, OH, OO, UH};
+use score::{AA, AE, EE, EH, K, OH, OO, Seg, UH, Voice, c, finish_at, k, perform_at};
 
 use crate::Rng;
 
-pub use creature::{creature_voice, CreatureCall, CreatureSpec};
-pub use lf::{lf_pulse, warm_voice_tables, Pulse};
+pub use creature::{CreatureCall, CreatureSpec, creature_voice};
+pub use lf::{Pulse, lf_pulse, warm_voice_tables};
 
 /// The mobs Foley can voice. The order is the C ABI's.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

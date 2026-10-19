@@ -5,10 +5,10 @@
 //! to sound like a taiga, every species from the real call of the bird that
 //! lives there.
 
-use crate::birds::bird_call;
-use crate::birds::engine2::{Phrase, Segment, SegmentKind};
 use crate::birds::Bird;
 use crate::birds::Birds;
+use crate::birds::bird_call;
+use crate::birds::engine2::{Phrase, Segment, SegmentKind};
 use crate::dsp::normalize;
 
 /// One phrase for the species, rendered from `seed`.

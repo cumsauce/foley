@@ -1,6 +1,6 @@
 use std::f32::consts::{PI, TAU};
 
-use crate::{bird_call, BandPass, Bird, Rng};
+use crate::{BandPass, Bird, Rng, bird_call};
 
 /// A field cricket's chirps a minute at `celsius`: Dolbear's law (1897),
 /// T°F = 50 + (N − 40)/4, which is N ≈ 7.2·T°C − 32. None below about 8 °C.
