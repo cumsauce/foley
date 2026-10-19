@@ -3,8 +3,8 @@
 
 use std::f32::consts::TAU;
 
-use crate::dsp::{add_at, normalize, Wobble};
-use crate::{contact, BandPass, Contact, LowPass, Material, Rng};
+use crate::dsp::{Wobble, add_at, normalize};
+use crate::{BandPass, Contact, LowPass, Material, Rng, contact};
 
 /// What a body brushes through: for [`brush`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

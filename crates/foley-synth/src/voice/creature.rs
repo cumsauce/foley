@@ -6,7 +6,7 @@
 //! seed, the archetypes keeping to the brief: unsettling in measure, never
 //! outright horror.
 
-use super::score::{c, finish_at, k, perform_at, Seg, Voice, AA, EH, OH, SCHWA, UH};
+use super::score::{AA, EH, OH, SCHWA, Seg, UH, Voice, c, finish_at, k, perform_at};
 use crate::Rng;
 
 /// Another mod's creature's voice. `length` is its vocal tract's (m) and

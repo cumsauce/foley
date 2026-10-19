@@ -8,7 +8,7 @@
 //! a small frog, a big one). 0–8 kHz, log magnitude;
 //! each row spans its whole sound.
 
-use foley_synth::{cicadas, howl, owl, surf, voice, woodpecker, Call, Mob};
+use foley_synth::{Call, Mob, cicadas, howl, owl, surf, voice, woodpecker};
 
 const N: usize = 1024;
 const HOP: usize = 256;
@@ -58,7 +58,7 @@ fn main() -> std::io::Result<()> {
             frog(12.0, 7, foley_dsp::DEFAULT_SAMPLE_RATE),
         ]
     } else if set == "steps" {
-        use foley_synth::{contact, Contact, Material};
+        use foley_synth::{Contact, Material, contact};
         [
             Material::Stone,
             Material::Wood,

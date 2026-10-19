@@ -300,7 +300,10 @@ mod tests {
         assert!(stream > 0.01 && stream < 0.15, "stream {stream}");
         // 1.5x held only while a long read starved the stream of bubbles; read
         // as the game reads (half a second at a time) it was ~1.2x then too.
-        assert!(fall > 1.1 * stream && fall < 0.5, "fall {fall} stream {stream}");
+        assert!(
+            fall > 1.1 * stream && fall < 0.5,
+            "fall {fall} stream {stream}"
+        );
         let far = rms(WaterScene {
             flow: 0.0,
             falls: 10.0,

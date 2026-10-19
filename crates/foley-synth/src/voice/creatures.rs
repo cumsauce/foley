@@ -3,7 +3,7 @@
 
 use std::f32::consts::{PI, TAU};
 
-use super::score::{c, perform_at, Seg, Voice, UH};
+use super::score::{Seg, UH, Voice, c, perform_at};
 use crate::{BandPass, Bubble, LowPass, Rng};
 
 const GRAVITY: f32 = 9.81;
@@ -734,7 +734,7 @@ pub(super) fn slime(rng: &mut Rng, call: Slime, size: f32, sample_rate: u32) -> 
 /// An iron golem, struck (its iron and stone ring, and its joints creak by
 /// stick–slip) or falling apart.
 pub(super) fn iron_golem(rng: &mut Rng, call: Call3, seed: u64, sample_rate: u32) -> Vec<f32> {
-    use crate::{contact, fracture, Contact, Material};
+    use crate::{Contact, Material, contact, fracture};
     let mut out = Vec::new();
     match call {
         Call3::Death => {
@@ -778,7 +778,7 @@ pub(super) fn iron_golem(rng: &mut Rng, call: Call3, seed: u64, sample_rate: u32
 
 /// A snow golem: snow creaking (ambient), crunching (hurt), or collapsing.
 pub(super) fn snow_golem(call: Call3, seed: u64, sample_rate: u32) -> Vec<f32> {
-    use crate::{contact, fracture, Contact, Material};
+    use crate::{Contact, Material, contact, fracture};
     match call {
         Call3::Ambient => contact(Contact::Step, Material::Snow, 0.4, seed, sample_rate)
             .iter()
