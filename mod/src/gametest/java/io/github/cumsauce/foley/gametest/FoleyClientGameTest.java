@@ -24,6 +24,8 @@ import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 /**
@@ -297,6 +299,12 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			} catch (RuntimeException | AssertionError e) {
 				throw new AssertionError("no bird at the dawn chorus in the plains", e);
 			}
+			// The bird fixture is not scenery. The leaves and trees it planted sit over the player's own
+			// column, so M17's "the player landed" check would read the canopy as ground and never settle,
+			// and the shore scan would see leaves where it expects water and land. Put the superflat back
+			// the way the roof test does above. The grass is one below this fill, so clearing from the
+			// surface up takes the leaves, the trees and any stray water and leaves the ground alone.
+			singleplayer.getServer().runCommand("fill ~-24 ~ ~-24 ~24 ~12 ~24 air");
 			// ...and with birds switched off, the gate is closed.
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
 					settings.volume(), settings.rain(), settings.wind(), settings.thunder(), settings.water(),
@@ -429,8 +437,6 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			// freezing air and the superflat plains never have it).
 			context.runOnClient(mc -> FoleyClient.apply(
 					FoleyConfig.NONE.withWater(true)));
-			// Three-wide water stripes with two of land between, 33 blocks round the player: every column
-			// the shore scan's 24 samples can pick is water with land two off, all inside its 32 radius.
 			int[] spot = context.computeOnClient(mc -> new int[] {
 					(int) Math.floor(mc.player.getX()), (int) Math.floor(mc.player.getZ())});
 			int ground = context.computeOnClient(mc -> mc.level.getHeight(
@@ -438,11 +444,22 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			try {
 				context.waitFor(mc -> mc.player != null && Math.abs(mc.player.getY() - ground) < 1.0, 10 * 20);
 			} catch (RuntimeException | AssertionError e) {
-				throw new AssertionError("the player never landed to hear the shore", e);
+				throw new AssertionError("the player never landed to hear the shore: "
+						+ context.computeOnClient(mc -> shoreProbe(mc, spot, ground)), e);
 			}
 			// A frog reply set off before the flip plays out ungated; let it drain before the count.
 			var drained = context.computeOnClient(mc -> mc.level.getGameTime());
 			context.waitFor(mc -> mc.level != null && mc.level.getGameTime() > drained + 60, 10 * 20);
+			// Three-wide water stripes with two of land between, 33 blocks round the player: every column
+			// the shore scan's 24 samples can pick is water with land two off, all inside its 32 radius.
+			// The land has to be solid at the water's own level, not a bare gap below it. Water spreads
+			// seven blocks, so a gap floods within a couple of ticks and once it has, no column in the
+			// scan's radius is a source beside land any more: the shore the bed is about stops existing
+			// for the rest of the window and never comes back.
+			for (int bank = spot[1] - 13; bank <= spot[1] + 13; bank += 5) {
+				singleplayer.getServer().runCommand("fill " + (spot[0] - 16) + " " + ground + " " + bank
+						+ " " + (spot[0] + 16) + " " + ground + " " + (bank + 1) + " minecraft:grass_block");
+			}
 			for (int stripe = spot[1] - 16; stripe <= spot[1] + 16; stripe += 5) {
 				singleplayer.getServer().runCommand("fill " + (spot[0] - 16) + " " + ground + " " + stripe
 						+ " " + (spot[0] + 16) + " " + ground + " " + Math.min(stripe + 2, spot[1] + 16)
@@ -490,7 +507,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			} catch (RuntimeException | AssertionError e) {
 				var surf = FoleyClient.surf();
 				throw new AssertionError("the surf bed died during the wave window: "
-						+ (surf == null ? "off" : surf.scene() + ", sound " + surf.sound()), e);
+						+ (surf == null ? "off" : surf.scene() + ", sound " + surf.sound())
+						+ "; " + context.computeOnClient(mc -> shoreProbe(mc, spot, ground)), e);
 			}
 			if (FoleyClient.life().calls() != beforeWaves) {
 				throw new AssertionError("M17 Life fired " + (FoleyClient.life().calls() - beforeWaves)
@@ -550,7 +568,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			} catch (RuntimeException | AssertionError e) {
 				var cave = FoleyClient.cave();
 				throw new AssertionError("the cave bed never played underground: "
-						+ (cave == null ? "off" : cave.scene() + ", sound " + cave.sound()), e);
+						+ (cave == null ? "off" : cave.scene() + ", sound " + cave.sound())
+						+ "; " + context.computeOnClient(FoleyClientGameTest::caveProbe), e);
 			}
 			// Toggle off mid-cave: the bed should stop within ~1 s.
 			context.runOnClient(mc -> FoleyClient.apply(settings));
@@ -562,11 +581,15 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			} catch (RuntimeException | AssertionError e) {
 				throw new AssertionError("the cave bed kept playing after the toggle was switched off", e);
 			}
-			// On the surface (high exposure), the bed is silent — even with the toggle on.
-			singleplayer.getServer().runCommand("tp @p ~ 80 ~");
+			// On the surface (high exposure), the bed is silent — even with the toggle on. Straight onto
+			// the surface: the old `tp @p ~ 80 ~` dropped the player 140 blocks back down it, and a fall
+			// that size kills them ("Player0 fell from a high place", run 15), which poisons every test
+			// after this one behind a death screen. Spawn's surface is the open air the assertion wants,
+			// so the gate is arrival at the surface, not an altitude you can only reach by being thrown.
+			singleplayer.getServer().runCommand("tp @p 0.5 -59 0.5");
 			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
 			try {
-				context.waitFor(mc -> mc.player != null && mc.player.getY() > 60, 10 * 20);
+				context.waitFor(mc -> mc.player != null && mc.player.getY() <= -59, 10 * 20);
 			} catch (RuntimeException | AssertionError e) {
 				throw new AssertionError("the player never teleported to the surface", e);
 			}
@@ -642,7 +665,11 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			var villages = java.util.Objects.requireNonNull(io.github.cumsauce.foley.FoleyClient.villageAmbience(),
 					"village ambience not loaded");
 			int beforeVillage = villages.played();
-			singleplayer.getServer().runCommand("setblock ~5 ~ ~ bell[attachment=floor,facing=north]");
+			// On the scan's own lattice, not merely near it. scanBells samples columns every SCAN_STEP
+			// (4) blocks from the player, so it visits x = ... -4, 0, 4, 8 ... and never x = 5: a bell
+			// at ~5 sits one block off the lattice, its column is never walked, and it is silent
+			// forever however long the test waits. ~4 is the nearest column the scan can see.
+			singleplayer.getServer().runCommand("setblock ~4 ~ ~ bell[attachment=floor,facing=north]");
 			context.waitFor(client -> villages.played() > beforeVillage, 100);
 			int villageMuted = villages.played();
 			context.runOnClient(mc -> FoleyClient.apply(new io.github.cumsauce.foley.config.FoleyConfig(
@@ -654,7 +681,7 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			if (villages.played() != villageMuted) {
 				throw new AssertionError("M20 played when its toggle was off");
 			}
-			singleplayer.getServer().runCommand("setblock ~5 ~ ~ air");
+			singleplayer.getServer().runCommand("setblock ~4 ~ ~ air");
 			context.runOnClient(mc -> FoleyClient.apply(settings));
 			// The settings, where players look first: Options → Music & Sounds → Foley.
 			context.setScreen(() -> new SoundOptionsScreen(null, Minecraft.getInstance().options));
@@ -677,9 +704,45 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			}
 
 			// M14 underwater ambience: with the player under water, the bed plays. With the toggle off, it stops.
+			// A sealed tank out at x=300, and every word of it absolute: `tp @s` matches no entity (the
+			// server console isn't one), so the old fixture moved nobody, and `~` resolves against that
+			// same console at spawn, so the water landed 140 blocks under wherever the player actually
+			// was. The tank has a lid because the bed wants water at the *eye*: an open pool lets
+			// buoyancy bob the head out of the water mid-wait, and the bed stops the moment the ear dries.
 			singleplayer.getServer().runCommand("weather clear");
-			singleplayer.getServer().runCommand("tp @s ~ 55 ~");
-			singleplayer.getServer().runCommand("fill ~-3 ~-1 ~-3 ~3 ~3 ~3 water");
+			// The player goes first: a fill outside every loaded chunk is refused with "That position is
+			// not loaded", and the gametest world runs view distance 5, so x=300 is nothing until the
+			// player stands on it. The tank fits inside the one chunk that lands in. Glass has no
+			// suffocation, so being encased for a tick is harmless — the water replaces it around
+			// their feet, and the lid stops buoyancy bobbing the ear out of the water mid-wait.
+			singleplayer.getServer().runCommand("tp @p 300.5 -59 300.5");
+			// A teleport does not load its destination in the same tick: the fills below issued straight
+			// after it were refused with "That position is not loaded" — `argument.pos.unloaded`, which is
+			// /fill's argument check requiring both corners in a chunk the *server* has loaded. The client
+			// having the chunk is not the same thing, so wait on the server. The tank fits inside the one
+			// chunk (18,18), so one position's chunk is the whole region's.
+			try {
+				singleplayer.getServer().waitFor(
+						server -> server.overworld().hasChunkAt(new BlockPos(300, -60, 300)), 5 * 20);
+			} catch (RuntimeException | AssertionError e) {
+				throw new AssertionError("the tank chunk never loaded at x=300: "
+						+ context.computeOnClient(FoleyClientGameTest::pauseProbe), e);
+			}
+			singleplayer.getServer().runCommand("fill 297 -61 297 303 -52 303 minecraft:glass");
+			singleplayer.getServer().runCommand("fill 298 -60 298 302 -53 302 minecraft:water");
+			// Turn on the thing under test, the way M12 turns the cave on and M23 the note blocks. The
+			// config is *persisted*: apply() writes foley.json and startup reads it back, so a run that
+			// died inside one of the all-false mute checks above leaves underwater false behind for good
+			// (run 18's foley.json held exactly underwater and aeolian false), and every `settings`
+			// restore then keeps handing it back off.
+			context.runOnClient(mc -> FoleyClient.apply(settings.withUnderwater(true)));
+			// Hold their breath. Sealed under the lid a player runs out of air in about thirty seconds
+			// ("Player0 drowned", run 16, seventy-three in), and a drowned listener's ear floats up out
+			// of the water, so the bed stops on its own and the wait below can never be met. An
+			// underwater breathing effect is what the fixture wants: the ear stays under and nothing
+			// else about the scene changes.
+			singleplayer.getServer().runCommand(
+					"effect give @p minecraft:water_breathing 10 0 true");
 			try {
 				context.waitFor(mc -> {
 					var u = FoleyClient.underwater();
@@ -689,7 +752,8 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 				}, 30 * 20);
 			} catch (RuntimeException | AssertionError e) {
 				throw new AssertionError("the underwater bed never played: "
-						+ (FoleyClient.underwater() == null ? "off" : FoleyClient.underwater().sound()), e);
+						+ (FoleyClient.underwater() == null ? "off" : FoleyClient.underwater().sound()) + "; "
+						+ context.computeOnClient(FoleyClientGameTest::pauseProbe), e);
 			}
 			context.runOnClient(mc -> FoleyClient.apply(settings.withUnderwater(false)));
 			try {
@@ -700,6 +764,12 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			} catch (RuntimeException | AssertionError e) {
 				throw new AssertionError("the underwater bed didn't stop when the toggle was off", e);
 			}
+			// Put the settings back, as every other block does, so nothing downstream inherits the toggle
+			// this block switched off (and persisted off).
+			context.runOnClient(mc -> FoleyClient.apply(settings));
+			// Back to spawn, because M22 summons its cow at the command source — which is spawn — and
+			// the breathing system listens for animals near the player, not near the console.
+			singleplayer.getServer().runCommand("tp @p 0.5 -60 0.5");
 			// Subtle physical layers (M22): peaceful-mob breathing plays when Foley voices cows; off when
 			// the toggle is off; all four toggles round-trip through JSON.
 			singleplayer.getServer().runCommand("summon cow ~ ~ ~ {NoAI:1b,PersistenceRequired:1b}");
@@ -779,6 +849,67 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			singleplayer.getServer().runCommand("setblock " + bellAt[0] + " " + (bellAt[1] - 1) + " " + bellAt[2] + " air");
 			context.runOnClient(mc -> FoleyClient.apply(settings));
 		}
+	}
+
+	/**
+	 * What the shore scan sees along a line through the player — one column per stripe and per gap — for a
+	 * failure message. It is here because the fixture's water spreads: the two-block land gaps are the first
+	 * thing to fill in, and once they are water there is no shore left for {@code SurfController} to find.
+	 */
+	private static String shoreProbe(Minecraft minecraft, int[] spot, int ground) {
+		if (minecraft.level == null) return "no level";
+		var level = minecraft.level;
+		var probe = new StringBuilder("ground=").append(ground);
+		if (minecraft.player != null) probe.append(" playerY=").append(minecraft.player.getY());
+		probe.append(" water?").append(FoleyClient.wants(FoleyConfig::water));
+		for (int dz = -8; dz <= 8; dz += 2) {
+			int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING, spot[0], spot[1] + dz) - 1;
+			var fluid = level.getFluidState(new BlockPos(spot[0], top, spot[1] + dz));
+			probe.append(" [z").append(dz).append(" top=").append(top).append(' ')
+					.append(fluid.isEmpty() ? "dry" : fluid.isSourceOfType(Fluids.WATER) ? "src" : "flowing")
+					.append(']');
+		}
+		return probe.toString();
+	}
+
+	/**
+	 * Each half of "the cave bed played": the sound engine must be holding it, and it must have rendered
+	 * more than a second of audio. The second is the one that bites, because {@link BedSound} restarts its
+	 * sample count whenever the controller replaces it.
+	 */
+	private static String caveProbe(Minecraft minecraft) {
+		var cave = FoleyClient.cave();
+		if (cave == null || cave.sound() == null) return "no cave bed";
+		var sound = cave.sound();
+		return "active=" + minecraft.getSoundManager().isActive(sound) + " rendered=" + sound.rendered()
+				+ "/" + NativeBridge.SAMPLE_RATE + " stopped=" + sound.isStopped()
+				+ " bypassed=" + FoleyClient.bypassed()
+				+ " caveOn=" + FoleyClient.wants(FoleyConfig::caveAtmosphere)
+				+ " gain=" + FoleyClient.gain();
+	}
+
+	/**
+	 * Why the server stopped serving fixtures — for a failure message. A paused integrated server never ticks
+	 * its levels, so every fill after it is refused with "That position is not loaded". The pause lives in
+	 * {@code Gui} — a pause screen or an overlay — not in anything Foley does.
+	 */
+	private static String pauseProbe(Minecraft minecraft) {
+		var gui = minecraft.gui;
+		var player = minecraft.player;
+		var scene = FoleyClient.underwater() == null ? null : FoleyClient.underwater().scene();
+		return "screen=" + (gui.screen() == null ? "none" : gui.screen().getClass().getSimpleName())
+				+ " overlay=" + (gui.overlay() == null ? "none" : gui.overlay().getClass().getSimpleName())
+				+ " pausing=" + gui.isPausing() + " paused=" + minecraft.isPaused()
+				+ " focused=" + minecraft.getWindow().isFocused()
+				+ " pauseOnLostFocus=" + minecraft.options.pauseOnLostFocus
+				+ (player == null ? ""
+						: " dead=" + player.isDeadOrDying() + " health=" + player.getHealth()
+								+ " at=" + player.getX() + "," + player.getY() + "," + player.getZ()
+								+ " eye=" + player.getEyePosition()
+								+ " eyeFluid=" + minecraft.level.getFluidState(BlockPos.containing(player.getEyePosition()))
+								+ " sea=" + minecraft.level.getSeaLevel())
+				+ " scene=" + scene + " underwaterOn=" + FoleyClient.wants(FoleyConfig::underwater)
+				+ " gain=" + FoleyClient.gain();
 	}
 
 	private static boolean playing(Minecraft minecraft, BedSound<?> sound) {
