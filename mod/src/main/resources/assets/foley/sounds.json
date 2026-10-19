@@ -5255,10 +5255,10 @@
 	"cave": {
 		"subtitle": "subtitles.foley.cave",
 		"sounds": [
-			"foley:generated/cave_0",
-			"foley:generated/cave_1",
-			"foley:generated/cave_2",
-			"foley:generated/cave_3"
+			{
+				"name": "fabric-sound-api-v1:empty",
+				"stream": true
+			}
 		]
 	},
 	"bird_9": {
@@ -6299,6 +6299,15 @@
 	},
 	"biome": {
 		"subtitle": "subtitles.foley.biome",
+		"sounds": [
+			{
+				"name": "fabric-sound-api-v1:empty",
+				"stream": true
+			}
+		]
+	},
+	"underwater": {
+		"subtitle": "subtitles.foley.underwater",
 		"sounds": [
 			{
 				"name": "fabric-sound-api-v1:empty",
