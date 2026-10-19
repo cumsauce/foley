@@ -11,6 +11,22 @@ import org.junit.jupiter.api.Test;
  * wind scene, which chatters near the threshold) cut the bed out and back in every sample.
  */
 class CaveControllerTest {
+	/**
+	 * The regression the gametest caught: {@code tick} used to hand {@code heard} the scene's
+	 * <em>normalised</em> depth (blocks over 60, so at most 1.0) while the thresholds are in blocks
+	 * (8 and 6), so a bed 47 blocks under the surface read as 0.79 of a block and never started.
+	 */
+	@Test
+	void aDeepEnclosedSceneIsHeard() {
+		// The exact scene the gametest sampled in a carved cave: 47 blocks deep, 45 of stone above.
+		CaveScene cave = new CaveScene(47f / 60f, 45f / 60f, 0.12f, 0f, 1f);
+		assertTrue(CaveController.heard(false, cave), "a 47-block-deep enclosed cave was not heard");
+		assertTrue(CaveController.heard(true, cave), "it did not stay heard");
+		// Shallow (3 blocks, normalised 0.05) is not a cave, and must not start the bed.
+		assertFalse(CaveController.heard(false, new CaveScene(3f / 60f, 1f, 0.05f, 0f, 0.1f)),
+				"a 3-block dip was heard as a cave");
+	}
+
 	@Test
 	void opennessHoveringAtTheThresholdDoesNotFlapARunningBed() {
 		// Latch on clearly shut in, then wander across the old 0.2 threshold — the band between

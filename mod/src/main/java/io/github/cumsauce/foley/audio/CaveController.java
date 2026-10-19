@@ -31,6 +31,8 @@ public final class CaveController {
 	private static final int MIN_DEPTH_STOP = MIN_DEPTH - 2;
 	/** A column scan: how many blocks above the ear to look for stone mass. */
 	private static final int COLUMN_TOP = 60;
+	/** The depth in blocks a full-depth scene is measured against; {@code CaveScene.depth} is blocks divided by this. */
+	private static final float DEPTH_FULL = 60f;
 
 	private final NativeBridge bridge;
 	private @Nullable BedSound<CaveScene> sound;
@@ -68,7 +70,8 @@ public final class CaveController {
 			return;
 		}
 		scene = sample(minecraft);
-		heard = heard(heard, scene.depth(), scene.openness());
+		// The scene carries normalised depth; the hysteresis thresholds are in blocks, so undo the scale here.
+		heard = heard(heard, scene);
 		if (!heard) {
 			stop(minecraft);
 			return;
@@ -91,6 +94,16 @@ public final class CaveController {
 	static boolean heard(boolean wasHeard, float depth, float openness) {
 		if (wasHeard) return depth >= MIN_DEPTH_STOP && openness <= SHUT_IN_STOP;
 		return depth >= MIN_DEPTH && openness <= SHUT_IN;
+	}
+
+	/**
+	 * The same verdict for a sampled scene: {@code scene.depth()} is normalised (blocks over
+	 * {@link #DEPTH_FULL}), while the thresholds above are in blocks. This is the call site that
+	 * couples the two, and the regression it guards is passing the normalised value straight in —
+	 * a depth of 0.85 then reads as 0.85 of a block and the bed never plays at all.
+	 */
+	static boolean heard(boolean wasHeard, CaveScene scene) {
+		return heard(wasHeard, scene.depth() * DEPTH_FULL, scene.openness());
 	}
 
 	private void stop(Minecraft minecraft) {
@@ -121,7 +134,7 @@ public final class CaveController {
 		float openness = wind == null ? 0 : wind.scene().exposure();
 		float gain = Math.min(1, depth / 40f) * Math.min(1, mass / 30f);
 		return new CaveScene(
-				Math.min(1, depth / 60f),
+				Math.min(1, depth / DEPTH_FULL),
 				Math.min(1, mass / 60f),
 				openness,
 				Math.min(1, drips / 8f),
