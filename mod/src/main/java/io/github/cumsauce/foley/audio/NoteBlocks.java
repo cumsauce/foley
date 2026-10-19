@@ -81,6 +81,16 @@ public final class NoteBlocks {
 	}
 
 	/**
+	 * The strike's own volume, read the way {@link #noteOf} reads its pitch: before the game resolves the
+	 * instance. Vanilla's getter multiplies in the resolved sound's volume, which a strike caught at the moment
+	 * of play does not have yet — it null-derefs and takes the client with it — so the raw field is what Foley
+	 * plays its buffer at, as {@link Voices} does for a voice it takes over.
+	 */
+	static float volumeOf(SoundInstance sound) {
+		return sound instanceof AbstractSoundInstanceAccessor own ? own.foley$volume() : 1f;
+	}
+
+	/**
 	 * Whether Foley takes this strike from the game: the id names an instrument Foley knows and the {@code noteBlocks}
 	 * setting is on, so its own buffer for the note plays at the sound's place and the game's sound is skipped. An
 	 * unknown id, or the setting off, leaves the game's sound alone.
@@ -106,7 +116,7 @@ public final class NoteBlocks {
 		int variant = Math.floorMod(sound.hashCode(), VARIANTS);
 		if (minecraft != null) {
 			minecraft.getSoundManager().play(AddonSounds.instance(EVENT.location(), bufferName(instrument, note, variant),
-					SoundSource.RECORDS, sound.getVolume() * FoleyClient.gain(), 1f, sound.getX(), sound.getY(),
+					SoundSource.RECORDS, volumeOf(sound) * FoleyClient.gain(), 1f, sound.getX(), sound.getY(),
 					sound.getZ()));
 			PLAYS.incrementAndGet();
 		}

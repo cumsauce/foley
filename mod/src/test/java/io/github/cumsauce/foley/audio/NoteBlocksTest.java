@@ -2,6 +2,7 @@ package io.github.cumsauce.foley.audio;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import net.minecraft.client.Minecraft;
@@ -72,6 +73,19 @@ class NoteBlocksTest {
 	@Test
 	void unreadableNoteFallsBackToTheInstancePitch() {
 		assertEquals(12, NoteBlocks.noteOf(soundWithPitch("block.note_block.harp", 1.0f), null));
+	}
+
+	@Test
+	void aStrikeVolumeIsReadableWhenTheGameHasNotResolvedTheSound() {
+		// Vanilla's getter multiplies in the resolved sound, which a strike caught at the moment of play does
+		// not have yet: it null-derefs — the crash Foley shipped while its strike still called it. Foley's own
+		// read must survive that (the raw field with the mixin applied, this fallback without one, as here).
+		SoundEvent event = SoundEvent.createVariableRangeEvent(
+				Identifier.fromNamespaceAndPath("minecraft", "block.note_block.harp"));
+		SoundInstance quiet = new SimpleSoundInstance(event, SoundSource.RECORDS, 0.5f, 1f,
+				SoundInstance.createUnseededRandom(), 0.0, 0.0, 0.0);
+		assertThrows(NullPointerException.class, quiet::getVolume);
+		assertEquals(1f, NoteBlocks.volumeOf(quiet));
 	}
 
 	/** The game's note block sound at that path, played at {@code pitch} from the origin. */
