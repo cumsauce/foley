@@ -3,6 +3,23 @@
 The mod and the Rust workspace share one version; entries are grouped by that
 version. Playtest builds are `0.1.0-beta.N`.
 
+## 0.1.0-beta.63 — sample-rate groundwork
+
+### Changed
+
+- The synthesis crates now take the sample rate as a parameter throughout
+  (beds, one-shots, voices, birds, instruments). The mod still renders at
+  48 kHz and its audio is bit-identical to beta.62; this is groundwork for
+  following the host's rate.
+- Bed warm-ups and the cave's rumble filters scale with the sample rate.
+
+### Fixed
+
+- The water bed frees finished bubbles as it plays rather than once per render
+  call, so a long render no longer runs out of voices and drops bubbles (the
+  mod renders in short blocks and was not affected).
+- Default bubbles and struck surfaces have a valid time step.
+
 ## 0.1.0-beta.62 — footsteps, blocks and explosions take over
 
 ### Added
