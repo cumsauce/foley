@@ -21,7 +21,7 @@ const DAMPING: f32 = 0.045;
 /// liquid-sound model): a sine at the Minnaert frequency, decaying at
 /// π f δ, rising in pitch as it nears the surface (by ξ times the decay rate
 /// over a second, ξ = 0.1), louder the bigger it is.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Bubble {
     frequency: f32,
     damping: f32,
@@ -103,11 +103,34 @@ impl Bubble {
     }
 }
 
+impl Default for Bubble {
+    fn default() -> Self {
+        Bubble {
+            frequency: 0.0,
+            damping: 0.0,
+            rise: 0.0,
+            amplitude: 0.0,
+            step: 1.0,
+            dt: 1.0 / 48_000.0,
+            phasor: [1.0, 0.0],
+            turn: [1.0, 0.0],
+            age: 0.0,
+            samples: 0,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     #[allow(unused_imports)]
     use std::{vec, vec::Vec};
+
+    #[test]
+    fn default_bubble_has_positive_dt() {
+        let b = Bubble::default();
+        assert!(b.dt > 0.0);
+    }
 
     #[test]
     fn a_millimetre_bubble_rings_at_minnaerts_frequency() {

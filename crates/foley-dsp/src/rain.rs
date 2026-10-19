@@ -123,7 +123,7 @@ impl Default for Voice {
 }
 
 /// A struck surface: two damped modes and a short noise burst.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Struck {
     /// Each mode as a phasor (re, im) turned by (cos, sin) of its step a
     /// sample and shrunk by its decay, so a mode costs a few multiplies a
@@ -192,6 +192,19 @@ impl Struck {
 
     pub fn done(&self) -> bool {
         self.decay * self.age > 7.0
+    }
+}
+
+impl Default for Struck {
+    fn default() -> Self {
+        Struck {
+            modes: [[0.0; 4]; 2],
+            click: 0.0,
+            click_step: 1.0,
+            age: 0.0,
+            decay: 0.0,
+            dt: 1.0 / 48_000.0,
+        }
     }
 }
 
@@ -402,6 +415,12 @@ mod tests {
     use super::*;
     #[allow(unused_imports)]
     use std::{vec, vec::Vec};
+
+    #[test]
+    fn default_struck_has_positive_dt() {
+        let s = Struck::default();
+        assert!(s.dt > 0.0);
+    }
 
     fn scene(rate: f32, surface: Surface) -> RainScene {
         let mut surfaces = [0.0; 7];

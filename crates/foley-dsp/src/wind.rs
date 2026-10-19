@@ -149,7 +149,7 @@ impl Wind {
     pub fn set_scene(&mut self, scene: WindScene) {
         // The wind is already blowing when it's first heard: take the speed at
         // once, and warm the render up to it before anything is heard.
-        if self.filled == 0 {
+        if self.samples == 0 {
             self.scene = scene;
             self.speed = scene.speed.max(0.0);
             // In chunks, so the buffer stays on the stack at any rate; the
