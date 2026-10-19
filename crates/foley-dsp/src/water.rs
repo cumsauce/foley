@@ -180,6 +180,12 @@ impl Water {
                     .for_each(|f| f.tune_at(cutoff, sample_rate));
             }
             self.samples += 1;
+            // Free finished bubbles as it plays: done only once a read, a
+            // half-second read filled the voices in milliseconds and dropped
+            // every bubble after, plinks cut out twice a second.
+            if self.samples.is_multiple_of(BLOCK) {
+                self.voices.retain(|voice| !voice.done());
+            }
             if rate > 0.0 {
                 self.until_next -= dt;
                 while self.until_next <= 0.0 {
@@ -227,7 +233,6 @@ impl Water {
             let near = self.distance[1].process(first);
             *sample = self.heard.gain * near;
         }
-        self.voices.retain(|voice| !voice.done());
     }
 }
 
@@ -244,6 +249,26 @@ mod tests {
         let mut out = vec![0.0; 2 * SAMPLE_RATE as usize];
         water.render(&mut out);
         (out.iter().map(|s| s * s).sum::<f32>() / out.len() as f32).sqrt()
+    }
+
+    /// The mod reads half a second at a time; the bed must sound the same as
+    /// read in small blocks, so finished bubbles must free their voices as it
+    /// plays, not only at the end of a read.
+    #[test]
+    fn a_long_read_sounds_like_short_ones() {
+        let render = |chunk: usize| {
+            let mut water = Water::new(9, SAMPLE_RATE);
+            water.set_scene(WaterScene {
+                flow: 20.0,
+                falls: 6.0,
+                gain: 1.0,
+            });
+            let mut out = vec![0.0; SAMPLE_RATE as usize];
+            out.chunks_mut(chunk).for_each(|c| water.render(c));
+            out
+        };
+        let (long, short) = (render(SAMPLE_RATE as usize / 2), render(64));
+        assert!(long == short, "a 0.5 s read differs from 64-sample ones");
     }
 
     #[test]
@@ -273,7 +298,9 @@ mod tests {
             gain: 1.0,
         });
         assert!(stream > 0.01 && stream < 0.15, "stream {stream}");
-        assert!(fall > 1.5 * stream && fall < 0.5, "fall {fall}");
+        // 1.5x held only while a long read starved the stream of bubbles; read
+        // as the game reads (half a second at a time) it was ~1.2x then too.
+        assert!(fall > 1.1 * stream && fall < 0.5, "fall {fall} stream {stream}");
         let far = rms(WaterScene {
             flow: 0.0,
             falls: 10.0,
