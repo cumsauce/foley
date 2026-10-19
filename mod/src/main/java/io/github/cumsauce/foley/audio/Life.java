@@ -296,10 +296,17 @@ public final class Life {
 
 	/** Notes a sound the game plays: something loud (an explosion, thunder) startles the birds. Any thread. */
 	public static void heard(net.minecraft.client.resources.sounds.SoundInstance sound) {
-		String path = sound.getIdentifier().getPath();
-		if (path.contains("explode") || path.contains("thunder") || path.contains("firework_rocket.blast")) {
-			startledAt = System.nanoTime();
-		}
+		if (startles(sound.getIdentifier().toString())) startledAt = System.nanoTime();
+	}
+
+	/**
+	 * Whether {@code id} (a sound's full id, {@code namespace:path}) startles the birds. Foley's own sounds never
+	 * do: its thunder bed is {@code foley:thunder} and re-plays for as long as a storm rumbles, so counting it
+	 * would keep the birds silent for the whole storm — they would never sing again.
+	 */
+	static boolean startles(String id) {
+		if (id.startsWith("foley:")) return false;
+		return id.contains("explode") || id.contains("thunder") || id.contains("firework_rocket.blast");
 	}
 
 	/**
