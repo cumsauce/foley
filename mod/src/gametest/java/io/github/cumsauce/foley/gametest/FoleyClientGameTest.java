@@ -285,6 +285,12 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 			if (FoleyClient.replaced() != beforeVoice + 1) throw new AssertionError("the sheep wasn't voiced by Foley");
 
 			// M13: birds by biome. At the dawn chorus on a superflat plains, a roster bird sings...
+			// The gametest world is the FLAT preset (the API forces it), so it has no leaves at all, and a
+			// bird only calls out once it has found a perch: plant a few trees around spawn first, as the
+			// scene recording does, or the roster is never asked for a singer.
+			for (String tree : new String[] {"~6 ~ ~6", "~-7 ~ ~5", "~9 ~ ~-4", "~-5 ~ ~-8"}) {
+				singleplayer.getServer().runCommand("place feature minecraft:oak " + tree);
+			}
 			singleplayer.getServer().runCommand("time set 23500");
 			int beforeDawn = context.computeOnClient(mc -> FoleyClient.life().calls());
 			try {
