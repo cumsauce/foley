@@ -22,6 +22,10 @@ use crate::{BandPass, LowPass, Rng};
 ///
 /// `harmonic` weights the second harmonic the trachea lets through (the
 /// whistle's standard brightness); `(attack, release)` are seconds.
+// Eight arguments, not seven: the sample-rate work gave every primitive its
+// rate, and this one was already at the limit. They are the physics of a
+// note rather than a queue waiting to become a struct.
+#[allow(clippy::too_many_arguments)]
 pub fn fm(
     contour: &[(f32, f32)],
     fm_depth_hz: f32,
