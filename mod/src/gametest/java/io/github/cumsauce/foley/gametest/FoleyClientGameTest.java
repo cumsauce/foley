@@ -523,7 +523,18 @@ public class FoleyClientGameTest implements FabricClientGameTest {
 
 			// Cave atmosphere (M12): underground, the cave bed plays; on the surface, it stops. Switches off the toggle
 			// mid-cave and the bed stops.
-			singleplayer.getServer().runCommand("tp @p ~ -50 ~");
+			// The gametest world is the FLAT preset (bedrock -64, grass -61), so y=-50 is open sky, not cave:
+			// build a stone shell with a thick ceiling and a room inside it, then stand in the room. The scene
+			// needs depth > 30 blocks (depth is normalised by 60), stone mass in the column, and openness <= 0.2.
+			double[] spot2 = context.computeOnClient(mc -> new double[] {mc.player.getX(), mc.player.getZ()});
+			int cx = (int) spot2[0], cz = (int) spot2[1];
+			for (int lo : new int[] {-63, -44, -25}) {
+				singleplayer.getServer().runCommand("fill " + (cx - 16) + " " + lo + " " + (cz - 16) + " "
+						+ (cx + 16) + " " + (lo + 18) + " " + (cz + 16) + " stone");
+			}
+			singleplayer.getServer().runCommand("fill " + (cx - 8) + " -58 " + (cz - 8) + " "
+					+ (cx + 8) + " -52 " + (cz + 8) + " air");
+			singleplayer.getServer().runCommand("tp @p " + cx + " -56 " + cz);
 			singleplayer.getServer().waitFor(server -> server.getTickCount() > 0, 60);
 			try {
 				context.waitFor(mc -> mc.player != null && mc.player.getY() < -40, 20 * 20);
